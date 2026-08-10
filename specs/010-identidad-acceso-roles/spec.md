@@ -309,7 +309,8 @@ function accountStatusAllowsLogin(status: AccountStatus): boolean
 function resolveLoginOutcome(input: { credentialsValid: boolean; status: AccountStatus }): LoginOutcome
 function resolvePrimaryPayer(guardianships: Guardianship[], now: Date): Result<PersonId, NoPrimaryPayer>
 function isWaiverAcceptanceCurrent(acceptance: WaiverAcceptance | null, currentVersion: WaiverVersion): boolean
-function isInvitationLinkValid(invitation: Invitation, now: Date): Result<void, ExpiredOrUsedInvitation>
+// T-012: la ventana de validez entra como configuración (P-04), no como constante del dominio
+function isInvitationLinkValid(invitation: InvitationLink, policy: InvitationLinkPolicy, clock: Clock): Result<void, InvitationLinkDenial>
 ```
 
 Todas puras, sin acceso a base de datos ni al reloj del sistema (P-08) — reciben `now` donde

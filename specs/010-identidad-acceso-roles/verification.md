@@ -555,3 +555,56 @@ permisos es exactamente cómo se abren los agujeros**.
   el seed con el primer administrador: por definición no hay nadie antes que él.
 - `player` es el rol base que el sistema asigna al activarse una cuenta, no un otorgamiento
   discrecional. Esta función lo trata como el rol de club que es si alguien lo otorga a mano.
+
+---
+
+## T-012 — `isInvitationLinkValid`: hasta cuándo sirve un enlace de invitación
+
+**Fecha:** 2026-08-10 · 10 tests · dominio al 100 % de cobertura (52 tests en total)
+
+Regla corta con dos decisiones que no eran obvias, ambas de las que sólo se notan cuando ya
+salieron mal.
+
+### Los 7 días no son del código: son configuración
+
+El spec dice «vence en 7 días (default, `docs/08`)». La palabra que manda ahí es **default**:
+`auth.invitation_link_validity_days` está en el catálogo de configuración (`docs/08` §9), así que
+escribir `7` dentro de la función habría contradicho P-04 y habría dejado un valor que sólo se
+cambia con un despliegue. La ventana entra como parámetro (`InvitationLinkPolicy`) y el dominio
+no sabe de dónde sale.
+
+Consecuencia asumida y anotada en el código: si un administrador **acorta** la ventana, las
+invitaciones ya enviadas se evalúan contra el valor nuevo. Es lo correcto para una regla de
+seguridad —endurecerla debe surtir efecto ya, no dentro de siete días— y el peor caso es una
+invitación de más que hay que reenviar.
+
+Está probado que la ventana es de verdad configurable, no un parámetro decorativo: con 3 días
+vence a los 3, con 14 sigue viva a los 8, y un test recorre `[1, 2, 3, 7, 14, 30]` exigiendo que
+en todas el último instante válido sea el anterior al corte.
+
+### El orden de las dos comprobaciones tiene consecuencia operativa
+
+Se mira **primero si ya se usó** y sólo después el vencimiento. Un enlace usado también termina
+por vencerse, así que con el orden inverso una invitación consumida por un tercero respondería
+«vencida» — y el administrador la reenviaría tranquilo, sin enterarse nunca de que alguien ya la
+había usado. Justamente la señal que querría ver si el correo fue interceptado. Hay un test del
+caso «usada **y** vencida» que fija ese orden para que nadie lo invierta por limpieza.
+
+### El borde exacto
+
+A los 7 días exactos está **vencida**, no válida: un borde hay que elegirlo, y en un token de
+acceso se elige por el lado que concede menos. Probado por ambos lados con precisión de
+milisegundo (`7 días − 1 ms` sirve, `7 días` no).
+
+### Firma distinta a la del plan
+
+`spec.md` §9 la anunciaba como `(invitation, now: Date)`. Quedó
+`(invitation, policy, clock: Clock)`: `Clock` porque la tarea lo pedía explícitamente y P-08
+admite ambas formas, y `policy` por lo del párrafo anterior. `spec.md` §9 quedó corregido para
+que la firma escrita sea la real.
+
+### Pendiente declarado
+
+- **La invalidación del enlace anterior al reenviar** (T-053) no está aquí. Esta función decide
+  sobre `sentAt` y `usedAt`; cómo se marca muerta la invitación previa es del modelo de datos y de
+  su endpoint, y todavía no existe la tabla `Invitation` en `schema.prisma` — la crea T-050.

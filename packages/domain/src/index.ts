@@ -6,3 +6,4 @@ export * from "./identity/accountStatus.js";
 export * from "./identity/login.js";
 export * from "./identity/roles.js";
 export * from "./identity/canAssignRole.js";
+export * from "./identity/isInvitationLinkValid.js";

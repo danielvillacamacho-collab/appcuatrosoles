@@ -66,8 +66,13 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > Resolvió una ambigüedad con consecuencia de seguridad: si `organization_admin` puede nombrar a
   > otro como él. `docs/06` decía que no, el spec leído literalmente decía que sí. Se resolvió por
   > menor privilegio y quedó escrito en ambos documentos.
-- [ ] **T-012** `isInvitationLinkValid(invitation, now)`, con `Clock` inyectado. Tests: recién
-  creado, a las 6 días 23h, a los 7 días exactos, ya usado.
+- [x] **T-012** `isInvitationLinkValid(invitation, now)`, con `Clock` inyectado. Tests: recién
+  creado, a las 6 días 23h, a los 7 días exactos, ya usado. ✅ 2026-08-10 — 10 tests, ver
+  `verification.md` §T-012.
+  > La ventana de validez **no** quedó como constante del dominio: entra como parámetro
+  > (`auth.invitation_link_validity_days`, `docs/08` §9), porque los 7 días son configuración
+  > (P-04). Y el orden de las dos comprobaciones resultó tener consecuencia operativa: se mira
+  > primero el uso y después el vencimiento.
 - [ ] **T-013** `isWaiverAcceptanceCurrent(acceptance, currentVersion)`. Tests: sin
   aceptación, aceptación de versión anterior, aceptación vigente.
 - [ ] **T-014** `resolvePrimaryPayer(guardianships, now)`. Tests: cero payers vigentes, uno,
