@@ -78,8 +78,14 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   `verification.md` §T-013.
   > Compara por **identificador** de versión, no por número: el correlativo `version` es por club,
   > así que comparar números habría dado por cubierta en un club a quien firmó en otro (P-05).
-- [ ] **T-014** `resolvePrimaryPayer(guardianships, now)`. Tests: cero payers vigentes, uno,
+- [x] **T-014** `resolvePrimaryPayer(guardianships, now)`. Tests: cero payers vigentes, uno,
   dos solapados (debe fallar como dato inconsistente, no elegir uno arbitrariamente).
+  ✅ 2026-08-10 — 13 tests, ver `verification.md` §T-014.
+  > No recibe `now: Date` sino `today: LocalDate`, un tipo nuevo en `shared/`: las columnas
+  > `starts_on`/`ends_on` son `date` sin hora, y compararlas contra un instante daba por vencido
+  > un vínculo el día que aún regía (5 horas de desfase con Bogotá). Ver el análisis en
+  > `verification.md`. **La tarea trajo `shared/localDate.ts` con su test**, que no estaba en el
+  > plan.
 
 ## C — Infraestructura transversal (guards, decoradores, interceptor)
 

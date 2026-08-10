@@ -307,7 +307,8 @@ function canAssignRole(actor: RoleContext, targetRole: Role, targetScope: Scope)
 function accountStatusAllowsLogin(status: AccountStatus): boolean
 // T-010: resuelve el intento completo, con el orden «contraseña primero» dentro (R-010-07)
 function resolveLoginOutcome(input: { credentialsValid: boolean; status: AccountStatus }): LoginOutcome
-function resolvePrimaryPayer(guardianships: Guardianship[], now: Date): Result<PersonId, NoPrimaryPayer>
+// T-014: `today` es fecha de calendario del club, no un instante — las columnas son `date` (P-08)
+function resolvePrimaryPayer(guardianships: GuardianshipRef[], today: LocalDate): Result<PersonId, PrimaryPayerFailure>
 function isWaiverAcceptanceCurrent(acceptance: WaiverAcceptance | null, currentVersion: WaiverVersion): boolean
 // T-012: la ventana de validez entra como configuración (P-04), no como constante del dominio
 function isInvitationLinkValid(invitation: InvitationLink, policy: InvitationLinkPolicy, clock: Clock): Result<void, InvitationLinkDenial>

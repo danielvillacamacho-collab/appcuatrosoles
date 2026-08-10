@@ -653,3 +653,65 @@ nula, y ambos llevan a la misma pantalla. Se respeta la firma del `spec.md` §9.
 - **No sabe de menores ni de acudientes.** Quién firmó materialmente (`acceptedByPersonId`) es
   evidencia legal que guarda la fila, no una condición de vigencia: al dominio le basta con que la
   persona cubierta tenga aceptación de la versión vigente. El flujo del acudiente es T-074.
+
+---
+
+## T-014 — `resolvePrimaryPayer`: a quién se le cobra lo de un menor
+
+**Fecha:** 2026-08-10 · 13 tests (+ 5 de `localDate`) · dominio al 100 % de cobertura (75 en total)
+
+Cierra la sección B. Trajo un hallazgo que no estaba en la tarea y que habría sido un bug de plata.
+
+### El desfase de cinco horas que nadie habría visto
+
+`guardianship.starts_on` y `ends_on` son columnas `@db.Date`: **fechas de calendario, sin hora**.
+Prisma las entrega como medianoche **UTC**. La firma que preveía el plan —`(guardianships, now:
+Date)`— invitaba a escribir `now <= endsOn`, y eso significa que un vínculo que rige *hasta el 10
+de agosto inclusive* se habría dado por vencido desde las **7:00 p.m. del 9 de agosto en Bogotá**,
+que es cuando empieza el 10 en UTC. Se pierde el último día entero del vínculo. Nada falla, nada
+se registra: simplemente el cobro del menor deja de consolidarse en el estado de cuenta de su
+acudiente un día antes de tiempo, o se lo lleva el acudiente equivocado.
+
+La respuesta no fue recordar el detalle en el momento de usar la función, sino hacer que el error
+**no compile**: se agregó el tipo `LocalDate` (`packages/domain/src/shared/localDate.ts`), una
+fecha `YYYY-MM-DD` sin hora ni zona, y `resolvePrimaryPayer` recibe `today: LocalDate`. Pasarle un
+`Date` es un error de tipos, no un resultado sutilmente equivocado en la madrugada.
+
+`toLocalDate(instant, timeZone)` hace la traducción, y **la zona es un parámetro**: el producto se
+vende a otros clubes (`docs/09` D-01), así que `America/Bogota` no podía quedar dentro del dominio.
+Hay un test con el mismo instante cayendo en días distintos según la zona, y otro que fija la
+propiedad de la que depende todo lo demás: en formato con ceros a la izquierda, **orden alfabético
+= orden cronológico**. El formato se arma pieza por pieza con `formatToParts` en vez de confiar en
+el texto de un locale, porque ese texto cambia con la versión de ICU y aquí el formato exacto no es
+cosmético.
+
+`spec.md` §9 quedó corregido con la firma real.
+
+### No elegir es la función
+
+Si dos acudientes **distintos** figuran como pagador principal el mismo día, devuelve
+`multiple_primary_payers`. Cualquier desempate inventado —el primero de la lista, el más antiguo—
+le carga a alguien una factura que quizá no le toca, en silencio y sin que nadie lo revise. Hay un
+test que compara el resultado de la lista y el de la lista invertida y exige que sean **iguales**:
+si mañana alguien "arregla" la ambigüedad eligiendo alguno, ese test lo delata.
+
+**Un caso sí se resuelve, y es una decisión, no un descuido:** varias filas solapadas que apuntan
+al **mismo** acudiente devuelven `ok`. No hay elección arbitraria que hacer —la plata va al mismo
+estado de cuenta de todas formas— y bloquear a la familia por un vínculo duplicado sería un castigo
+sin beneficio. Sigue siendo un dato sucio; detectarlo es del job de integridad.
+
+### Los bordes de la ventana
+
+Ambos extremos son inclusivos: el primer día ya paga y el último todavía paga. Probado por los dos
+lados, más los dos casos de fuera de ventana (terminó ayer, empieza mañana) y uno de otro año que
+existe para vigilar que la comparación como texto no se rompa.
+
+### Pendientes declarados
+
+- **T-071** (job diario de integridad) tiene ahora dos casos que detectar, no uno: dependiente
+  activo **sin** pagador vigente, y dependiente con **dos pagadores distintos** vigentes. El
+  segundo bloquea cobros hasta que un humano lo corrija, así que es el más urgente de los dos.
+- **T-070** debe usar la misma noción de fecha del club al cerrar el `endsOn` del pagador anterior;
+  si lo hace con `now` en UTC reintroduce el desfase por el otro extremo.
+- Quien llame a esta función debe pasarle los vínculos de **un solo** dependiente y de su club: la
+  función no puede verificarlo con los datos que recibe. Queda anotado en su firma.
