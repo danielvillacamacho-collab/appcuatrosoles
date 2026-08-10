@@ -99,9 +99,25 @@ acceder a lo que me corresponde según mis roles.
 - **Dado** cuatro intentos fallidos previos, **cuando** el usuario falla el quinto,
   **entonces** la cuenta se bloquea temporalmente (15 min default) y se informa cuándo podrá
   reintentar.
-- **Dado** una cuenta `invited`, `suspended` o `archived`, **cuando** intenta iniciar sesión,
-  **entonces** el sistema no lo deja y muestra un mensaje acorde a su estado (nunca el
-  genérico de credenciales).
+- **Dado** una cuenta `suspended` o `archived` **y la contraseña correcta**, **cuando** intenta
+  iniciar sesión, **entonces** el sistema no lo deja y muestra un mensaje acorde a su estado
+  ("tu acceso está suspendido, contacta al club").
+- **Dado** una cuenta en cualquier estado **y la contraseña incorrecta**, **cuando** intenta
+  iniciar sesión, **entonces** recibe **exactamente** el mismo error genérico que si el correo
+  no existiera — mismo texto, misma forma de respuesta.
+
+  > **Precisión hecha en T-010, importante porque cambia lo que ve el usuario.** El PRD Parte II
+  > §5 pide que una cuenta invitada, suspendida o archivada reciba «un mensaje acorde a su
+  > estado», sin decir en qué momento. Tomado literalmente, cualquiera podría escribir un correo
+  > y averiguar si tiene cuenta y si está suspendida: eso es enumeración de cuentas y, además,
+  > filtrar el estado de un tercero (P-12). La regla queda entonces: **primero se verifica la
+  > contraseña, y sólo después se revela el estado**. El titular legítimo —que es quien conoce su
+  > contraseña— sigue recibiendo su mensaje útil; quien está probando correos no recibe nada.
+  > Cuando el PRD y la constitución chocan, gana la constitución (`memory/constitution.md` §3).
+  >
+  > Consecuencia práctica: una cuenta `invited` no tiene contraseña usable, así que en la vida
+  > real siempre caerá por el camino genérico. Para esa persona el camino correcto es reenviarle
+  > la invitación (T-053), no un mensaje en la pantalla de ingreso.
 
 ### HU-010-05 — Cierre de sesión
 **Como** usuario con sesión iniciada **quiero** cerrar sesión **para** proteger mi cuenta,
@@ -202,7 +218,11 @@ tener respaldo legal.
   o `archived`, ambos reversibles por un administrador (P-06). El borrado real sólo procede
   por el flujo formal de datos personales (`docs/06-security-privacy.md` §8).
 - `R-010-07` El mensaje de error de login y el de recuperación de contraseña nunca revelan si
-  una cuenta existe (P-12).
+  una cuenta existe (P-12). **En el login el orden es parte de la regla:** se verifica la
+  contraseña primero y sólo después se evalúa el estado de la cuenta; sin contraseña correcta,
+  todos los estados —incluida la cuenta inexistente— responden lo mismo. Implementado en
+  `packages/domain/identity/resolveLoginOutcome` (T-010) para que el orden no dependa de que el
+  controlador lo recuerde.
 - `R-010-08` Un enlace de invitación vence en 7 días (default, `docs/08`); uno de
   restablecimiento, en 1 hora. Ambos son de un solo uso.
 - `R-010-09` Al usar un enlace de restablecimiento de contraseña, se revocan todas las demás
@@ -271,7 +291,9 @@ de qué rol tiene cada permiso va en `docs/06-security-privacy.md` §4 y se ampl
 ```ts
 // packages/domain/identity
 function canAssignRole(actor: RoleContext, targetRole: Role, targetScope: Scope): Result<void, ForbiddenRoleAssignment>
-function accountStatusAllowsLogin(status: UserAccountStatus): boolean
+function accountStatusAllowsLogin(status: AccountStatus): boolean
+// T-010: resuelve el intento completo, con el orden «contraseña primero» dentro (R-010-07)
+function resolveLoginOutcome(input: { credentialsValid: boolean; status: AccountStatus }): LoginOutcome
 function resolvePrimaryPayer(guardianships: Guardianship[], now: Date): Result<PersonId, NoPrimaryPayer>
 function isWaiverAcceptanceCurrent(acceptance: WaiverAcceptance | null, currentVersion: WaiverVersion): boolean
 function isInvitationLinkValid(invitation: Invitation, now: Date): Result<void, ExpiredOrUsedInvitation>

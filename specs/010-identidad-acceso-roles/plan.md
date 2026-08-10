@@ -236,13 +236,26 @@ apps/api/src/modules/identity/
 │   └── audit.interceptor.ts      # global, registra mutaciones marcadas @Auditable()
 └── __tests__/
 
-packages/domain/identity/
+packages/domain/src/identity/
+├── accountStatus.ts              # T-010 · vocabulario propio del dominio (no el enum de Prisma)
+├── login.ts                      # T-010 · accountStatusAllowsLogin + resolveLoginOutcome
 ├── canAssignRole.ts
-├── accountStatusAllowsLogin.ts
 ├── resolvePrimaryPayer.ts
 ├── isWaiverAcceptanceCurrent.ts
 ├── isInvitationLinkValid.ts
 └── __tests__/
+
+> **Dos ajustes hechos al ejecutar T-010.**
+>
+> 1. El plan preveía sólo `accountStatusAllowsLogin(status): boolean`, y resultó insuficiente para
+>    su propio spec: HU-010-04 pide un mensaje distinto según el estado, y con un booleano el
+>    controlador tendría que volver a mirar el estado para elegir el texto — duplicando la regla
+>    justo donde es fácil equivocarse con el orden. Se agregó `resolveLoginOutcome`, que decide el
+>    intento completo y **encierra el orden «contraseña primero, estado después»** que exige
+>    R-010-07. El booleano se conserva porque es útil por sí solo.
+> 2. El dominio define su **propio** tipo `AccountStatus` en vez de importar el enum de Prisma:
+>    `packages/domain` no puede depender de la base (P-01), y el repositorio traduce en el borde.
+>    Son cuatro palabras duplicadas a cambio de poder probar las reglas sin base de datos.
 
 packages/contracts/identity/
 ├── login.schema.ts

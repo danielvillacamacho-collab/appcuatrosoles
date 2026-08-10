@@ -394,3 +394,82 @@ justo la deuda que este módulo lleva arrastrando.
    vez que alguien lo corra.
 4. **Primer uso real de Argon2id**, verificado: el hash guardado valida la contraseña correcta,
    rechaza la incorrecta, y el algoritmo es `argon2id` (no `argon2i` ni `argon2d`).
+
+---
+
+## T-010 — Primera regla de dominio: quién puede iniciar sesión
+
+**Fecha:** 2026-08-10 · 10 tests en `packages/domain/src/identity/__tests__/login.spec.ts`
+
+### La barrera que protegía el dominio no protegía nada
+
+Antes de escribir la primera regla se comprobó lo obvio: que `check:arch` detecte un import
+prohibido. **No lo detectaba.** Se agregó a propósito un `import type { UserAccountStatus } from
+"@prisma/client"` dentro de `packages/domain` y el gate pasó en verde. El proyecto llevaba cuatro
+tareas creyendo que P-01 estaba protegido automáticamente.
+
+Dos causas, la segunda peor que la primera:
+
+1. Con pnpm la ruta real de un paquete es
+   `node_modules/.pnpm/@prisma+client@X/node_modules/@prisma/client`, así que un patrón anclado
+   con `^node_modules/` nunca casa.
+2. Como pnpm **aísla** las dependencias, `@prisma/client` no se puede resolver desde
+   `packages/domain`: dependency-cruiser lo reporta con tipo `unknown` y sin ruta en disco. Ninguna
+   regla basada en el nombre resuelto o en el tipo de dependencia lo iba a ver.
+
+**Corregido invirtiendo la regla: en vez de enumerar lo prohibido, se declara lo permitido.** El
+dominio sólo puede importar archivos de `packages/domain/src`; cualquier otra cosa —npm, otro
+paquete del workspace, una app, un módulo de Node— es error. Así no depende de cómo se resuelva
+nada, y atrapa también el próximo paquete que a alguien le parezca inofensivo. Se agregó además una
+regla que convierte **cualquier import no resoluble** en error de build.
+
+Verificado en los dos sentidos: con el import prohibido presente el gate falla con 2 errores; sin
+él, pasa. Es el mismo patrón de fallo que el `REVOKE` de T-004: código que parece proteger y no
+protege.
+
+### La regla, y por qué el orden es parte de ella
+
+| Test | Qué fija |
+|---|---|
+| Cuenta activa + contraseña correcta | Entra |
+| Contraseña incorrecta en cuenta activa | Error genérico |
+| **Contraseña incorrecta en cuenta suspendida** | Error genérico — **no revela la suspensión** |
+| **Los 4 estados con contraseña incorrecta** | **Respuesta idéntica**, un solo valor distinto en el conjunto |
+| Cuenta suspendida + contraseña correcta | Motivo `suspended` (mensaje útil para su titular) |
+| Cuenta archivada + contraseña correcta | Motivo `archived` |
+| Cuenta invitada + contraseña correcta | Motivo `invitation_pending` |
+| Ningún estado salvo `active` entra, ni con la contraseña correcta | ✅ |
+
+El cuarto test es el que importa de verdad: comprueba que **sin la contraseña correcta los cuatro
+estados son indistinguibles entre sí**. Ésa es la propiedad que impide enumerar cuentas, y está
+escrita como propiedad y no como cuatro comparaciones sueltas.
+
+### Aclaración de spec (cambia lo que ve el usuario)
+
+El PRD Parte II §5 pide que una cuenta invitada, suspendida o archivada reciba «un mensaje acorde a
+su estado», sin decir **en qué momento**. Tomado literalmente, cualquiera podría escribir un correo
+y averiguar si tiene cuenta y si está suspendida: enumeración de cuentas más fuga del estado de un
+tercero (P-12).
+
+La regla quedó: **primero la contraseña, después el estado.** El titular legítimo sigue recibiendo
+su mensaje útil; quien prueba correos no recibe nada. `spec.md` HU-010-04 y R-010-07 se
+actualizaron para que no quede ambiguo, y el orden vive dentro de `resolveLoginOutcome` — no en el
+controlador, donde una fuga quedaría a un despiste de distancia.
+
+Consecuencia práctica declarada: una cuenta `invited` no tiene contraseña usable, así que en la
+vida real siempre caerá por el camino genérico. Para esa persona el camino correcto es reenviar la
+invitación (T-053), no un mensaje en la pantalla de ingreso.
+
+### Decisiones que fijan el patrón para el resto del dominio
+
+1. **El dominio tiene su propio vocabulario.** `AccountStatus` se define en
+   `packages/domain/src/identity/accountStatus.ts` en vez de importar el enum de Prisma. Cuatro
+   palabras duplicadas a cambio de poder probar las reglas del polo sin base de datos, y de que
+   cambiar de ORM no toque ninguna regla de negocio.
+2. **El dominio no hashea ni compara contraseñas.** Recibe `credentialsValid: boolean`, un
+   veredicto ya tomado. Argon2id es una librería, y el dominio no tiene dependencias.
+3. **Exhaustividad forzada por el compilador.** El `switch` sobre el estado termina en un
+   `never`: si algún día se agrega un estado y nadie lo piensa, el build se rompe en vez de
+   dejarlo permitido —o prohibido— por accidente.
+4. **El plan se corrigió, no se ignoró.** Preveía sólo un booleano; se anotó en `plan.md` por qué
+   resultó insuficiente para su propio spec.

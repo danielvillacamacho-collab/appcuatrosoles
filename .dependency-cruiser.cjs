@@ -1,23 +1,55 @@
 /**
  * Fitness functions de arquitectura (memory/constitution.md P-15, ADR-014 punto 1).
  * Falla el build si una capa importa algo que no le corresponde.
+ *
+ * Historia que conviene no repetir (T-010): la primera versión de estas reglas intentaba
+ * detectar imports prohibidos por el **nombre del paquete** (`node_modules/@prisma/...`) y por
+ * el **tipo de dependencia** (`npm`). No detectaba nada, y el proyecto pasó cuatro tareas
+ * creyendo que el dominio estaba protegido. Dos razones:
+ *
+ *   1. Con pnpm, la ruta real es `node_modules/.pnpm/@prisma+client@X/node_modules/@prisma/client`,
+ *      así que un patrón anclado con `^node_modules/` nunca casa.
+ *   2. Peor: como pnpm aísla las dependencias, `@prisma/client` **no se puede resolver** desde
+ *      `packages/domain`, así que llega con tipo `unknown` y sin ruta en disco — y ninguna regla
+ *      basada en el nombre resuelto o en el tipo lo iba a ver.
+ *
+ * La lección es que la regla no debe enumerar lo prohibido, sino **declarar lo permitido**: el
+ * dominio sólo puede importar archivos del propio dominio. Así no depende de cómo se resuelva
+ * nada, y atrapa también el próximo paquete que a alguien le parezca inofensivo.
  */
 module.exports = {
   forbidden: [
     {
-      name: "domain-no-framework",
+      name: "domain-solo-imports-locales",
       comment:
-        "packages/domain no puede importar NestJS, Prisma, HTTP ni nada fuera de sí mismo o de otro paquete de dominio (constitution P-01).",
+        "packages/domain es TypeScript puro (constitution P-01): sólo puede importar archivos de " +
+        "packages/domain/src. Ni npm, ni otro paquete del workspace, ni una app, ni módulos de " +
+        "Node. Si una regla de polo necesita algo de afuera, se le inyecta por un puerto (como el " +
+        "Clock), no se importa. Los tests del dominio quedan fuera de la regla: sí usan vitest.",
       severity: "error",
-      from: { path: "^packages/domain" },
-      to: {
-        path: "^(apps/|node_modules/(@nestjs|@prisma|prisma|express|fastify))",
+      from: {
+        path: "^packages/domain/src",
+        pathNot: "(__tests__/|\\.spec\\.ts$)",
       },
+      to: {
+        pathNot: "^packages/domain/src",
+      },
+    },
+    {
+      name: "no-imports-sin-resolver",
+      comment:
+        "Un import que no se puede resolver es un bug, no un aviso: o está mal escrito, o el " +
+        "paquete no está declarado como dependencia de ESE paquete del workspace (pnpm aísla, y " +
+        "eso es una ventaja: obliga a declarar lo que se usa).",
+      severity: "error",
+      from: { pathNot: "(__tests__/|\\.spec\\.ts$)" },
+      to: { couldNotResolve: true },
     },
     {
       name: "no-cross-feature-imports",
       comment:
-        "Un módulo de apps/api no puede importar directamente de otro módulo — sólo vía packages/domain o eventos (docs/01-architecture.md §2).",
+        "Un módulo de apps/api no puede importar directamente de otro módulo — sólo vía " +
+        "packages/domain o eventos (docs/01-architecture.md §2).",
       severity: "error",
       from: { path: "^apps/api/src/modules/([^/]+)/" },
       to: {

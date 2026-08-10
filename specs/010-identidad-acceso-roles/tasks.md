@@ -53,8 +53,13 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 
 ## B — Dominio puro (`packages/domain/identity`)
 
-- [ ] **T-010** `accountStatusAllowsLogin(status)`. Tests: los 4 estados, nombre de test en
-  español citando HU-010-04.
+- [x] **T-010** `accountStatusAllowsLogin(status)`. Tests: los 4 estados, nombre de test en
+  español citando HU-010-04. ✅ 2026-08-10 — ver `verification.md` §T-010.
+  > Se agregó además `resolveLoginOutcome`, que encierra el orden «contraseña primero, estado
+  > después» (R-010-07): con un booleano suelto, el controlador tendría que reimplementar ese
+  > orden y una fuga de enumeración de cuentas quedaría a un despiste de distancia. Y de paso se
+  > descubrió que **la barrera de arquitectura que protege el dominio no detectaba nada** — ver
+  > verification.md.
 - [ ] **T-011** `canAssignRole(actor, targetRole, targetScope)`. Tests: cubre R-010-04 exacto
   (admin de organización intentando rol de club → rechazado; club_admin asignando rol de
   organización ajena → rechazado).
