@@ -96,11 +96,16 @@ puede_inscribir_copas, requiere_aptitud, puede_reservar_taqueo…), `active`.
 > Requiere la extensión `btree_gist`, que se crea en esta migración y que también usarán los
 > módulos 040 (canchas) y 090 (caballos).
 
-**waiver_version** / **waiver_acceptance** — `version`, `body`, `published_at` /
-`person_id`, `waiver_version_id`, `accepted_by_person_id` (el acudiente si es menor),
+**waiver_version** / **waiver_acceptance** — `club_id`, `version`, `body`, `published_at` /
+`club_id`, `person_id`, `waiver_version_id`, `accepted_by_person_id` (el acudiente si es menor),
 `accepted_at`, `ip_hash`.
 > Invariante: no se puede postular a una práctica ni reservar clase sin aceptación
 > vigente de la última versión publicada.
+> **T-004:** `body` guarda el texto completo, no una referencia a un archivo que pueda cambiar
+> o perderse: si en 2029 se discute qué se aceptó en 2026, la respuesta es ese texto exacto.
+> `version` es correlativa por club (`UNIQUE(club_id, version)`) y positiva. Una persona acepta
+> una versión **una sola vez** (`UNIQUE(person_id, waiver_version_id)`), pero sí puede tener
+> aceptaciones de versiones distintas — eso es el historial.
 
 **practice_eligibility** — `person_id`, `max_handicap_halves` (nivel hasta el que puede
 jugar), `granted_by_id`, `granted_at`, `revoked_at`, `revoked_by_id`.
@@ -108,7 +113,21 @@ jugar), `granted_by_id`, `granted_at`, `revoked_at`, `revoked_by_id`.
 
 **audit_log** — `club_id`, `actor_user_id`, `on_behalf_of_id`, `action`, `entity_type`,
 `entity_id`, `before jsonb`, `after jsonb`, `occurred_at`, `request_id`.
-> Sin UPDATE ni DELETE. El rol de base de datos de la aplicación sólo tiene INSERT y SELECT.
+> Sin UPDATE ni DELETE.
+> **Cómo se garantiza (T-004):** con **triggers** que rechazan `UPDATE`, `DELETE` y `TRUNCATE`.
+> No con `REVOKE`: hoy la aplicación se conecta con un rol superusuario y dueño de la tabla, y
+> en PostgreSQL ambos saltan toda comprobación de permisos — el `REVOKE` habría sido una
+> garantía falsa. Verificado ejecutando las tres operaciones **como superusuario**: las tres
+> fallan. El rol de menor privilegio se agrega como segunda capa en T-007.
+> `TRUNCATE` necesita su propio trigger: no dispara los de `DELETE`, así que sin él bastaría un
+> `TRUNCATE audit_log` para perder la auditoría entera.
+> **Límite honesto de la garantía:** protege operaciones de *datos*, no *DDL*. Un `DROP TABLE`
+> (por ejemplo, al revertir una migración) sí funciona; eso es deliberado, porque revertir el
+> esquema es un acto administrativo explícito, no manipulación de datos.
+> `club_id` es **nulo** en acciones de alcance de plataforma (crear un club, por ejemplo), que
+> no cuelgan de ningún club; la capa de repositorio debe tratar ese NULL explícitamente.
+> `entity_id` es polimórfico a propósito y por eso no tiene llave foránea: la auditoría cubre
+> cualquier entidad y debe sobrevivir aunque la entidad ya no exista.
 
 ---
 

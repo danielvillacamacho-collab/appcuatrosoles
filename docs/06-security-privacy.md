@@ -132,8 +132,30 @@ menor, la acepta su acudiente. Si el club publica un texto nuevo, se vuelve a so
 
 ## 9. Auditoría (P-07)
 
-`audit_log` es append-only a nivel de permisos de PostgreSQL, no sólo de convención de
-código. Registra como mínimo (PRD Parte II §12):
+`audit_log` es append-only **en la base de datos**, no por convención del código.
+
+**Implementado en T-004 con triggers**, no con `REVOKE`: la aplicación se conecta hoy con un rol
+que es superusuario y dueño de la tabla, y en PostgreSQL ambos saltan toda comprobación de
+permisos — un `REVOKE UPDATE, DELETE` contra ese rol no hace nada y deja una garantía falsa, que
+es peor que ninguna. Los triggers rechazan `UPDATE`, `DELETE` y `TRUNCATE`, y aplican a todo el
+mundo. Verificado ejecutando las tres operaciones **como superusuario**: las tres fallan.
+
+`TRUNCATE` lleva su propio trigger porque no dispara los de `DELETE`: sin él, un solo
+`TRUNCATE audit_log` bastaría para vaciar la auditoría sin encontrar resistencia.
+
+El rol de aplicación de menor privilegio (con el `REVOKE` real, como segunda capa) es la tarea
+T-007 de `specs/010-identidad-acceso-roles/tasks.md`.
+
+> **Consecuencia operativa que conviene saber:** los tests de integración que escriban en
+> `audit_log` **no pueden limpiar lo que escribieron**. Necesitan base de datos nueva por corrida
+> (Testcontainers ya la da), no limpieza posterior.
+
+> **Tensión pendiente con la Ley 1581.** El §8 exige poder anonimizar datos personales a
+> solicitud del titular, pero `before`/`after` de la auditoría pueden contener nombre o correo, y
+> hoy son inmodificables. Cuando se construya ese flujo formal necesitará una vía privilegiada y
+> auditada de redacción; queda declarado aquí y **no** se debilita el trigger por adelantado.
+
+Registra como mínimo (PRD Parte II §12):
 
 - Cambios de handicap (quién, valor anterior, valor nuevo, cuándo, y `on_behalf_of_id` si fue
   por delegación de subcomisario).

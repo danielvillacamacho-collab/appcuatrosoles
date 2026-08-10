@@ -102,6 +102,15 @@ Necesita una base de datos «sombra» que Prisma usa para reconstruir el estado 
 script la crea si no existe. Es una herramienta de desarrollo local: el CI no genera `down.sql`,
 sólo comprueba que exista y lo ejecuta.
 
+**Lo que el `down.sql` generado cubre y lo que no.** Cubre todo lo que Prisma administra: tablas,
+columnas, índices, enums y llaves foráneas — y con ellas se van también los `CHECK` y los índices
+parciales que se agregaron en SQL, porque cuelgan de la tabla. **No** revierte objetos de SQL
+crudo independientes de una tabla: la extensión `btree_gist` (T-003) y la función del trigger de
+auditoría (T-004) quedan en la base tras un `down`. Es deliberado y no un olvido: ambos son
+idempotentes (`CREATE EXTENSION IF NOT EXISTS`, `CREATE OR REPLACE FUNCTION`), no contienen datos,
+y otros módulos los necesitan. Si alguna vez hace falta revertir uno, se agrega a mano y se
+documenta en la propia migración, que sí sobrevive a la regeneración.
+
 **Revertir una migración son dos pasos, no uno:** aplicar su `down.sql` **y** borrar su fila
 de `_prisma_migrations`. Sin el segundo paso, Prisma cree que sigue aplicada y no la vuelve a
 correr. El CI hace exactamente esos dos pasos y luego re-aplica, y **falla si una migración

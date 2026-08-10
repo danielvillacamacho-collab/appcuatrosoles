@@ -58,7 +58,10 @@ model Person {
   guardianOf  Guardianship[] @relation("Guardian")
   dependentOf Guardianship[] @relation("Dependent")
 
-  // Las relaciones hacia waivers se agregan en T-004, cuando exista ese modelo.
+  /// Exenciones de responsabilidad: las que aceptó esta persona, y las que aceptó *en nombre
+  /// de* otra (un acudiente firmando por su hijo menor).
+  waiverAcceptances    WaiverAcceptance[] @relation("WaiverSubject")
+  waiversAcceptedOnBehalf WaiverAcceptance[] @relation("WaiverAcceptedBy")
 
   @@unique([clubId, email])
   @@index([clubId, status])
@@ -116,6 +119,8 @@ model UserAccount {
   delegationsGiven    CommissionerDelegation[] @relation("DelegationsGiven")
   delegationsReceived CommissionerDelegation[] @relation("DelegationsReceived")
   membershipsAssigned MembershipAssignment[]   @relation("MembershipsAssigned")
+  auditEntries        AuditLog[]               @relation("AuditActor")
+  auditEntriesOnBehalf AuditLog[]              @relation("AuditOnBehalfOf")
 
   @@map("user_account")
 }
@@ -406,6 +411,110 @@ model Guardianship {
   @@index([clubId, dependentPersonId])
   @@index([guardianPersonId])
   @@map("guardianship")
+}
+
+// ─── T-004 · Exenciones de responsabilidad y auditoría ──────────────────────────
+// docs/02-domain-model.md §B · specs/010-identidad-acceso-roles/plan.md §1
+
+/// Versión publicada del texto de exención de responsabilidad (waiver). Cada versión se
+/// conserva íntegra y para siempre: si en 2029 alguien discute qué aceptó en 2026, la
+/// respuesta es el texto exacto de esa versión, no el vigente (PRD §2).
+model WaiverVersion {
+  id     String @id @default(uuid(7))
+  clubId String @map("club_id")
+
+  /// Correlativo por club. El vigente es el de mayor `version` ya publicado.
+  version Int
+  /// El texto completo, no una referencia a un archivo que pueda cambiar o perderse.
+  body    String
+
+  publishedAt DateTime @map("published_at") @db.Timestamptz(3)
+  createdById String?  @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  acceptances WaiverAcceptance[]
+
+  @@unique([clubId, version])
+  @@index([clubId, publishedAt])
+  @@map("waiver_version")
+}
+
+/// Constancia de que una persona aceptó una versión concreta del waiver. Es evidencia legal:
+/// guarda quién aceptó, en nombre de quién, cuándo y desde qué IP (hasheada).
+///
+/// R-010-12: sin aceptación vigente de la última versión publicada no se puede postular a una
+/// práctica ni reservar una clase. Para un menor, acepta su acudiente — por eso
+/// `acceptedByPersonId` puede ser distinto de `personId` (PRD §2, HU-010-11).
+model WaiverAcceptance {
+  id     String @id @default(uuid(7))
+  clubId String @map("club_id")
+
+  /// La persona a la que cubre la exención (puede ser un menor sin cuenta).
+  personId String @map("person_id")
+  /// Quién la aceptó materialmente: la propia persona, o su acudiente si es menor.
+  acceptedByPersonId String @map("accepted_by_person_id")
+  waiverVersionId    String @map("waiver_version_id")
+
+  acceptedAt DateTime @default(now()) @map("accepted_at") @db.Timestamptz(3)
+  /// IP hasheada, no en claro: sirve como evidencia de la aceptación sin almacenar un dato
+  /// personal innecesario (docs/06 §8).
+  ipHash String? @map("ip_hash")
+
+  person     Person        @relation("WaiverSubject", fields: [personId], references: [id])
+  acceptedBy Person        @relation("WaiverAcceptedBy", fields: [acceptedByPersonId], references: [id])
+  version    WaiverVersion @relation(fields: [waiverVersionId], references: [id])
+
+  /// Una persona acepta una versión una sola vez; aceptarla dos veces no significa nada.
+  @@unique([personId, waiverVersionId])
+  @@index([clubId, personId])
+  @@map("waiver_acceptance")
+}
+
+/// Registro de auditoría. **Append-only** (P-07): sólo INSERT y SELECT.
+///
+/// La garantía no es una convención del código de servicio — está en la base de datos, con
+/// triggers que rechazan UPDATE, DELETE y TRUNCATE (ver la migración de esta tarea). El
+/// propósito de una auditoría que se puede editar es cero: esta tabla es la que resuelve
+/// «¿quién cambió este handicap?» meses después, y su valor depende enteramente de que nadie
+/// —ni un administrador, ni el superusuario de la base— haya podido tocarla.
+model AuditLog {
+  id String @id @default(uuid(7))
+
+  /// Nulo sólo en acciones de alcance de plataforma, que no cuelgan de ningún club (por
+  /// ejemplo, crear un club). La capa de repositorio debe tratar el NULL explícitamente:
+  /// esas filas sólo las ve un superadministrador.
+  clubId String? @map("club_id")
+
+  /// Nulo cuando la acción la ejecutó el sistema y no una persona (un job programado, una
+  /// reconciliación). Distinguirlo importa: «nadie» y «no sabemos quién» no son lo mismo.
+  actorUserId String? @map("actor_user_id")
+  /// Presente cuando se actuó **por delegación**: el subcomisario que firma con la autoridad
+  /// del comisario queda registrado como tal, nunca como si fuera el comisario en persona
+  /// (docs/02 §B, R-010-11).
+  onBehalfOfId String? @map("on_behalf_of_id")
+
+  action     String
+  entityType String @map("entity_type")
+  /// Referencia polimórfica a propósito: la auditoría cubre cualquier entidad del sistema, así
+  /// que no puede tener llave foránea. Debe sobrevivir aunque la entidad ya no exista.
+  entityId String @map("entity_id")
+
+  before Json?
+  after  Json?
+
+  occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz(3)
+  /// El mismo identificador que viaja en la respuesta de error de la API y en los logs de
+  /// Pino (docs/03 §2): es el hilo que conecta el reclamo de un usuario con lo que pasó.
+  requestId String @map("request_id")
+
+  actor      UserAccount? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  onBehalfOf UserAccount? @relation("AuditOnBehalfOf", fields: [onBehalfOfId], references: [id], onDelete: Restrict)
+
+  // No hay `updated_at`: esta tabla no se actualiza nunca.
+  @@index([clubId, entityType, entityId])
+  @@index([occurredAt])
+  @@index([actorUserId, occurredAt])
+  @@map("audit_log")
 }
 
 // ─── Integridad pendiente (no es un olvido) ─────────────────────────────────────

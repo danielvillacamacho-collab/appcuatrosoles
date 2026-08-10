@@ -196,3 +196,85 @@ queda escrito para que nadie asuma más de lo que hay.
 - `membership_category.rights` es `jsonb` sin validación de forma en la base. La estructura la
   debe validar el dominio (Zod) cuando se implemente la gestión de categorías; hoy nada impide
   guardar una clave mal escrita.
+
+---
+
+## T-004 — `WaiverVersion`, `WaiverAcceptance`, `AuditLog` (append-only)
+
+**Fecha:** 2026-08-10 · **Migración:** `20260810211235_identity_waivers_and_audit_log`
+
+### La tarea se partió al ejecutarla, y por qué
+
+`tasks.md` pedía `REVOKE UPDATE, DELETE ... para el rol de aplicación`. Al ir a hacerlo apareció
+un problema de fondo: **la aplicación se conecta con un rol que es superusuario y dueño de la
+tabla**, y en PostgreSQL tanto el superusuario como el dueño saltan toda comprobación de
+permisos. Ese `REVOKE` habría sido código que parece proteger y no protege — una garantía falsa,
+que es peor que ninguna, porque nadie la vuelve a revisar.
+
+Se implementó con **triggers**, que sí aplican a todo el mundo. El `REVOKE` sigue siendo deseable
+como segunda capa y quedó como **T-007**, porque crear un rol sin privilegios toca
+`docker-compose`, `.env`, el despliegue y el CI — más de lo que cabe en una tarea.
+
+### Append-only, verificado en la forma más fuerte posible
+
+Las tres operaciones se probaron **conectado como el superusuario** (`polo`, `usesuper = t`):
+
+| Operación | Resultado |
+|---|---|
+| `INSERT` | ✅ permitido (es el único camino de escritura) |
+| `SELECT` | ✅ permitido |
+| `UPDATE` | ✅ **rechazado** — `audit_log es append-only: la operacion UPDATE no esta permitida (constitution P-07)` |
+| `DELETE` | ✅ **rechazado** |
+| `TRUNCATE` | ✅ **rechazado** |
+| La fila, tras los tres intentos | ✅ intacta y sin alterar |
+
+Y desde la aplicación (Prisma), los mismos tres caminos fallan, incluido `deleteMany`.
+
+**`TRUNCATE` necesitaba su propio trigger.** No dispara los de `DELETE`: sin esa tercera línea,
+un solo `TRUNCATE audit_log` habría vaciado la auditoría entera sin encontrar resistencia. Es
+justamente la operación que alguien usaría para «limpiar».
+
+### Waivers (HU-010-11)
+
+| Comprobación | Resultado |
+|---|---|
+| Publicar la versión 1 y luego la 2, cada una con su texto | ✅ la 2 no sobreescribe la 1 |
+| Repetir el número de versión dentro del mismo club | ✅ rechazado |
+| Versión cero o negativa | ✅ rechazado |
+| Una persona adulta acepta por sí misma | ✅ |
+| La misma persona acepta dos veces la misma versión | ✅ rechazado |
+| **El acudiente acepta en nombre del menor** (`person_id` ≠ `accepted_by_person_id`) | ✅ permitido |
+| La misma persona con aceptaciones de versiones distintas | ✅ permitido — eso es el historial |
+
+`body` guarda el texto completo, no una referencia a un archivo: si en 2029 se discute qué se
+aceptó en 2026, la respuesta tiene que ser ese texto exacto y no el vigente.
+
+### Auditoría: dos casos de modelado que importan
+
+1. **`club_id` es nulable.** Una acción de alcance de plataforma (crear un club) no cuelga de
+   ningún club. Verificado que se puede auditar con `club_id = NULL`. La capa de repositorio
+   debe tratar ese NULL explícitamente: esas filas sólo las ve un superadministrador.
+2. **`entity_id` no tiene llave foránea, a propósito.** Es polimórfico: la auditoría cubre
+   cualquier entidad del sistema y debe sobrevivir aunque la entidad ya no exista. `actor_user_id`
+   y `on_behalf_of_id` **sí** son llaves foráneas con `Restrict`, por la misma razón que en
+   T-002: un puntero roto haría inútil el registro justo cuando se necesita.
+
+### Límites honestos de la garantía
+
+- **Protege datos, no DDL.** `DROP TABLE` sí funciona — verificado al probar el `down`. Es
+  deliberado: revertir una migración es un acto administrativo explícito, no manipulación de
+  datos. La auditoría no puede editarse; el esquema sí puede revertirse.
+- **Tensión pendiente con la Ley 1581.** `docs/06` §8 exige poder anonimizar datos personales a
+  solicitud del titular, pero `before`/`after` pueden contener nombre o correo y hoy son
+  inmodificables. Ese flujo necesitará una vía privilegiada y auditada de redacción cuando se
+  construya. Se dejó **declarado** y no se debilitó el trigger por adelantado.
+- **Los tests que escriban en `audit_log` no pueden limpiar lo que escribieron.** Necesitan base
+  de datos nueva por corrida (Testcontainers), no limpieza posterior. Afecta a T-081.
+- Tras un `down`, la función `audit_log_append_only()` queda en la base sin sus triggers.
+  Inofensivo e idempotente (`CREATE OR REPLACE`); documentado en `docs/05` §6 como límite
+  conocido del generador de `down.sql`.
+
+### Pendiente declarado
+
+- Los 15 chequeos son, otra vez, prueba de humo **manual y desechable**. La red contra regresión
+  llega con T-081 (test que verifica que cada acción auditable deja exactamente una fila).

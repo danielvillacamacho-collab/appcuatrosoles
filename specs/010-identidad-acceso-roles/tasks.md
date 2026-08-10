@@ -19,10 +19,23 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   `verification.md` §T-002.
 - [x] **T-003** Agregar `Guardianship`, `MembershipCategory`, `MembershipAssignment`.
   Verificación: igual que T-002. ✅ 2026-08-10 — ver `verification.md` §T-003.
-- [ ] **T-004** Agregar `WaiverVersion`, `WaiverAcceptance`, `AuditLog` + migración SQL cruda
-  de permisos (`REVOKE UPDATE, DELETE` / `GRANT SELECT, INSERT` sobre `audit_log` para el rol
-  de aplicación). Verificación: un `UPDATE` manual contra `audit_log` con el usuario de
-  aplicación falla por permisos (test de integración que lo confirma).
+- [x] **T-004** Agregar `WaiverVersion`, `WaiverAcceptance`, `AuditLog` + hacer `audit_log`
+  append-only. Verificación: `UPDATE`, `DELETE` y `TRUNCATE` contra `audit_log` fallan.
+  ✅ 2026-08-10 — ver `verification.md` §T-004.
+  > **La tarea se partió al ejecutarla.** Decía «`REVOKE UPDATE, DELETE` … para el rol de
+  > aplicación», pero hoy la aplicación se conecta con un rol que es **superusuario y dueño de
+  > la tabla**, y en PostgreSQL ambos saltan toda comprobación de permisos: ese `REVOKE` no
+  > habría hecho nada y habría dejado una falsa sensación de garantía. Se implementó con
+  > **triggers**, que sí aplican a todo el mundo. El `REVOKE` sigue siendo deseable como
+  > segunda capa y va en **T-007**, porque crear el rol toca `docker-compose`, `.env`, el
+  > despliegue y el CI.
+- [ ] **T-007** Rol de base de datos de menor privilegio para la aplicación (segunda capa de
+  P-07). Crear un rol **no superusuario** con el que se conecte `apps/api`, dejar la propiedad
+  del esquema y las migraciones al rol administrador, y aplicar
+  `REVOKE UPDATE, DELETE ON audit_log` + `GRANT SELECT, INSERT`. Toca `docker-compose.yml`,
+  `.env.example`, `docs/07-deployment-ec2.md` y el workflow de CI. Verificación: conectado como
+  el rol de aplicación, `UPDATE audit_log` falla **por permisos** (no sólo por el trigger), y
+  las migraciones siguen corriendo con el rol administrador.
 - [ ] **T-005** ~~Constraint parcial `UNIQUE(club_id, email) WHERE email IS NOT NULL` en SQL
   crudo~~ → **corregido en T-001**: no hace falta SQL crudo. PostgreSQL trata los `NULL` como
   distintos en un índice único, así que el `@@unique([clubId, email])` normal de Prisma ya da
