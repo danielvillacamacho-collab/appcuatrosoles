@@ -1,0 +1,172 @@
+# TASKS-010 — Identidad, acceso y roles
+
+> Cada tarea: una sesión, un commit (`docs/10-operating-manual-solo.md` §2). Formato de
+> arranque de sesión sugerido:
+> `Lee CLAUDE.md, memory/constitution.md y specs/010-identidad-acceso-roles/tasks.md.
+> Implementa la tarea T-0XX. No toques nada fuera de su alcance. Al terminar: corre pnpm
+> lint, typecheck y test, y muéstrame el diff completo.`
+
+Si una tarea, al hacerla, resulta tocar más de 5 archivos o 400 líneas de diff: detente y
+avisa — la tarea estaba mal partida (`docs/10` §2).
+
+## A — Esquema y migraciones
+
+- [ ] **T-001** Agregar a `prisma/schema.prisma` los modelos `Person`, `UserAccount`,
+  `Session` (`plan.md` §1). Generar migración. Verificación: `pnpm db:migrate:dev` corre
+  limpio; migración revierte con `down`.
+- [ ] **T-002** Agregar `PersonOrganization`, `RoleAssignment`, `CommissionerDelegation`.
+  Verificación: migración `up`/`down` en CI contra Postgres real.
+- [ ] **T-003** Agregar `Guardianship`, `MembershipCategory`, `MembershipAssignment`.
+  Verificación: igual que T-002.
+- [ ] **T-004** Agregar `WaiverVersion`, `WaiverAcceptance`, `AuditLog` + migración SQL cruda
+  de permisos (`REVOKE UPDATE, DELETE` / `GRANT SELECT, INSERT` sobre `audit_log` para el rol
+  de aplicación). Verificación: un `UPDATE` manual contra `audit_log` con el usuario de
+  aplicación falla por permisos (test de integración que lo confirma).
+- [ ] **T-005** Constraint parcial `UNIQUE(club_id, email) WHERE email IS NOT NULL` en
+  `Person`, en SQL crudo dentro de la migración. Verificación: insertar dos personas del mismo
+  club con el mismo correo falla; con `email = NULL` no falla.
+- [ ] **T-006** Seed mínimo (`pnpm db:seed`): un club, tres personas con roles distintos
+  (`club_admin`, `commissioner`, `player`), una categoría de membresía. Verificación: correr
+  el seed dos veces no duplica nada (idempotente).
+
+## B — Dominio puro (`packages/domain/identity`)
+
+- [ ] **T-010** `accountStatusAllowsLogin(status)`. Tests: los 4 estados, nombre de test en
+  español citando HU-010-04.
+- [ ] **T-011** `canAssignRole(actor, targetRole, targetScope)`. Tests: cubre R-010-04 exacto
+  (admin de organización intentando rol de club → rechazado; club_admin asignando rol de
+  organización ajena → rechazado).
+- [ ] **T-012** `isInvitationLinkValid(invitation, now)`, con `Clock` inyectado. Tests: recién
+  creado, a las 6 días 23h, a los 7 días exactos, ya usado.
+- [ ] **T-013** `isWaiverAcceptanceCurrent(acceptance, currentVersion)`. Tests: sin
+  aceptación, aceptación de versión anterior, aceptación vigente.
+- [ ] **T-014** `resolvePrimaryPayer(guardianships, now)`. Tests: cero payers vigentes, uno,
+  dos solapados (debe fallar como dato inconsistente, no elegir uno arbitrariamente).
+
+## C — Infraestructura transversal (guards, decoradores, interceptor)
+
+- [ ] **T-020** `TenantGuard`: resuelve club por subdominio del host, `404` si no coincide con
+  ningún club activo, antes de tocar cualquier otro guard. Verificación: test con host
+  desconocido → `404` sin llegar a consultar usuario.
+- [ ] **T-021** `SessionGuard`: valida cookie de sesión, adjunta `CurrentUser` al request.
+  Verificación: sin cookie → `401`; cookie de sesión revocada → `401`.
+- [ ] **T-022** `@RequirePermission()` + `PermissionGuard`: falla el arranque de la app si una
+  ruta mutante no declara el decorador (`ADR-014` punto 4). Verificación: test que registra
+  una ruta sin decorador y confirma que la app no arranca.
+- [ ] **T-023** `AuditInterceptor` + `@Auditable()`: registra automáticamente antes/después en
+  mutaciones marcadas. Verificación: una mutación de prueba genera exactamente una fila en
+  `audit_log`.
+- [ ] **T-024** Filtro global de excepciones → formato de error único de `docs/03` §2, con
+  `requestId` (Pino) en cada respuesta de error.
+
+## D — Autenticación (`auth/`)
+
+- [ ] **T-030** `POST /auth/login`: camino feliz (HU-010-04, cuenta activa). Test de contrato
+  + test de camino feliz.
+- [ ] **T-031** `POST /auth/login`: mensaje de error genérico ante credencial incorrecta y
+  ante correo inexistente — mismo mensaje en ambos casos (R-010-07). Test que compara los dos
+  cuerpos de respuesta byte a byte.
+- [ ] **T-032** Bloqueo tras 5 intentos fallidos (`docs/08` `auth.failed_login_lockout_*`).
+  Test con `FixedClock`: al quinto intento bloquea; pasado el tiempo, desbloquea.
+- [ ] **T-033** Rechazo de login por estado `invited`/`suspended`/`archived` con mensaje
+  específico por estado (no el genérico de credenciales).
+- [ ] **T-034** `POST /auth/logout` y `POST /auth/logout-all`. Test: sesión cerrada no sirve
+  ni con "atrás" del navegador (repetir la misma request con la cookie vieja → `401`).
+- [ ] **T-035** `POST /auth/password/forgot`: mismo mensaje exista o no la cuenta (R-010-07);
+  encola `identity.send-password-reset` en la misma transacción (P-11).
+- [ ] **T-036** `POST /auth/password/reset`: token de un solo uso, expira en 1h, revoca las
+  demás sesiones al usarse (R-010-09). Tests: token usado dos veces, token expirado.
+- [ ] **T-037** `POST /me/password` (cambio estando dentro): valida contraseña actual, exige
+  las dos nuevas contraseñas coincidentes, rechaza si la actual es incorrecta.
+- [ ] **T-038** Política de complejidad de contraseña (mínimo 8, letras+números, rechaza lista
+  de comunes) + Argon2id con parámetros documentados (`plan.md` §7 riesgo de configuración).
+
+## E — Perfil propio (`me/`)
+
+- [ ] **T-040** `GET /me`: devuelve datos propios, roles, categoría, organizaciones — sin
+  exponer campos administrativos que el propio usuario no debe editar.
+- [ ] **T-041** `PATCH /me`: sólo permite editar teléfono, foto, preferencias de notificación.
+  Test: un intento de mandar `categoryId` o `roles` en el body no tiene efecto (se ignora, no
+  se rechaza con error — para no filtrar la existencia del campo a quien no debería tocarlo).
+- [ ] **T-042** `POST /me/email-change` + `POST /me/email-change/confirm`: correo anterior
+  sigue válido hasta confirmar el nuevo.
+- [ ] **T-043** `GET /me/sessions` y `DELETE /me/sessions/:id`.
+
+## F — Gestión de usuarios (`users/`)
+
+- [ ] **T-050** `POST /users`: creación por administrador, estado inicial `invited`, encola
+  `identity.send-invitation` en la misma transacción. Test de contrato + HU-010-01 camino
+  feliz.
+- [ ] **T-051** `POST /users` — rechazo por correo duplicado (HU-010-01, segundo criterio).
+- [ ] **T-052** `POST /users` — administrador de organización sólo puede asignar roles dentro
+  de su organización al crear (usa `canAssignRole` de T-011).
+- [ ] **T-053** `POST /users/:id/invite` (reenvío) — nueva invitación, el enlace anterior deja
+  de ser válido.
+- [ ] **T-054** `GET /users` con filtros (`status`, `role`, `organizationId`, `categoryId`,
+  `q`) + aislamiento: administrador de organización nunca ve usuarios de otra (HU-010-08,
+  segundo criterio) — test de aislamiento explícito.
+- [ ] **T-055** `GET /users/:id` y `PATCH /users/:id`. Test de aislamiento igual que T-054
+  sobre acceso directo por id (`404`, no `403`, si es de otro ámbito administrable — ver
+  `docs/03` §3 tabla de códigos).
+- [ ] **T-056** `POST /users/:id/suspend` y `/reactivate`: suspender revoca todas las sesiones
+  activas de inmediato (test explícito, no basta con cambiar el estado en base de datos).
+- [ ] **T-057** `POST /users/:id/archive` y `/restore`.
+- [ ] **T-058** Auto-protección: `suspend`/`archive`/retirar rol sobre el propio actor →
+  rechazado (R-010-05) sin importar que sea `superadmin`.
+- [ ] **T-059** `GET /users/export`: mismo filtro que el listado, formato Excel/CSV.
+
+## G — Roles (`roles/`)
+
+- [ ] **T-060** `POST /users/:id/roles`: usa `canAssignRole`; registra en `audit_log` con
+  quién/a quién/qué rol/cuándo (R-010-11).
+- [ ] **T-061** `DELETE /users/:id/roles/:roleAssignmentId`: retiro de rol, efecto inmediato
+  (test: una request inmediatamente posterior con ese rol ya no pasa el `PermissionGuard`).
+- [ ] **T-062** Test de integración específico de R-010-04: administrador de organización
+  intentando `role.assign` con `scope=club` → `403`.
+
+## H — Familias, membresía y waivers
+
+- [ ] **T-070** `POST /guardianships`: crea vínculo, cierra automáticamente el `endsOn` de un
+  payer anterior si el nuevo se marca `isPrimaryPayer=true` (mantiene el invariante "exactamente
+  uno vigente", `plan.md` §7).
+- [ ] **T-071** Job `identity.check-primary-payer-integrity` (cron diario): detecta
+  dependientes activos sin payer vigente, notifica al administrador. Test: fixture con el caso
+  roto, confirma que el job lo detecta.
+- [ ] **T-072** `MembershipAssignment`: alta y consulta de categoría vigente por persona
+  (histórico, nunca se sobreescribe — sólo se agrega fila nueva).
+- [ ] **T-073** `POST /waivers` (`club_admin`): publica nueva versión.
+- [ ] **T-074** `POST /waivers/current/accept`: acepta en nombre propio o, si la persona es
+  menor, registrado por el acudiente (`acceptedByPersonId`).
+- [ ] **T-075** Guard/helper reutilizable `assertWaiverAccepted(personId)` para que otros
+  módulos (prácticas, clases) lo llamen sin reimplementar la regla (R-010-12).
+
+## I — Auditoría
+
+- [ ] **T-080** `GET /audit-log` con filtros y aislamiento por ámbito del solicitante
+  (`organization_admin` sólo ve auditoría de su organización).
+- [ ] **T-081** Test transversal: cada acción de la lista de R-010-11 (crear, suspender,
+  archivar, asignar/retirar rol) deja **exactamente una** fila de auditoría, ni cero ni dos.
+
+## J — Notificaciones del módulo base
+
+- [ ] **T-090** Plantillas de correo (MJML) para: invitación, restablecimiento de contraseña,
+  contraseña cambiada, cuenta suspendida/reactivada.
+- [ ] **T-091** `NotificationPreference`: el usuario elige qué avisos no críticos recibe; las
+  de seguridad se envían siempre sin importar la preferencia (`docs/06` — regla dura).
+
+## K — End-to-end
+
+- [ ] **T-100** E2E: administrador crea usuario → invitación llega (mailbox de prueba) →
+  usuario define contraseña → inicia sesión → ve su panel.
+- [ ] **T-101** E2E: usuario olvida contraseña → restablece → sesiones anteriores quedan
+  revocadas.
+- [ ] **T-102** E2E: acudiente crea/administra un perfil de menor y ve el consolidado en su
+  estado de cuenta (stub de cobro, el módulo de pagos real es `specs/100`).
+
+## L — Cierre de módulo
+
+- [ ] **T-110** `verification.md`: marcar cada criterio de aceptación de `spec.md` con su test
+  correspondiente (nombre de archivo + nombre de test). Cualquier criterio sin test
+  identificado se resuelve antes de dar el módulo por terminado.
+- [ ] **T-111** Demostración en staging desde un celular real (`docs/10` §3 punto 4) antes de
+  continuar con el módulo 020.

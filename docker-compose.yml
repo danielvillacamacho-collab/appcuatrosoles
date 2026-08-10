@@ -1,0 +1,65 @@
+# docs/07-deployment-ec2.md §1. Una sola instancia, cuatro servicios de aplicación + Postgres.
+# Sin Redis (ADR-012) — colas y caché de sesión viven en Postgres.
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: polo
+      POSTGRES_PASSWORD: polo
+      POSTGRES_DB: polo_dev
+    volumes:
+      - polo_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U polo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "3000"
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    command: ["node", "dist/worker.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  caddy:
+    # ADR-003: la SPA se compila a estáticos y Caddy los sirve directamente — no hay proceso
+    # Node para el frontend en producción. El pipeline de CI/CD (docs/07 §6) copia el build de
+    # apps/web/dist a ./web-dist en la EC2 antes de este `docker compose up -d`.
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile
+      - ./web-dist:/srv/web:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+volumes:
+  polo_pgdata:
+  caddy_data:
+  caddy_config:

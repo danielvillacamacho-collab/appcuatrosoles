@@ -1,0 +1,794 @@
+
+DOCUMENTO CONSOLIDADO DE PRODUCTO
+Plataforma web de gestión de polo
+Club de Polo Los Pinos  ·  Organización Cuatro Soles
+Parte I — Documento funcional de producto
+Parte II — Módulo base: identidad, usuarios, roles y sesión
+
+Versión de trabajo · Aplicación web · Agosto de 2026
+
+Contenido
+Cómo leer este documento consolidado
+PARTE I — Documento funcional de producto
+1. Visión general
+2. Usuarios y roles
+3. Cuentas familiares y menores de edad
+4. Estructura: club, organizaciones y temporadas
+5. Handicaps
+6. Canchas y calendario
+7. Prácticas oficiales
+8. Copas y torneos
+9. Clases
+10. Coaches privados
+11. Caballos: caballada, bitácora y alquiler
+12. Pagos y cobros
+13. Políticas de cancelación, penalización y reembolso
+14. Comunicación y notificaciones
+15. Perfiles, historial y estadísticas
+16. Reglas y consideraciones transversales
+17. Qué NO incluye (por ahora)
+18. Preguntas para el club y Cuatro Soles
+PARTE II — Módulo base: identidad, usuarios, roles y sesión
+1. Modelo de identidad: conceptos base
+2. Catálogo de roles
+3. Estados y ciclo de vida del usuario
+4. Alta de usuarios (creación e invitación)
+5. Inicio de sesión
+6. Cierre de sesión
+7. Recuperación y cambio de contraseña
+8. Perfil propio
+9. Gestión de usuarios (administración)
+10. Asignación de roles y permisos
+11. Matriz de permisos del módulo base
+12. Seguridad, sesión y auditoría
+13. Notificaciones del módulo base
+14. Supuestos por confirmar y fuera de alcance
+Cómo leer este documento consolidado
+Este documento reúne, en un solo lugar, todo lo trabajado hasta ahora para la plataforma web de gestión de polo del Club Los Pinos y la organización Cuatro Soles. Está organizado en dos partes:
+Parte I — Documento funcional de producto: la visión completa de lo que hará la plataforma, en lenguaje sencillo, pensada para que el club y Cuatro Soles la lean, validen y comenten.
+Parte II — Módulo base: la especificación detallada de las funcionalidades fundamentales (identidad, usuarios, roles, sesión), más técnica, que sirve de cimiento para el desarrollo y para los demás módulos.
+Es una plataforma web. Se usa desde el navegador, tanto en computador como en celular. No es una aplicación que se descargue de una tienda.
+A lo largo del texto encontrará recuadros de colores que conviene revisar con atención:
+Historia de usuario: Como rol quiero realizar una acción para lograr un objetivo (define para quién y para qué sirve una funcionalidad).
+Regla: una condición que el sistema siempre debe cumplir.
+Supuesto de producto: una decisión que proponemos como equipo de producto y que conviene validar con el club.
+Ejemplo: un caso concreto que ilustra cómo funcionaría algo.
+En la Parte II, además, cada funcionalidad clave incluye Criterios de aceptación en formato "Dado… cuando… entonces…", que definen cuándo se considera terminada y correcta.
+Le pedimos un favor al leer: marque lo que no coincida con la realidad del club y responda las preguntas del cierre de la Parte I. Ese aporte es lo que hará que la plataforma quede a la medida.
+
+PARTE I
+Documento funcional de producto
+La visión completa de la plataforma, para revisión del club y Cuatro Soles
+
+1. Visión general
+Hoy la vida del club se organiza en grupos de WhatsApp, mensajes sueltos y hojas de cálculo. Reservar una clase, apuntarse a una práctica, saber quién juega, cuadrar equipos parejos o llevar la cuenta de lo que cada quien paga se vuelve lento y confuso. La plataforma reúne todo eso en un solo lugar ordenado.
+Qué resuelve, en una frase por área
+Área
+Qué logra
+Prácticas
+Publicarlas, que la gente se postule, armar equipos parejos y planear los chukkers, con confirmación o cancelación automática.
+Copas y torneos
+Organizar competencias con varios formatos, inscripción individual o por equipo, invitados, resultados y tabla de posiciones.
+Handicaps
+Guardar el internacional y el del club, editados solo por el comisario, con historial de cambios.
+Clases
+Agendar con cupos y lista de espera, vender paquetes en bolsa y aplicar la política de cancelación.
+Coaches privados
+Reservar y cobrar sesiones individuales con tarifa por coach.
+Caballos
+Bitácora de pensión, alimentación, herraje y salud básica de cada caballo.
+Canchas
+Reservar y ver la ocupación de las tres canchas para prácticas, clases y taqueos.
+Pagos
+Cobrar con link de pago y llevar el control de quién está al día.
+Comunicación
+Avisos y notificaciones que reemplazan los grupos de WhatsApp.
+Principios que guían el diseño
+Una sola verdad. Lo que está en la plataforma es lo oficial; se acaban las versiones distintas en cada chat.
+El comisario manda. En lo deportivo, la plataforma propone y avisa, pero la última palabra siempre es del comisario de polo.
+Todo configurable. Precios, cupos, reglas y tarifas se administran desde la plataforma sin depender de un técnico.
+Preparada para crecer. Hoy se optimiza para Los Pinos y Cuatro Soles, pero admite que existan otras organizaciones en el futuro.
+
+2. Usuarios y roles
+La plataforma reconoce distintos tipos de usuario y a cada uno le muestra lo que le corresponde. Un mismo usuario puede tener más de un rol (por ejemplo, un socio que también es profesor).
+Categorías de personas que juegan y aprenden
+Categoría
+En qué se distingue
+Estudiante
+Toma clases. Juega prácticas solo cuando se le habilita como "apto para práctica", según su nivel.
+Miembro temporal
+Acceso al club por un tiempo definido, con cuota y condiciones propias.
+Miembro permanente
+Acceso estable, con más libertad para jugar prácticas.
+Socio
+La categoría con mayor acceso: prácticas, copas y todo lo demás, con tarifas propias.
+Jugador invitado
+Persona externa que no pertenece al club ni a una organización; se le invita a copas puntuales y puede tener tarifa especial.
+Las diferencias entre categorías viven en tres planos: los derechos dentro del club, la cuota mensual y el valor por jugar (práctica, copa o taqueo). Las fronteras exactas las confirmaremos con ustedes.
+Supuesto de producto: cada persona tiene una única categoría vigente a la vez, pero la plataforma guarda el historial (por ejemplo, alguien que pasó de estudiante a miembro). Los cambios de categoría los hace un administrador y quedan registrados con fecha.
+Roles de organización y administración
+Rol
+Qué puede hacer
+Comisario de polo
+Máxima autoridad deportiva. Único que edita handicaps, aprueba/ajusta equipos, y valida resultados oficiales.
+Administrador del club (Los Pinos)
+Crea y publica prácticas y copas, gestiona canchas, categorías, tarifas y usuarios del club.
+Administrador de organización (Cuatro Soles)
+Gestiona clases, coaches, paquetes, cobros y la caballada de su organización.
+Profesor / instructor
+Dicta clases, marca asistencia y sugiere cuándo un estudiante queda apto para práctica.
+Petisero / groom
+Ve y registra tareas de cuidado de los caballos (alimentación, herraje, salud).
+Jugador
+Se postula a prácticas, se inscribe a copas, reserva clases y canchas, ve su historial.
+Tesorería / administración
+Ve el estado de cobros y pagos, concilia y exporta reportes.
+Supuesto de producto: los permisos funcionan por "lo que cada rol puede ver y hacer". Un mismo login puede acumular roles. Existe además un rol Superadministrador (dueño de la plataforma) que puede crear clubes y organizaciones y designar a los demás administradores.
+El caso especial del estudiante "apto para práctica"
+Un estudiante no se postula libremente a las prácticas: primero debe estar habilitado. El flujo propuesto es:
+El profesor o el director de la organización marca al estudiante como "apto para práctica", indicando hasta qué nivel puede jugar (por ejemplo, hasta prácticas de cierto handicap).
+Desde ese momento, al estudiante le aparecen las prácticas para las que califica y puede postularse.
+La habilitación se puede retirar en cualquier momento, y queda registro de quién la otorgó y cuándo.
+Ejemplo: Martín marca a un estudiante como apto para prácticas de hasta 6 goles. El estudiante ya ve y puede postularse a esas prácticas, pero no a las de nivel más alto.
+Cambios de categoría
+Un administrador puede cambiar la categoría de una persona (por ejemplo, de miembro a socio). El cambio queda registrado con fecha y quién lo hizo.
+Regla: el cambio de categoría aplica desde el siguiente ciclo de facturación; no se prorratea a mitad de mes, salvo que el club defina lo contrario. Las clases o reservas ya tomadas se respetan con la tarifa que tenían.
+Supuesto de producto: si la nueva categoría tiene una cuota distinta, el nuevo valor se refleja en la próxima cuota. Las deudas pendientes de la categoría anterior no se borran con el cambio: siguen en el estado de cuenta.
+Exención de responsabilidad (waiver)
+Por seguridad y respaldo legal, cada jugador acepta una exención de responsabilidad antes de participar. En el caso de un menor, la firma su acudiente.
+Se presenta al activar la cuenta o antes de la primera práctica o clase.
+Queda registrada con fecha y con la versión del texto aceptado.
+Si el club actualiza el texto, se vuelve a solicitar la aceptación.
+Supuesto de producto: el club define si la exención se firma una sola vez o se renueva por temporada.
+
+3. Cuentas familiares y menores de edad
+El polo es un deporte muy familiar y con escuela infantil. Muchos participantes son menores que no tienen (ni deberían tener) correo ni acceso propio al sistema. Para eso existe el modelo de cuenta titular con perfiles a cargo.
+Cómo funciona
+Cuenta titular: un adulto (padre, madre o acudiente) con su correo y contraseña.
+Perfiles a cargo: bajo esa cuenta, uno o más perfiles de menores sin acceso propio.
+El titular reserva clases, paga, firma las exenciones y ve el historial de cada menor a su cargo.
+Un menor puede tener su propia caballada, su bolsa de clases, su handicap de club y sus estadísticas, aunque no inicie sesión.
+Regla: todos los cobros de los perfiles a cargo se consolidan en el estado de cuenta del titular.
+Regla: al llegar a la mayoría de edad (o cuando el club lo decida), un perfil de menor puede convertirse en cuenta propia conservando todo su historial deportivo y de pagos.
+Supuesto de producto: un mismo menor puede estar vinculado a más de un acudiente (por ejemplo, padre y madre); en ese caso se define quién es el pagador principal. La edad hasta la cual se maneja como perfil de menor la define el club.
+Ejemplo: María administra a sus dos hijos: les reserva las clases, paga todo desde su estado de cuenta y firma una sola vez la exención de cada uno. Cada hijo tiene su propio caballo y su saldo de clases.
+
+4. Estructura: club, organizaciones y temporadas
+En el polo, quien tiene suficientes caballos suele armar su propia organización, así que dentro de un club pueden convivir varias. La plataforma está hecha para eso: el club es el marco (canchas, prácticas oficiales, copas, comisario) y las organizaciones operan dentro (escuela, clases, caballada, equipos).
+Hoy la única organización con vocación de escuela y semillero es Cuatro Soles: allí la gente estabula caballos, paga clases y juega bajo el equipo Cuatro Soles. Se optimiza para Cuatro Soles y Los Pinos, dejando la puerta abierta a otras.
+Supuesto de producto: la plataforma maneja el concepto de "temporada" (por ejemplo, primer semestre 2026). Prácticas, copas, handicaps del club y estadísticas se agrupan por temporada, para poder cerrar un período y comparar históricos. Si el club no usa temporadas hoy, puede simplemente dejarse una temporada abierta permanente.
+
+5. Handicaps
+El handicap es la calificación de nivel de cada jugador. En el mundo del polo va de -2 (principiante) a 10 (los mejores del mundo), y el handicap de un equipo es la suma de los handicaps de sus jugadores. La plataforma guarda por cada jugador dos valores:
+Handicap internacional: el oficial del jugador.
+Handicap club: una versión suavizada que refleja mejor el nivel real dentro de Los Pinos.
+Quién los edita: únicamente el comisario de polo. Detrás puede haber un comité que decida, pero en la plataforma la única mano autorizada es la del comisario.
+Cuál se usa: al crear cada práctica o copa se elige cuál de los dos handicaps aplica para ese evento. No es fijo, se decide evento por evento.
+Supuesto de producto: cada cambio de handicap queda en un historial con fecha, valor anterior, valor nuevo y quién lo hizo. Así se puede ver la evolución de un jugador a lo largo del tiempo y se evitan discusiones sobre "con cuánto estaba jugando".
+Supuesto de producto: la plataforma admite medios goles (por ejemplo 0,5 o 1,5) tanto en internacional como en club, porque el handicap club suele moverse en pasos finos. Al sumar el handicap de un equipo se muestra el total exacto.
+Delegación del comisario (subcomisario)
+El comisario puede enfermarse, viajar o estar jugando un torneo y no poder estar frente a la pantalla. Para no bloquear la operación, puede delegar temporalmente su autoridad.
+Designa a un subcomisario por un período o para un evento, con los mismos permisos deportivos: editar handicaps, aprobar equipos y validar resultados.
+Regla: toda acción del subcomisario queda registrada como hecha por delegación, indicando quién la otorgó; la delegación tiene fecha de inicio y de fin.
+Cambios de handicap durante una copa
+Regla: un cambio de handicap no altera las copas ya en curso: los handicaps y los equipos quedan congelados al inicio de la copa y el nuevo valor aplica desde la siguiente (o desde cuando el comisario indique). Así no se desarman equipos ya inscritos y validados.
+
+6. Canchas y calendario
+El club tiene tres canchas, y casi todo lo que pasa ocurre en alguna de ellas: prácticas, clases, taqueos y copas. La plataforma ofrece un calendario central donde se ve la ocupación de las tres canchas.
+Reserva y ocupación
+Cada práctica, clase, copa o taqueo queda asociada a una cancha y a una franja horaria.
+El calendario muestra, por día y por cancha, qué hay programado, para evitar choques (que dos actividades pidan la misma cancha a la misma hora).
+Los administradores pueden bloquear una cancha por mantenimiento o riego, y entonces no se puede programar nada ahí en esa franja.
+Taqueos
+Un taqueo es una práctica informal de un jugador para entrenar. La plataforma permite reservar una cancha para taquear en las franjas libres, con su respectivo cobro si aplica.
+Supuesto de producto: los taqueos se reservan por franja y cancha, con un cupo máximo de jugadores por franja para no saturar la cancha, y con una tarifa que puede variar por categoría (socio, miembro, estudiante). Si el club prefiere que los taqueos sean libres y sin reserva, se puede desactivar esta regla.
+Supuesto de producto: el calendario se puede ver por día, semana y mes, y se puede filtrar por tipo de actividad (práctica, clase, copa, taqueo) y por cancha. Cada usuario ve resaltado aquello en lo que participa.
+Privacidad del calendario
+El calendario muestra la ocupación de las canchas, pero protege la información de terceros.
+Los eventos privados de otras personas (clases particulares, taqueos individuales, coach) se muestran como "Ocupado", sin nombre.
+Cada quien ve el detalle solo de lo suyo y de los eventos públicos del club (prácticas y copas).
+Regla: nadie debe poder deducir, a partir del calendario, quién toma clases o taquea a cierta hora.
+El cierre de una jornada completa por lluvia se maneja desde el módulo de políticas de cancelación (ver capítulo correspondiente).
+
+7. Prácticas oficiales
+Las prácticas son los partidos que organiza el club durante la semana. Es el corazón del día a día y donde más se siente hoy el desorden de WhatsApp.
+Creación y publicación
+El administrador del club (o el comisario) crea la práctica definiendo:
+Fecha, hora y cancha (1, 2 o 3).
+Número de chukkers: 6, 7 u 8.
+Handicap a usar: internacional o del club.
+Nivel o rango de handicap sugerido de los jugadores (para quién es la práctica).
+Número de jugadores objetivo y mínimo para que la práctica se realice.
+Hora de cierre de postulaciones y hora de decisión (confirmar o cancelar).
+La práctica se publica con anticipación (normalmente días, hasta una semana antes) y aparece en el calendario y en el tablero de los jugadores que califican.
+Postulación de jugadores
+Los jugadores que califican ven la práctica y se postulan con un clic.
+Cada jugador indica cuántos chukkers puede cubrir (según cuántos caballos llevará), porque no siempre alcanza para todos.
+El jugador puede retirar su postulación antes de la hora de cierre.
+Supuesto de producto: los estudiantes solo ven las prácticas para las que están habilitados como aptos y dentro de su nivel. Los medios hombres se postulan indicando que van a compartir puesto (ver más abajo).
+Confirmación o cancelación automática
+A la hora de decisión (por defecto las 6:00 p.m. del día de la práctica), la plataforma revisa si se alcanzó el mínimo de jugadores:
+Si hay suficientes, la práctica se confirma y todos reciben aviso.
+Si no, se cancela automáticamente y se avisa a todos, para que nadie prepare los caballos en vano.
+Ejemplo: Una práctica a 6 chukkers necesita mínimo 6 jugadores. A las 6:00 p.m. solo hay 4 postulados: la plataforma la cancela y notifica a los 4 que ya no habrá práctica.
+Armado y balanceo de equipos
+Con los jugadores confirmados, la plataforma propone automáticamente los equipos más parejos posibles según el handicap elegido. El comisario revisa, ajusta si quiere y aprueba. La propuesta busca que la suma de handicaps de ambos equipos quede lo más cercana posible.
+Regla de "medio hombre"
+Cuando dos jugadores comparten un mismo puesto (cada uno juega "medio hombre"), el handicap que cuenta para ese puesto es el más alto de los dos, no la suma ni el promedio.
+Ejemplo: Un puesto lo comparten un jugador de handicap 2 y otro de 4: ese puesto pesa 4 para balancear los equipos.
+Economía y estadística del medio hombre
+Además de la regla deportiva, se define lo operativo del puesto compartido:
+El cobro de la práctica para ese puesto se divide entre los dos medios hombres (por defecto, mitad y mitad), configurable.
+En las estadísticas, a cada medio hombre se le cuentan los chukkers que efectivamente jugó según la grilla, no la práctica completa.
+Supuesto de producto: si uno de los dos medios hombres no se presenta, el otro puede asumir el puesto completo y el cobro se ajusta; lo resuelve el comisario o el administrador.
+La grilla de chukkers
+Para reflejar la realidad de cada práctica, la plataforma ofrece una grilla: una tabla donde, chukker por chukker, se define qué jugador juega y en qué equipo.
+Por defecto se llena pareja: si la práctica es a 6 chukkers con 4 jugadores por equipo, todos juegan los 6.
+El comisario puede editar celda por celda: alguien que descansa chukkers por falta de caballos, un jugador principal que juega menos, o incluso alguien que juega en ambos equipos.
+En prácticas hay flexibilidad: el comisario puede permitir que un equipo con handicap alto juegue con solo 3 jugadores. (En copas esto no aplica: siempre 4 contra 4.)
+Asistente visual de balance en vivo
+Mientras el comisario arma la grilla, la plataforma le muestra en tiempo real el handicap de cada equipo y la diferencia entre ambos, para que vea al instante si quedó pareja. La plataforma sugiere y advierte; el comisario decide y guarda.
+Ejemplo: El comisario pasa a un jugador de handicap 5 al otro equipo y ve que la diferencia baja de 3 goles a 1 gol: ahora está más equilibrado.
+Después de la práctica
+Supuesto de producto: la plataforma permite registrar (opcionalmente) el resultado y marcar asistencia real, para dejar histórico de cuántas prácticas jugó cada quien. Esto alimenta estadísticas y sirve de insumo al comité de handicap. Si el club no quiere registrar resultados de práctica, se puede omitir.
+
+8. Copas y torneos
+Las copas son las competencias formales del club. Las crea el club y el comisario sigue siendo la máxima autoridad. Este es el módulo más completo de la plataforma.
+Creación de la copa
+Al crear una copa se define:
+Nombre, fechas y sedes (canchas).
+Handicap a usar (internacional o club) y si se juega "a la llana" o "por handicap" (ver más abajo).
+Modalidad de inscripción: individual o por equipo.
+Banda de handicap de la copa: mínimo y máximo por equipo (por ejemplo, de 6 a 8 goles).
+Formato de competencia (ver catálogo).
+Número de chukkers por partido y reglas de desempate.
+Tarifas de inscripción (por categoría y para invitados).
+Modalidades de inscripción
+Modalidad
+Cómo funciona
+Inscripción individual
+Cada persona se inscribe con su handicap y el club arma los mejores equipos posibles con los inscritos.
+Inscripción por equipo
+El club fija un mínimo y un máximo de handicap, y cada equipo llega ya armado cumpliendo esa banda.
+Jugadores invitados: las copas pueden incluir externos que no son socios ni miembros. La plataforma tiene un espacio para invitarlos, registrarlos con su handicap y cobrarles una tarifa distinta.
+Juego "a la llana" vs. "por handicap"
+En el polo, dos equipos de distinto nivel pueden emparejarse de dos maneras, y la plataforma soporta ambas:
+A la llana (open): ambos arrancan 0 a 0, sin ventaja. Se usa cuando los equipos tienen un nivel parecido.
+Por handicap: el equipo de menor handicap arranca con una ventaja de goles en el marcador, calculada por la diferencia de handicaps entre los equipos y el número de chukkers.
+Supuesto de producto: la plataforma calcula automáticamente los goles de ventaja cuando la copa es por handicap, siguiendo la fórmula estándar (un sexto de la diferencia de handicaps por el número de chukkers), y muestra el marcador inicial ya cargado. Si el resultado da fracción, se aplica el redondeo que el club defina.
+Ejemplo: Un equipo de 6 goles juega contra uno de 8, a 6 chukkers. La diferencia es 2; la ventaja para el equipo de 6 es 2 goles. El partido arranca 2 a 0 a favor del equipo de 6.
+Catálogo de formatos de competencia
+Según cuántos equipos participen, el club elige un formato. La plataforma incluye estos formatos estándar:
+Formato
+En qué consiste
+Todos contra todos (a la americana)
+Cada equipo juega contra todos; se suman puntos y con la tabla se definen las finales. Ideal para pocos equipos.
+Eliminación directa
+El que pierde queda fuera; el que gana avanza hasta la final. Rápido, bueno para muchos equipos.
+Doble eliminación
+Un equipo debe perder dos veces para quedar fuera (llave de ganadores y de perdedores).
+Grupos + eliminatoria
+Primero fase de grupos (todos contra todos) y los mejores pasan a las llaves finales.
+Copa libre
+Solo inscripción y equipos; el club lleva el avance por fuera. Opción de respaldo cuando ningún formato encaja.
+Las dos coronas
+En el polo suelen convivir dos definiciones: la Copa principal (a la llana) y la Copa de handicap (contando la ventaja). La plataforma contempla ambas en paralelo, con sus dos campeones.
+Cobro de la inscripción
+La inscripción de una copa se puede cobrar de dos formas, a elección del club por cada copa:
+Al responsable del equipo: el capitán asume el total de la inscripción en su estado de cuenta.
+Pago dividido por jugador: la plataforma genera un sub-cobro para cada integrante, y el equipo queda "completo" cuando todos pagaron su parte.
+Regla: un equipo se considera inscrito en firme solo cuando su inscripción está pagada (el total, o todas las partes en el caso del pago dividido).
+Supuesto de producto: para jugadores invitados externos, el cobro puede recaer en quien los invita o en el propio invitado; se configura por copa.
+Fixture, resultados y posiciones
+La plataforma genera el fixture (calendario de partidos, llaves o grupos) según el formato elegido.
+A medida que se cargan los resultados, avanza automáticamente: llena las llaves, actualiza la tabla de posiciones y define finalistas.
+Todo queda visible para que jugadores y público sigan la copa desde la web.
+Supuesto de producto: en formatos de tabla (todos contra todos y grupos), los desempates siguen el estándar del polo: primero mayor número de partidos ganados, luego diferencia de goles (goles a favor menos en contra), luego goles a favor, y si persiste, sorteo o definición que el comisario determine. El club puede ajustar este orden.
+Supuesto de producto: quien carga los resultados es un rol autorizado (comisario o mesa de control), y el comisario valida el resultado oficial. Una vez validado, queda en firme y cualquier corrección queda registrada.
+Regla: los handicaps y los equipos quedan congelados al inicio de la copa (ver capítulo de Handicaps): un cambio de nivel durante el torneo no altera lo ya inscrito.
+Premiación y registro histórico
+Supuesto de producto: cada copa guarda su palmarés: campeón y subcampeón de cada corona, mejor jugador, mejor caballo (petisero) y goleador, si el club los otorga. Esto construye con el tiempo la historia deportiva del club, consultable por temporada.
+
+9. Clases
+Es el corazón comercial de Cuatro Soles. Reemplaza el "quién se apunta" de los grupos de WhatsApp por una agenda ordenada con cupos y cobros claros.
+Publicación y agenda
+Cada clase se publica con día, hora, profesor, tema y cancha.
+Cupo máximo por clase: límite de personas, porque no hay caballos infinitos.
+Lista de espera: si la clase se llena, quien quiera puede anotarse en la lista de espera.
+Cupo liberado con ventana para reclamar: si alguien cancela, el primero de la lista recibe un aviso y tiene una ventana (por defecto 1 hora, y nunca más allá del inicio de la clase) para confirmar. Si no responde, el cupo pasa al siguiente. Así nadie queda inscrito, ni se le descuenta la clase, sin haberse enterado.
+Todo lo gestiona el administrador de Cuatro Soles; los profesores ven su agenda y marcan asistencia.
+Paquetes de clases (bolsa)
+Cuatro Soles vende paquetes de 8, 10, 12 o 20 clases que funcionan como una bolsa: la persona paga por adelantado y se le descuenta una clase por cada asistencia.
+Los paquetes no vencen: la bolsa vive hasta agotarse.
+Supuesto de producto: hoy los paquetes no vencen. Como un saldo que no caduca puede volverse un pasivo difícil de gestionar y desincentiva el uso, dejamos abierta al club la opción de un vencimiento largo (por ejemplo, 12 meses) con posibilidad de reactivación. Es una decisión de negocio (ver preguntas del cierre).
+Todas las clases valen igual, sin importar el profesor.
+Cada persona ve cuántas clases le quedan en su bolsa.
+Supuesto de producto: una persona puede tener varias bolsas y la plataforma descuenta primero de la más antigua. Si alguien se queda sin saldo, no puede reservar hasta comprar otro paquete (o el administrador puede autorizar un saldo en negativo, si el club lo permite).
+Política de cancelación
+Si cancela con más de 12 horas de anticipación, la clase no se descuenta.
+Si no cancela a tiempo y no asiste, la clase se cuenta como tomada.
+Excepciones administrables: el administrador de Cuatro Soles puede perdonar una ausencia o anular el descuento por lluvia, caballo enfermo o calamidad.
+Ejemplo: Llueve y se cancela la jornada: el administrador marca que a nadie se le descuente esa clase de su bolsa.
+
+10. Coaches privados
+Los coaches privados son un servicio aparte de las clases grupales. A diferencia de estas, el valor del coach privado varía según el coach. La persona reserva la sesión desde la plataforma igual que una clase.
+Cada coach tiene su tarifa y su disponibilidad de horarios.
+La reserva ocupa una cancha y una franja, y se cobra según la tarifa del coach.
+Supuesto de producto: los coaches privados se pagan por sesión (no salen de la bolsa de clases grupales) y siguen la misma política de cancelación de 12 horas, salvo que el club defina otra. La disponibilidad de cada coach la administra el propio coach o el administrador de la organización.
+
+11. Caballos: caballada, bitácora y alquiler
+Muchos jugadores le pagan a Cuatro Soles la pensión de sus caballos y otros servicios. La plataforma lleva un registro de cada caballo y una bitácora sencilla centrada en costo y cuidado esencial, sin volverse una historia clínica veterinaria completa.
+Ficha del caballo
+Nombre, dueño, organización donde está estabulado y desde qué fecha.
+Estado (activo, en descanso, lesionado, etc.).
+Bitácora de cuidado y costo
+Costo de la pensión mensual.
+Tipo de concentrado y kilos o raciones por día.
+Herrajes y su frecuencia.
+Desparasitación.
+Vacunas principales (por ejemplo influenza, encefalitis y anemia) con sus fechas.
+Medicamentos y tratamientos puntuales, con su costo.
+Cada dueño ve la bitácora y el historial de servicios y pagos de sus caballos en un solo lugar, en vez de repartido en chats.
+Alquiler de caballos
+No todos tienen la caballada completa. El club y las organizaciones alquilan caballos para clases, prácticas, taqueos y copas: es un ingreso importante que conviene manejar dentro de la plataforma.
+Catálogo de caballos disponibles para alquiler (del club o de una organización), con su tarifa.
+Al postularse a una práctica o inscribirse a una copa, el jugador puede solicitar el alquiler de los caballos que le falten, indicando cuántos chukkers.
+La asignación evita que un mismo caballo se alquile a dos jugadores en la misma franja o chukker.
+El alquiler se cobra al jugador y queda en su estado de cuenta.
+Regla: un caballo en descanso, lesionado o ya asignado no aparece como disponible para alquilar.
+Supuesto de producto: el club define quién presta cada caballo (club u organización) y su tarifa, que puede variar por categoría del jugador y por tipo de evento. Si un tercero pone su caballo a alquilar, puede recibir una parte del ingreso, si el club maneja ese esquema.
+Ejemplo: Un invitado a una copa alquila 4 caballos del club para su equipo; la plataforma verifica que estén libres en esos chukkers y le carga el alquiler a su cuenta.
+Supuesto de producto: la plataforma puede avisar cuando se acerca una fecha importante del caballo (por ejemplo, próximo herraje o vacuna), a modo de recordatorio. Los petiseros pueden tener un tablero simple de tareas del día (dar concentrado, herrar, etc.) que marcan como hechas. Como las caballerizas suelen tener mala señal, si este tablero se incluye se construirá pensado para funcionar sin conexión (offline). Si esto excede lo que el club quiere hoy, se deja para una etapa posterior.
+
+12. Pagos y cobros
+El manejo del dinero se mantiene simple y sin complicar la facturación:
+Cobros por link: la plataforma genera un link de pago usando un proveedor externo (una pasarela tipo PayU u otra por definir).
+Sin facturación dentro de la plataforma: la factura la emiten el club o Cuatro Soles de forma manual, por fuera.
+Registro de estado: la plataforma sí lleva el control de qué se cobró, a quién, y si el link fue pagado o no.
+Qué se cobra a través de la plataforma
+Cuota mensual o de sostenimiento (según categoría).
+Paquetes de clases y sesiones de coach privado.
+Inscripción a copas y valor por jugar prácticas o taqueos.
+Pensión de caballos y servicios asociados (concentrado, herraje, medicamentos).
+Supuesto de producto: cada persona tiene un "estado de cuenta" donde ve lo que debe, lo que ya pagó y su historial. Administración ve, por categoría y por organización, quién está al día y quién no, y puede exportar esa información a Excel. La plataforma no reemplaza la contabilidad: es el registro de cobros y su estado.
+
+13. Políticas de cancelación, penalización y reembolso
+Este capítulo reúne, en un solo lugar, qué pasa cuando algo se cancela, para prácticas, clases, coaches y copas. Todas las reglas son configurables por el club.
+Cancelación por parte del jugador
+Clases y coaches: rige la ventana de 12 horas ya descrita; dentro de la ventana no se descuenta, fuera sí.
+Prácticas: retirar la postulación antes de la hora de cierre no genera ninguna penalización.
+Bajarse después de confirmada la práctica
+Caso crítico: la práctica se confirma a las 6:00 p.m. y un jugador cancela después, desbalanceando los equipos.
+Bajarse después de la confirmación genera una penalización configurable: por ejemplo, se cobra el valor de la práctica de todos modos, o se pierde prioridad en las próximas, o ambas.
+Regla: el sistema registra los "no se presentó" y las bajas tardías, para que el club pueda aplicar consecuencias de forma justa.
+Cierre por clima (botón de cierre masivo)
+El polo depende del clima, y cuando la jornada se cae hay que cancelar en bloque, no evento por evento.
+Un administrador cierra la jornada completa (o una franja) con un clic.
+Se cancela toda la programación afectada (prácticas, clases, taqueos, coaches) y se notifica a todos a la vez.
+Se revierten automáticamente los descuentos de la bolsa de clases y se marcan esos cobros como no aplicables.
+Regla: un cierre por clima nunca penaliza al jugador ni consume su bolsa de clases.
+Ejemplo: Llueve fuerte a las 2:00 p.m. El administrador cierra la tarde con un clic: se cancelan las 3 clases y la práctica de la jornada, se avisa a todos y a nadie se le descuenta nada.
+Cancelación por parte del club y reembolsos
+Cuando el club cancela un evento ya pagado, hay que definir el destino del dinero.
+El valor puede devolverse como reembolso, quedar como crédito o saldo a favor, o reponerse (por ejemplo, devolver la clase a la bolsa).
+Supuesto de producto: por defecto, lo que el club cancela se repone como crédito o saldo a favor (más simple que un reembolso a la pasarela); el club puede elegir el reembolso real caso a caso. Se confirma en las preguntas del cierre.
+
+14. Comunicación y notificaciones
+El objetivo declarado es reemplazar los grupos de WhatsApp. Para eso, la plataforma avisa de forma automática lo que a cada quien le interesa.
+Avisos automáticos
+Confirmación o cancelación de una práctica.
+Convocatoria a una práctica o copa y publicación de equipos.
+Recordatorio de clase o sesión de coach reservada.
+Aviso de cupo liberado en una clase (para la lista de espera).
+Recordatorios de pago y de fechas del caballo (herraje, vacuna).
+Supuesto de producto: los avisos llegan dentro de la plataforma (campana de notificaciones) y por correo electrónico. Se puede evaluar más adelante un enlace con WhatsApp o mensajes de texto para quienes prefieran ese canal. Cada usuario puede elegir qué avisos quiere recibir.
+Tablón del club
+Supuesto de producto: existe un tablón de anuncios del club y de cada organización, para comunicados generales (cambios de horario, eventos, noticias). Reemplaza los mensajes "para todos" del grupo de WhatsApp.
+
+15. Perfiles, historial y estadísticas
+Cada jugador tiene un perfil que reúne su vida deportiva en el club.
+Datos personales y categoría vigente.
+Handicap internacional y de club, con su historial de cambios.
+Caballos asociados.
+Prácticas jugadas, copas disputadas y títulos.
+Estado de cuenta y saldo de bolsa de clases.
+Supuesto de producto: el club dispone de un panel general (tablero) con indicadores: cuántas prácticas y clases se hicieron, ocupación de canchas, ingresos por concepto, morosidad, y participación por categoría. Sirve para tomar decisiones y ver la salud del club de un vistazo.
+
+16. Reglas y consideraciones transversales
+Todo administrable
+Estos valores no están "quemados": se administran desde la plataforma y pueden cambiar cuando el club lo decida.
+Precios: cuotas por categoría, valor por práctica/taqueo, inscripción a copas, paquetes de clases, tarifas de coach, pensión y servicios de caballos.
+Reglas: hora de decisión de prácticas (por defecto 6:00 p.m.), ventana de cancelación de clases (por defecto 12 horas), cupos por clase y por taqueo, mínimos de jugadores por práctica.
+Catálogos: categorías de miembros, tipos de concentrado, temas de clase, formatos de copa disponibles.
+Acceso, seguridad y datos
+Supuesto de producto: cada persona entra con su usuario y contraseña. La información sensible (pagos, datos de contacto) solo la ven los roles autorizados. Queda registro de las acciones importantes (quién cambió un handicap, quién validó un resultado, quién perdonó una clase), para transparencia.
+Supuesto de producto: al ser plataforma web, se usa desde cualquier navegador (computador o celular) sin instalar nada. Se diseña para verse bien en pantalla de celular, aunque no sea una app de tienda.
+Idioma y contexto local
+Supuesto de producto: la plataforma está en español, con los términos propios del polo que usa el club (chukker, taqueo, medio hombre, petisero), y con valores en pesos colombianos.
+
+17. Qué NO incluye (por ahora)
+Para que las expectativas queden claras, estos puntos quedan deliberadamente fuera de esta versión:
+Facturación electrónica: las facturas las hacen el club o la organización por fuera.
+Aplicación descargable de tienda (iOS/Android): es plataforma web.
+Registro de qué caballo juega cada chukker: por ahora no se modela (a confirmar si aportaría valor estadístico).
+Contabilidad completa: la plataforma registra cobros y su estado, no reemplaza al contador.
+Transmisión de video o marcador en vivo de partidos.
+
+18. Preguntas para el club y Cuatro Soles
+Para afinar la plataforma, les pedimos ayuda con estos puntos:
+Sobre personas y categorías
+¿Cuáles son exactamente las diferencias entre estudiante, miembro temporal, miembro permanente y socio (en derechos, cuota mensual y valor por jugar)?
+¿Quién puede marcar a un estudiante como "apto para práctica": solo el profesor, solo el director de la organización, o ambos?
+Sobre prácticas y copas
+¿La hora de decisión de las prácticas es siempre 6:00 p.m. o cambia según el día?
+¿Qué formatos de copa usan más y cuáles quieren tener sí o sí disponibles?
+¿Cómo definen hoy los desempates en las copas de tabla?
+¿Otorgan premios como mejor jugador o mejor caballo que quieran registrar?
+Sobre clases, canchas y caballos
+¿Los taqueos se cobran y se reservan, o son libres?
+¿Se puede reservar clase con saldo en cero (bolsa vacía) o nunca?
+¿Qué datos del caballo quieren ver además de los propuestos?
+¿Quieren que los petiseros usen la plataforma para sus tareas del día?
+Sobre pagos y comunicación
+¿Con qué proveedor de pagos prefieren trabajar para los links de cobro?
+¿Quieren notificaciones también por WhatsApp, o basta con correo y la campana dentro de la plataforma?
+General
+¿Falta algún tipo de evento, regla o situación del día a día que no aparezca en este documento?
+Sobre modelo de negocio
+¿Las bolsas de clases deben seguir sin vencer, o prefieren un vencimiento largo (por ejemplo, 12 meses) con reactivación? (afecta caja y uso)
+¿El club y/o las organizaciones alquilan caballos? ¿Con qué tarifas y quién recibe el ingreso (club, organización o dueño)?
+En copas por equipo, ¿el capitán asume el total de la inscripción o prefieren pago dividido por jugador?
+Sobre familias y menores
+¿Hasta qué edad se maneja a una persona como perfil de menor bajo una cuenta titular?
+¿Un menor puede tener dos acudientes (padre y madre)? ¿Quién sería el pagador principal?
+¿La exención de responsabilidad se firma una sola vez o se renueva por temporada?
+Sobre cancelaciones, penalizaciones y reembolsos
+¿Qué penalización quieren para quien se baja de una práctica ya confirmada (cobrar igual, perder prioridad, ambas)?
+¿Cuánto debe durar la ventana para reclamar un cupo liberado en clases (sugerimos 1 hora)?
+Cuando el club cancela un evento ya pagado, ¿prefieren reembolso, crédito o saldo a favor, o reponer la clase a la bolsa?
+Sobre operación y roles
+¿Quién puede actuar como subcomisario cuando el comisario no está?
+Al cambiar de categoría a mitad de mes, ¿aplican desde el siguiente ciclo (lo sugerido) o prefieren prorratear?
+Gracias por su tiempo y sus comentarios. Cada corrección que nos hagan hará que la plataforma quede realmente a la medida del Club Los Pinos y de Cuatro Soles.
+
+PARTE II
+Módulo base
+Identidad, usuarios, roles y sesión
+Especificación base para el desarrollo y los demás módulos
+
+1. Modelo de identidad: conceptos base
+Para evitar confusiones más adelante, separamos cuatro conceptos que suelen mezclarse:
+Concepto
+Qué es
+Persona
+Un individuo del mundo real: un jugador, un estudiante, un profesor, un petisero. Existe aunque todavía no tenga acceso al sistema.
+Cuenta de usuario
+El acceso de esa persona a la plataforma: su correo, su contraseña y su sesión. Una persona tiene, como máximo, una cuenta.
+Rol
+Lo que una cuenta PUEDE HACER (comisario, administrador, profesor, jugador, etc.). Una cuenta puede tener varios roles a la vez.
+Categoría de membresía
+La relación comercial/política con el club (estudiante, miembro temporal, miembro permanente, socio). Es un atributo de la persona, no un permiso.
+Regla: el rol define permisos; la categoría define tarifas y derechos. Son cosas distintas: un socio (categoría) puede además ser profesor (rol), y un estudiante (categoría) normalmente solo tiene el rol de jugador.
+Supuesto de producto: una persona puede existir en el sistema sin cuenta de usuario (por ejemplo, un caballo cuyo dueño aún no fue invitado, o un invitado externo que solo figura en una copa). Cuando esa persona necesite acceder, se le crea la cuenta y se vincula a la persona ya existente, sin duplicarla.
+Pertenencia: club y organizaciones
+Toda cuenta pertenece al club (Los Pinos).
+Una persona puede además estar vinculada a una o más organizaciones (hoy, Cuatro Soles) como estudiante, cliente o miembro de equipo.
+Los administradores de organización solo gestionan a las personas de su organización; el administrador del club ve a todos.
+Cuentas familiares y perfiles de menores
+El modelo de identidad contempla que una cuenta titular (un adulto) tenga a su cargo uno o más perfiles de menores que no tienen correo ni acceso propio.
+El perfil de menor es una Persona con su propia caballada, bolsa de clases, handicap de club y estadísticas, pero sin cuenta de usuario para iniciar sesión.
+El titular actúa en nombre de sus perfiles a cargo: reserva, paga, firma exenciones y consulta su historial.
+Regla: los cobros de los perfiles a cargo se consolidan en el estado de cuenta del titular. Un perfil de menor puede convertirse en cuenta propia al llegar a la mayoría de edad, conservando su historial.
+
+2. Catálogo de roles
+Estos son los roles del sistema. Una cuenta puede acumular varios (por ejemplo, comisario + jugador).
+Rol
+Alcance
+Resumen de lo que puede hacer
+Superadministrador
+Plataforma
+Crea clubes y organizaciones, designa administradores, configuración global. Uso interno.
+Administrador del club
+Club
+Gestiona usuarios, roles, categorías, tarifas, canchas, prácticas y copas del club.
+Administrador de organización
+Organización
+Gestiona clases, coaches, paquetes, cobros y caballada de su organización, y a sus personas.
+Comisario de polo
+Club
+Autoridad deportiva: edita handicaps, aprueba equipos, valida resultados.
+Profesor / instructor
+Organización
+Dicta clases, marca asistencia, sugiere aptitud de estudiantes.
+Petisero / groom
+Organización
+Ve y registra tareas de cuidado de caballos.
+Tesorería / administración
+Club u org.
+Ve estados de cobro y pago, concilia, exporta reportes.
+Jugador
+Club
+Se postula a prácticas, se inscribe a copas, reserva clases y canchas, ve su perfil.
+Supuesto de producto: el rol Jugador es el rol base: toda persona con cuenta activa lo tiene por defecto. Los demás roles se suman encima. El Superadministrador es un rol reservado al equipo que opera la plataforma, no del club.
+Delegación temporal (subcomisario)
+El rol de Comisario admite delegación temporal: puede designarse un subcomisario por un período o evento, con los mismos permisos deportivos.
+Regla: la delegación tiene fecha de inicio y de fin, y toda acción del subcomisario se registra como hecha por delegación, indicando quién la otorgó.
+
+3. Estados y ciclo de vida del usuario
+Una cuenta pasa por distintos estados a lo largo del tiempo:
+Estado
+Qué significa
+Puede iniciar sesión
+Invitado / pendiente
+Se creó la cuenta y se envió invitación, pero la persona aún no activa su acceso ni define contraseña.
+No
+Activo
+Cuenta en uso normal.
+Sí
+Suspendido
+Acceso bloqueado temporalmente (por mora, decisión del club, etc.). Los datos se conservan.
+No
+Archivado / inactivo
+La persona ya no pertenece al club. Se conserva el histórico, pero no puede acceder.
+No
+Transiciones típicas
+Invitado → Activo: cuando la persona acepta la invitación y define su contraseña.
+Activo → Suspendido: acción de un administrador (reversible).
+Suspendido → Activo: un administrador levanta la suspensión.
+Activo/Suspendido → Archivado: la persona deja el club (reversible por un administrador).
+Regla: el sistema no borra usuarios de forma definitiva desde la operación normal; los archiva. Así se preserva el histórico deportivo y de pagos. El borrado real solo procede por solicitud formal de datos personales (ver capítulo 12).
+
+4. Alta de usuarios (creación e invitación)
+En un club privado, las cuentas no se crean solas: las abre un administrador. Contemplamos dos caminos.
+Supuesto de producto: el auto-registro abierto (que cualquiera cree su cuenta desde internet) queda desactivado. Toda cuenta nace por creación o invitación de un administrador. Esto evita cuentas falsas y mantiene el control del club sobre quién entra.
+Camino A — Creación por administrador
+Historia de usuario: Como administrador del club u organización quiero crear la cuenta de una persona para darle acceso a la plataforma con los datos y roles correctos.
+Flujo
+El administrador abre "Usuarios" y elige "Crear usuario".
+Ingresa los datos mínimos: nombre completo, correo electrónico y categoría de membresía. Opcionalmente, teléfono y organización.
+Asigna uno o más roles (por defecto, Jugador).
+Guarda. El sistema crea la cuenta en estado "Invitado" y envía un correo de invitación con un enlace para definir contraseña.
+La persona abre el enlace, define su contraseña y la cuenta pasa a "Activo".
+Criterios de aceptación
+Dado un correo que ya existe en el sistema, cuando el administrador intenta crear otro usuario con ese mismo correo, entonces el sistema lo impide y avisa que el correo ya está registrado.
+Dado los datos mínimos completos, cuando el administrador guarda, entonces la cuenta se crea en estado Invitado y se envía la invitación.
+Dado una invitación enviada, cuando el administrador consulta el usuario, entonces ve el estado Invitado y la fecha de envío, y puede reenviar la invitación.
+Camino B — Invitación con enlace
+Variante del anterior en la que el administrador solo captura el correo (y opcionalmente el rol), y la propia persona completa sus datos al aceptar la invitación.
+Regla: el enlace de invitación tiene una vigencia limitada (por defecto 7 días). Si expira, la persona no puede usarlo y el administrador debe reenviarlo. Un enlace ya usado no vuelve a funcionar.
+Supuesto de producto: las personas que solo son "invitados externos" de una copa pueden registrarse como Persona sin cuenta (solo nombre y handicap), y únicamente se les crea cuenta si van a usar la plataforma. Así no obligamos a un externo a registrarse para figurar en un partido.
+
+5. Inicio de sesión
+Historia de usuario: Como usuario registrado quiero iniciar sesión con mi correo y contraseña para acceder a lo que me corresponde según mis roles.
+Flujo principal
+El usuario ingresa correo y contraseña y presiona "Entrar".
+Si las credenciales son correctas y la cuenta está Activa, accede y ve su panel según sus roles.
+Si no, ve un mensaje de error genérico ("correo o contraseña incorrectos") sin revelar cuál de los dos falló.
+Reglas
+Regla: el mensaje de error nunca indica si el correo existe o no, para no filtrar quién tiene cuenta.
+Regla: tras 5 intentos fallidos seguidos, la cuenta se bloquea temporalmente (por defecto 15 minutos) o exige verificación adicional, para frenar adivinación de contraseñas.
+Regla: una cuenta en estado Invitado, Suspendido o Archivado no puede iniciar sesión, y recibe un mensaje acorde (p. ej., "tu acceso está suspendido, contacta al club").
+Supuesto de producto: el inicio de sesión es por correo electrónico (no por nombre de usuario). Se ofrece la opción "recordarme en este dispositivo" para mantener la sesión abierta más tiempo. Más adelante puede sumarse el inicio con Google, si el club lo desea.
+Criterios de aceptación
+Dado una cuenta Activa con contraseña correcta, cuando el usuario inicia sesión, entonces accede a su panel.
+Dado una contraseña incorrecta, cuando el usuario intenta entrar, entonces ve un error genérico y no accede.
+Dado cuatro intentos fallidos previos, cuando el usuario falla el quinto, entonces la cuenta se bloquea temporalmente y se le informa cuándo podrá reintentar.
+Dado una cuenta Suspendida con contraseña correcta, cuando el usuario intenta entrar, entonces el sistema no lo deja y le explica que su acceso está suspendido.
+
+6. Cierre de sesión
+Historia de usuario: Como usuario con sesión iniciada quiero cerrar sesión para proteger mi cuenta cuando termino, sobre todo en equipos compartidos.
+Flujo
+El usuario elige "Cerrar sesión" desde el menú de su cuenta.
+El sistema finaliza la sesión y lo lleva a la pantalla de inicio de sesión.
+Reglas
+Regla: al cerrar sesión, la sesión de ese dispositivo deja de ser válida de inmediato; volver "atrás" en el navegador no reabre el contenido privado.
+Supuesto de producto: el usuario puede cerrar sesión en todos los dispositivos desde su perfil (útil si perdió el celular). También se cierra sesión automáticamente tras un período de inactividad prolongado (por defecto, varias horas), configurable.
+Criterios de aceptación
+Dado una sesión iniciada, cuando el usuario cierra sesión, entonces queda deslogueado y no puede ver contenido privado sin volver a entrar.
+
+7. Recuperación y cambio de contraseña
+Recuperar contraseña olvidada
+Historia de usuario: Como usuario que olvidó su contraseña quiero restablecerla desde mi correo para recuperar el acceso sin depender de un administrador.
+En la pantalla de inicio, el usuario elige "¿Olvidaste tu contraseña?" e ingresa su correo.
+El sistema envía un enlace de restablecimiento al correo, si ese correo tiene cuenta.
+El usuario abre el enlace, define una nueva contraseña y accede.
+Regla: el sistema siempre muestra el mismo mensaje ("si el correo está registrado, te enviamos un enlace"), exista o no la cuenta, para no revelar quién está registrado.
+Regla: el enlace de restablecimiento es de un solo uso y expira pronto (por defecto 1 hora). Al usarlo, se cierran las demás sesiones abiertas de esa cuenta.
+Cambiar contraseña estando dentro
+Historia de usuario: Como usuario con sesión quiero cambiar mi contraseña desde mi perfil para mantener mi cuenta segura.
+En su perfil, el usuario elige "Cambiar contraseña".
+Ingresa su contraseña actual y la nueva (dos veces).
+El sistema valida y guarda; opcionalmente cierra las otras sesiones.
+Requisitos de contraseña
+Supuesto de producto: la contraseña exige un mínimo razonable (por ejemplo, 8 caracteres, combinando letras y números) y se rechazan las más comunes. No se obliga a cambiarla periódicamente, práctica hoy desaconsejada. Se puede activar una verificación en dos pasos (código al correo o al celular) más adelante para roles administrativos.
+Criterios de aceptación
+Dado un correo registrado, cuando el usuario pide restablecer, entonces recibe el enlace y puede definir una nueva contraseña.
+Dado un enlace de restablecimiento ya usado, cuando el usuario intenta usarlo otra vez, entonces el sistema lo rechaza y ofrece solicitar uno nuevo.
+Dado la contraseña actual incorrecta, cuando el usuario intenta cambiarla desde el perfil, entonces el sistema no permite el cambio.
+
+8. Perfil propio
+Historia de usuario: Como usuario quiero ver y editar mis datos para mantener mi información al día.
+Qué puede ver y editar el propio usuario
+Editar: nombre visible, teléfono, foto, preferencias de notificación y contraseña.
+Ver (sin editar): su categoría de membresía, sus roles, su handicap internacional y de club, sus organizaciones y su estado de cuenta.
+Regla: el usuario NO puede cambiarse a sí mismo la categoría, los roles ni los handicaps: eso lo hacen los roles autorizados (administrador y comisario). Así se evita que alguien se auto-asigne permisos o se suba el nivel.
+Supuesto de producto: cambiar el correo de acceso requiere verificación: se envía un enlace de confirmación al correo nuevo, y el cambio solo se aplica al confirmarlo. Mientras tanto, el correo anterior sigue siendo el válido.
+Criterios de aceptación
+Dado un usuario en su perfil, cuando edita su teléfono y guarda, entonces el dato queda actualizado de inmediato.
+Dado un usuario en su perfil, cuando intenta cambiar su propio handicap, entonces no encuentra esa opción disponible (es de solo lectura para él).
+
+9. Gestión de usuarios (administración)
+Historia de usuario: Como administrador quiero ver, buscar y administrar las cuentas para mantener ordenada la comunidad del club.
+Listado de usuarios
+Tabla con nombre, correo, categoría, roles, organización y estado.
+Búsqueda por nombre o correo, y filtros por categoría, rol, organización y estado.
+Exportación del listado a Excel.
+Acciones sobre un usuario
+Acción
+Qué hace
+Quién
+Ver ficha
+Consulta datos, roles, estado y actividad.
+Administrador
+Editar datos
+Corrige nombre, correo, teléfono, categoría.
+Administrador
+Gestionar roles
+Asigna o retira roles (ver cap. 10).
+Administrador (según alcance)
+Suspender / reactivar
+Bloquea o restablece el acceso.
+Administrador
+Archivar / restaurar
+Marca la salida del club o la revierte.
+Administrador
+Reenviar invitación
+Reenvía el enlace a cuentas Invitadas.
+Administrador
+Restablecer contraseña
+Fuerza el envío de un enlace de restablecimiento.
+Administrador
+Regla: un administrador de organización solo ve y administra a las personas de su organización, y no puede otorgar roles de alcance de club (como comisario o administrador del club).
+Regla: un administrador no puede suspender, archivar ni quitarse roles a sí mismo, para evitar quedar sin acceso o bloqueos accidentales. Debe hacerlo otro administrador.
+Criterios de aceptación
+Dado un usuario Activo, cuando el administrador lo suspende, entonces el usuario deja de poder iniciar sesión y su estado pasa a Suspendido.
+Dado un administrador de organización, cuando intenta ver un usuario de otra organización, entonces no aparece en su listado.
+
+10. Asignación de roles y permisos
+Historia de usuario: Como administrador quiero asignar y retirar roles a una cuenta para que cada persona pueda hacer exactamente lo que le corresponde.
+Cómo funciona
+Cada cuenta tiene una lista de roles. Los permisos que ve el usuario son la suma de los permisos de todos sus roles.
+Asignar o retirar un rol tiene efecto de inmediato en lo que el usuario puede hacer.
+Toda asignación o retiro de rol queda registrada (quién, a quién, qué rol, cuándo).
+Regla: los permisos son acumulativos y nunca restrictivos entre sí: si un rol permite algo, el usuario puede hacerlo, aunque otro de sus roles no lo contemple. No existen roles que "quiten" permisos.
+Regla: solo el Superadministrador y el Administrador del club pueden otorgar roles de alcance de club (Comisario, Administrador del club, Tesorería del club). El Administrador de organización solo otorga roles dentro de su organización (Profesor, Petisero, y Jugador a sus personas).
+Ejemplo: A una persona se le asignan los roles Comisario y Jugador. Puede editar handicaps y aprobar equipos (por Comisario) y, a la vez, postularse a prácticas como cualquier jugador (por Jugador).
+Criterios de aceptación
+Dado una cuenta con rol Jugador, cuando el administrador le agrega el rol Profesor, entonces la persona pasa a poder dictar clases sin perder lo que ya hacía.
+Dado un administrador de organización, cuando intenta asignar el rol Comisario, entonces la opción no está disponible para él.
+
+11. Matriz de permisos del módulo base
+Resumen de quién puede hacer qué en las funciones base. ✓ = puede; · = solo lo propio o solo lectura; vacío = no aplica. (Los permisos de los módulos deportivo, de clases, caballos y pagos se detallan en sus documentos respectivos.)
+SA Superadmin  ·  AC Admin club  ·  AO Admin organización  ·  JU Jugador
+Capacidad
+SA
+AC
+AO
+JU
+Crear / invitar usuarios
+✓
+✓
+·
+
+Editar datos de usuario
+✓
+✓
+·
+
+Suspender / archivar usuario
+✓
+✓
+·
+
+Asignar roles de club
+✓
+✓
+
+
+Asignar roles de organización
+✓
+✓
+✓
+
+Editar categoría de membresía
+✓
+✓
+·
+
+Ver listado de usuarios
+✓
+✓
+·
+
+Exportar usuarios
+✓
+✓
+·
+
+Editar su propio perfil
+✓
+✓
+✓
+✓
+Iniciar / cerrar su sesión
+✓
+✓
+✓
+✓
+Ver registro de auditoría
+✓
+✓
+·
+
+Configurar reglas globales
+✓
+
+
+
+Nota: "·" en Admin organización significa "limitado a las personas de su organización". "·" en Ver auditoría significa "solo la actividad de su ámbito".
+
+12. Seguridad, sesión y auditoría
+Sesión
+La sesión se mantiene mientras el usuario esté activo; se cierra por inactividad prolongada o al cerrar sesión.
+El usuario puede ver sus sesiones/dispositivos activos y cerrarlas todas.
+Protección de datos
+Las contraseñas se guardan de forma cifrada (nunca en texto legible).
+Los datos sensibles (contacto, pagos) solo los ven los roles autorizados.
+El acceso viaja siempre por conexión segura (HTTPS).
+Registro de auditoría
+El sistema deja rastro de las acciones importantes, para transparencia y para resolver disputas:
+Cambios de handicap (quién, valor anterior y nuevo, cuándo).
+Creación, suspensión y archivado de usuarios.
+Asignación y retiro de roles.
+Validación de resultados de copas.
+Perdón de clases o ajustes de bolsa.
+Regla: el registro de auditoría es de solo lectura: nadie, ni siquiera un administrador, puede editar o borrar lo ya registrado.
+Supuesto de producto: la plataforma cumple con la protección de datos personales aplicable en Colombia (Ley 1581). Una persona puede solicitar la exportación o el borrado de sus datos personales; el borrado real se ejecuta por este canal formal, conservando de forma anónima lo mínimo necesario para la integridad de resultados históricos.
+
+13. Notificaciones del módulo base
+Las funciones base disparan estos avisos automáticos (por correo y por la campana dentro de la plataforma):
+Evento
+A quién
+Canal
+Invitación a la plataforma
+A la persona invitada
+Correo
+Restablecimiento de contraseña
+Al titular de la cuenta
+Correo
+Contraseña cambiada con éxito
+Al titular
+Correo + campana
+Cuenta suspendida o reactivada
+Al titular
+Correo + campana
+Nuevo rol asignado
+Al titular
+Campana
+Inicio de sesión desde un dispositivo nuevo
+Al titular
+Correo (opcional)
+Supuesto de producto: cada usuario controla, desde su perfil, qué notificaciones no críticas quiere recibir. Las de seguridad (restablecimiento, cambios de contraseña, suspensión) siempre se envían.
+
+14. Supuestos por confirmar y fuera de alcance
+Supuestos que conviene validar
+El acceso es por correo electrónico y no hay auto-registro abierto: las cuentas las crea/invita un administrador.
+El sistema archiva usuarios en vez de borrarlos; el borrado real solo por solicitud formal de datos.
+Los invitados externos de copas pueden existir como Persona sin cuenta.
+Bloqueo tras 5 intentos fallidos y vigencias de enlaces (invitación 7 días, restablecimiento 1 hora): valores ajustables.
+Verificación en dos pasos disponible más adelante, opcional para roles administrativos.
+Fuera de alcance de este módulo
+Inicio de sesión con redes sociales o Google (evaluable a futuro).
+Los permisos detallados de prácticas, copas, clases, caballos y pagos (se especifican en sus propios documentos).
+Facturación y contabilidad.
+Este documento base se irá afinando junto con el feedback del club y servirá de cimiento para los demás módulos y para la especificación técnica.

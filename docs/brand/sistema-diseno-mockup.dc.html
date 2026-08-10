@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#FAF6EE;}
+  a{color:#224331;text-decoration:underline;}
+  a:hover{color:#F64A1F;}
+</style>
+</helmet>
+<div style="font-family:'Montserrat',sans-serif;background:#FAF6EE;color:#1B241D;min-height:100%;">
+
+  <div style="background:#1B2E20;padding:64px 48px 56px;color:#FAF6EE;">
+    <div style="max-width:1200px;margin:0 auto;">
+      <div style="display:flex;align-items:baseline;gap:2px;font-weight:800;font-size:15px;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:28px;">
+        <span style="color:#FFCB00;">CUATRO</span><span style="color:#FAF6EE;">SOLES</span>
+      </div>
+      <div style="font-size:13px;letter-spacing:0.15em;text-transform:uppercase;color:#FFCB00;font-weight:600;margin-bottom:14px;">Sistema de diseño</div>
+      <h1 style="font-size:44px;font-weight:700;margin:0 0 16px;max-width:640px;line-height:1.15;">Fundamentos visuales para la plataforma de gestión de polo</h1>
+      <p style="font-size:17px;line-height:1.6;max-width:620px;color:#D9D2C2;margin:0;">Cálida, auténtica y sofisticada: el mismo tono de Cuatro Soles, adaptado a una interfaz clara y utilitaria para socios, jugadores y comisarios. "No gritamos lujo, lo susurramos."</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:28px;">
+        <sc-for list="{{ voiceWords }}" as="w" hint-placeholder-count="7">
+          <span style="border:1px solid #3B5643;border-radius:100px;padding:7px 16px;font-size:13px;color:#EFE9DA;">{{ w }}</span>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:1200px;margin:0 auto;padding:64px 48px;">
+
+    <section style="margin-bottom:72px;">
+      <div style="font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:#F64A1F;font-weight:700;margin-bottom:8px;">01 · Color</div>
+      <h2 style="font-size:28px;font-weight:700;margin:0 0 8px;">Paleta de marca</h2>
+      <p style="font-size:15px;color:#5B6058;max-width:640px;line-height:1.6;margin:0 0 28px;">Tomada directamente del brandbook Cuatro Soles 2025. El verde y el crema cálido dominan las superficies; el jonquil y el coquelicot se reservan para acentos y llamados a la acción.</p>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;">
+        <div>
+          <div style="height:100px;border-radius:10px;background:#224331;margin-bottom:10px;border:1px solid #00000010;"></div>
+          <div style="font-weight:700;font-size:14px;">Brunswick Green</div>
+          <div style="font-size:13px;color:#5B6058;">#224331 · primario</div>
+        </div>
+        <div>
+          <div style="height:100px;border-radius:10px;background:#FFCB00;margin-bottom:10px;border:1px solid #00000010;"></div>
+          <div style="font-weight:700;font-size:14px;">Jonquil</div>
+          <div style="font-size:13px;color:#5B6058;">#FFCB00 · acento</div>
+        </div>
+        <div>
+          <div style="height:100px;border-radius:10px;background:#F64A1F;margin-bottom:10px;border:1px solid #00000010;"></div>
+          <div style="font-weight:700;font-size:14px;">Coquelicot</div>
+          <div style="font-size:13px;color:#5B6058;">#F64A1F · acción</div>
+        </div>
+        <div>
+          <div style="height:100px;border-radius:10px;background:#000000;margin-bottom:10px;border:1px solid #00000010;"></div>
+          <div style="font-weight:700;font-size:14px;">Negro</div>
+          <div style="font-size:13px;color:#5B6058;">#000000 · texto</div>
+        </div>
+        <div>
+          <div style="height:100px;border-radius:10px;background:#FFFFFF;margin-bottom:10px;border:1px solid #E4DDCB;"></div>
+          <div style="font-weight:700;font-size:14px;">Blanco</div>
+          <div style="font-size:13px;color:#5B6058;">#FFFFFF · superficie</div>
+        </div>
+      </div>
+      <div style="margin-top:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+        <div>
+          <div style="height:64px;border-radius:10px;background:#FAF6EE;margin-bottom:10px;border:1px solid #E4DDCB;"></div>
+          <div style="font-weight:700;font-size:14px;">Crema (fondo)</div>
+          <div style="font-size:13px;color:#5B6058;">#FAF6EE · derivado, cálido</div>
+        </div>
+        <div>
+          <div style="height:64px;border-radius:10px;background:#1B241D;margin-bottom:10px;border:1px solid #E4DDCB;"></div>
+          <div style="font-weight:700;font-size:14px;">Tinta (texto)</div>
+          <div style="font-size:13px;color:#5B6058;">#1B241D · derivado de negro, más suave</div>
+        </div>
+        <div>
+          <div style="height:64px;border-radius:10px;background:#E4DDCB;margin-bottom:10px;border:1px solid #E4DDCB;"></div>
+          <div style="font-weight:700;font-size:14px;">Borde / división</div>
+          <div style="font-size:13px;color:#5B6058;">#E4DDCB · derivado del crema</div>
+        </div>
+      </div>
+    </section>
+
+    <section style="margin-bottom:72px;">
+      <div style="font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:#F64A1F;font-weight:700;margin-bottom:8px;">02 · Tipografía</div>
+      <h2 style="font-size:28px;font-weight:700;margin:0 0 8px;">Montserrat</h2>
+      <p style="font-size:15px;color:#5B6058;max-width:640px;line-height:1.6;margin:0 0 28px;">Única familia tipográfica de la marca. Geométrica, clara y accesible. En títulos y etiquetas se aplica tracking amplio (+150 → 0.15em en mayúsculas) para reforzar sofisticación y aire visual.</p>
+
+      <div style="background:#FFFFFF;border:1px solid #E4DDCB;border-radius:14px;padding:32px;margin-bottom:20px;">
+        <div style="font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:#F64A1F;font-weight:700;margin-bottom:18px;">Escala</div>
+        <div style="font-size:48px;font-weight:700;line-height:1.1;">Display 48/700</div>
+        <div style="font-size:32px;font-weight:700;line-height:1.2;margin-top:14px;">Título H1 32/700</div>
+        <div style="font-size:22px;font-weight:600;line-height:1.3;margin-top:14px;">Subtítulo H2 22/600</div>
+        <div style="font-size:16px;font-weight:400;line-height:1.6;margin-top:14px;max-width:520px;color:#3A4038;">Cuerpo de texto 16/400 — usado para descripciones, párrafos e información secundaria en tarjetas y formularios.</div>
+        <div style="font-size:13px;font-weight:500;line-height:1.5;margin-top:14px;color:#5B6058;">Caption 13/500 — metadatos, fechas, ayudas de campo.</div>
+        <div style="font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;margin-top:14px;color:#224331;">Etiqueta con tracking +150</div>
+      </div>
+
+      <div style="background:#FFFFFF;border:1px solid #E4DDCB;border-radius:14px;padding:32px;">
+        <div style="font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:#F64A1F;font-weight:700;margin-bottom:18px;">Pesos</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-weight:400;font-size:20px;">Regular — Aa Bb Cc 123</div>
+          <div style="font-weight:500;font-size:20px;">Medium — Aa Bb Cc 123</div>
+          <div style="font-weight:600;font-size:20px;">SemiBold — Aa Bb Cc 123</div>
+          <div style="font-weight:700;font-size:20px;">Bold — Aa Bb Cc 123</div>
+          <div style="font-weight:800;font-size:20px;">ExtraBold — Aa Bb Cc 123</div>
+        </div>
+      </div>
+    </section>
+
+    <section style="margin-bottom:72px;">
+      <div style="font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:#F64A1F;font-weight:700;margin-bottom:8px;">03 · Logo</div>
+      <h2 style="font-size:28px;font-weight:700;margin:0 0 8px;">Lockup de marca</h2>
+      <p style="font-size:15px;color:#5B6058;max-width:640px;line-height:1.6;margin:0 0 28px;">El wordmark es la expresión principal para producto. En la interfaz se usa como texto vivo (no imagen), en dos densidades. El isotipo del sol se reserva para espacios muy reducidos (avatar, favicon) y no se recrea aquí como vector — usar el archivo oficial del brandbook cuando esté disponible.</p>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">
+        <div style="background:#1B2E20;border-radius:14px;padding:36px 40px;display:flex;align-items:center;">
+          <div style="font-weight:800;font-size:26px;letter-spacing:0.1em;"><span style="color:#FFCB00;">CUATRO</span><span style="color:#FAF6EE;">SOLES</span></div>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #E4DDCB;border-radius:14px;padding:36px 40px;display:flex;align-items:center;">
+          <div style="font-weight:800;font-size:26px;letter-spacing:0.1em;"><span style="color:#F64A1F;">CUATRO</span><span style="color:#224331;">SOLES</span></div>
+        </div>
+        <div style="background:#FAF6EE;border:1px solid #E4DDCB;border-radius:14px;padding:22px 26px;display:flex;align-items:center;gap:10px;">
+          <div style="width:34px;height:34px;border-radius:50%;background:conic-gradient(from 0deg,#FFCB00,#FFE066,#FFCB00,#FFE066,#FFCB00,#FFE066,#FFCB00,#FFE066,#FFCB00);"></div>
+          <div style="font-weight:800;font-size:15px;letter-spacing:0.08em;color:#1B241D;">CS</div>
+        </div>
+      </div>
+    </section>
+
+    <section style="margin-bottom:72px;">
+      <div style="font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:#F64A1F;font-weight:700;margin-bottom:8px;">04 · Botones</div>
+      <h2 style="font-size:28px;font-weight:700;margin:0 0 8px;">Acciones</h2>
+      <p style="font-size:15px;color:#5B6058;max-width:640px;line-height:1.6;margin:0 0 28px;">El coquelicot se reserva para la acción principal de la pantalla (postularse, pagar, confirmar). El verde se usa para acciones secundarias de marca; el contorno y el texto para acciones terciarias.</p>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;">
+        <button style="background:#F64A1F;color:#FFFFFF;border:none;border-radius:10px;padding:14px 26px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:15px;cursor:pointer;">Postularme</button>
+        <button style="background:#224331;color:#FFFFFF;border:none;border-radius:10px;padding:14px 26px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:15px;cursor:pointer;">Guardar equipos</button>
+        <button style="background:transparent;color:#224331;border:1.5px solid #224331;border-radius:10px;padding:13px 26px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:15px;cursor:pointer;">Ver detalle</button>
+        <button style="background:transparent;color:#1B241D;border:none;padding:14px 10px;font-family:'Montserrat',sans-serif;font-weight:600;font-size:15px;cursor:pointer;text-decoration:underline;">Cancelar</button>
+        <button style="background:#E4DDCB;color:#9A9382;border:none;border-radius:10px;padding:14px 26px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:15px;cursor:not-allowed;">Cupo lleno</button>
+      </div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:16px;">
+        <button style="background:#F64A1F;color:#FFFFFF;border:none;border-radius:8px;padding:9px 18px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;cursor:pointer;">Pequeño</button>
+        <button style="background:#224331;color:#FFFFFF;border:none;border-radius:8px;padding:9px 18px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;cursor:pointer;">Pequeño</button>
+      </div>
+    </section>
+
+    <section style="margin-bottom:72px;">
+      <div style="font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:#F64A1F;font-weight:700;margin-bottom:8px;">05 · Formularios</div>
+      <h2 style="font-size:28px;font-weight:700;margin:0 0 8px;">Inputs y controles</h2>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:20px;max-width:720px;">
+        <div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Correo electrónico</div>
+          <input placeholder="nombre@correo.com" style="width:100%;box-sizing:border-box;border:1.5px solid #E4DDCB;border-radius:8px;padding:12px 14px;font-family:'Montserrat',sans-serif;font-size:15px;background:#FFFFFF;color:#1B241D;"/>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Campo enfocado</div>
+          <input value="Martín Vélez" style="width:100%;box-sizing:border-box;border:1.5px solid #224331;box-shadow:0 0 0 3px #22433122;border-radius:8px;padding:12px 14px;font-family:'Montserrat',sans-serif;font-size:15px;background:#FFFFFF;color:#1B241D;"/>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Con error</div>
+          <input value="correo@" style="width:100%;box-sizing:border-box;border:1.5px solid #F64A1F;border-radius:8px;padding:12px 14px;font-family:'Montserrat',sans-serif;font-size:15px;background:#FFF6F3;color:#1B241D;"/>
+          <div style="font-size:12px;color:#F64A1F;margin-top:5px;">Ingresa un correo válido</div>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Selector — cancha</div>
+          <select style="width:100%;box-sizing:border-box;border:1.5px solid #E4DDCB;border-radius:8px;padding:12px 14px;font-family:'Montserrat',sans-serif;font-size:15px;background:#FFFFFF;color:#1B241D;">
+            <option>Cancha 1</option>
+            <option>Cancha 2</option>
+            <option>Cancha 3</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:28px;align-items:center;margin-top:24px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;"><input type="checkbox" checked style="width:18px;height:18px;accent-color:#224331;"/> Acepto la exención</label>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:42px;height:24px;border-radius:100px;background:#224331;position:relative;"><div style="width:18px;height:18px;border-radius:50%;background:#FFFFFF;position:absolute;top:3px;right:3px;"></div></div>
+          <span style="font-size:14px;">Notificarme por correo</span>
+        </div>
+      </div>
+    </section>
+
+    <section style="margin-bottom:40px;">
+      <div style="font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:#F64A1F;font-weight:700;margin-bottom:8px;">06 · Estado y cards</div>
+      <h2 style="font-size:28px;font-weight:700;margin:0 0 8px;">Badges y tarjetas base</h2>
+      <p style="font-size:15px;color:#5B6058;max-width:640px;line-height:1.6;margin:0 0 24px;">Los estados (confirmada, pendiente, cancelada) y el handicap son los dos tipos de badge más usados en la plataforma.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px;">
+        <span style="background:#DDEDDF;color:#1F5C34;font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 14px;border-radius:100px;">Confirmada</span>
+        <span style="background:#FFF1CC;color:#8A6200;font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 14px;border-radius:100px;">Pendiente</span>
+        <span style="background:#FCDDD4;color:#B0330F;font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 14px;border-radius:100px;">Cancelada</span>
+        <span style="background:#224331;color:#FFCB00;font-size:12px;font-weight:800;padding:6px 14px;border-radius:100px;">HC +6</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:20px;max-width:720px;">
+        <div style="background:#FFFFFF;border:1px solid #E4DDCB;border-radius:14px;padding:20px;">
+          <div style="font-size:12px;color:#5B6058;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">Práctica · Cancha 2</div>
+          <div style="font-size:18px;font-weight:700;margin-bottom:6px;">Sábado 15 ago · 4:00 p.m.</div>
+          <div style="font-size:14px;color:#5B6058;">8 chukkers · Handicap internacional 4–8</div>
+        </div>
+        <div style="background:#1B2E20;color:#FAF6EE;border-radius:14px;padding:20px;">
+          <div style="font-size:12px;color:#FFCB00;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">Copa · Los Pinos</div>
+          <div style="font-size:18px;font-weight:700;margin-bottom:6px;">Copa Cuatro Soles 2026</div>
+          <div style="font-size:14px;color:#C9C3B2;">Grupos + eliminatoria · 6 equipos</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      voiceWords: ["Cálida","Auténtica","Invitacional","Aspiracional","Sofisticada","Cautivadora","Devota"]
+    };
+  }
+}
+</script>
+</body>
+</html>

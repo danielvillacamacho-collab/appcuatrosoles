@@ -1,0 +1,13 @@
+// Fuente única del esquema (docs/01-architecture.md §1). Los modelos concretos del módulo
+// 010 se agregan tarea por tarea siguiendo specs/010-identidad-acceso-roles/tasks.md (T-001
+// en adelante) y el detalle de specs/010-identidad-acceso-roles/plan.md §1 — no se pegan aquí
+// de una vez para no adelantarse al ciclo de una tarea, un commit (docs/10 §2).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}

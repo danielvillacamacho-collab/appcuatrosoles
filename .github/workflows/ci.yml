@@ -1,0 +1,85 @@
+# ADR-014 — barreras automáticas que reemplazan la revisión de código humana.
+# Cada gate reporta en español qué se rompió (docs/09-open-questions.md D-04).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality-gates:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: polo
+          POSTGRES_PASSWORD: polo
+          POSTGRES_DB: polo_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://polo:polo@localhost:5432/polo_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint (sin any, sin @ts-ignore, sin console.log — ADR-014 punto 10)
+        run: pnpm lint
+
+      - name: Typecheck estricto
+        run: pnpm typecheck
+
+      - name: Fitness functions de arquitectura (dependency-cruiser)
+        run: pnpm check:arch
+
+      - name: Migraciones — up, down, up contra Postgres real
+        run: |
+          pnpm --filter @polo/api exec prisma migrate deploy
+          pnpm --filter @polo/api exec prisma migrate reset --force --skip-seed
+          pnpm --filter @polo/api exec prisma migrate deploy
+
+      - name: Tests con umbrales de cobertura (docs/05 §2)
+        run: pnpm test:cov
+
+      - name: Prueba de aislamiento de tenant por endpoint (ADR-014 punto 3)
+        run: pnpm check:isolation
+
+      - name: Build
+        run: pnpm build
+
+      - name: Escaneo de secretos en el diff
+        uses: gitleaks/gitleaks-action@v2
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: quality-gates
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: npx playwright install --with-deps
+      - run: pnpm test:e2e

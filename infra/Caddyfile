@@ -1,0 +1,14 @@
+# docs/07-deployment-ec2.md §3. TLS automático por host — sin certbot, sin cron de renovación.
+# {$CLUB_DOMAIN} se define en el entorno de la EC2; localmente se usa localhost.
+
+{$CLUB_DOMAIN:localhost} {
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+
+	handle {
+		root * /srv/web
+		try_files {path} /index.html
+		file_server
+	}
+}

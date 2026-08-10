@@ -1,0 +1,28 @@
+/**
+ * docs/04-frontend-conventions.md §1 — extraído del brandbook (docs/brand/brandbook_text.txt),
+ * no inventado. Un color nuevo se agrega primero aquí, con su justificación en docs/04,
+ * antes de usarse en un componente.
+ */
+:root {
+  /* Colores de marca — Cuatro Soles Brand Guidelines 2025 */
+  --color-coquelicot: #f64a1f;
+  --color-brunswick: #224331;
+  --color-jonquil: #ffcb00;
+  --color-black: #000000;
+  --color-white: #ffffff;
+
+  /* Neutros de aplicación */
+  --color-cream: #efe9db;
+  --color-ink: #1b241d;
+  --color-forest: #16261c;
+  --color-bone: #faf6ee;
+  --color-sage: #b9c4b4;
+  --color-muted: #5b6058;
+
+  /* Tipografía — Montserrat es la única familia (brandbook §16) */
+  --font-sans: "Montserrat", system-ui, sans-serif;
+  --tracking-title: 0.15em;
+
+  /* Objetivo táctil mínimo (docs/04 §2) */
+  --tap-target-min: 44px;
+}
