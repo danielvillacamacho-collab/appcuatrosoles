@@ -1,4 +1,5 @@
 import type { INestApplication } from "@nestjs/common";
+import cookieParser from "cookie-parser";
 import { ApiExceptionFilter } from "./common/errors/api-exception.filter.js";
 import { requestIdMiddleware } from "./common/http/request-id.js";
 
@@ -26,6 +27,10 @@ export function configurarApp(app: INestApplication): INestApplication {
   }
 
   app.use(requestIdMiddleware);
+  // Sin firmar: la cookie de sesión es un identificador opaco de 256 bits que sólo vale contra la
+  // tabla `session` (ADR-005). Firmarla protegería contra manipulación de un valor que no
+  // significa nada por sí mismo, y agregaría un secreto más que rotar.
+  app.use(cookieParser());
   app.useGlobalFilters(new ApiExceptionFilter());
 
   return app;

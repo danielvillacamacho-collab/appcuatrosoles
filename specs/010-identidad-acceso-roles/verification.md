@@ -798,3 +798,85 @@ log. Eso es lo que confirma que el montaje de producción es el que se probó.
 - **El logger no tiene todavía correlación automática por solicitud**: hoy el `requestId` se
   escribe explícitamente en la línea de error. Cuando haya más código logueando, conviene un
   `AsyncLocalStorage` para que ninguna línea quede sin él.
+
+---
+
+## T-021 — `SessionGuard`: quién está del otro lado, y desde cuándo
+
+**Fecha:** 2026-08-10 · 10 tests de integración contra Postgres real · tres commits
+
+Primer componente del proyecto que combina base de datos, inyección de dependencias y una regla de
+seguridad. Desbordó el límite de 5 archivos de `CLAUDE.md`, así que se partió: **andamiaje**
+(`PrismaModule` + `ClockModule` + test de arranque de la aplicación completa), **reparaciones** que
+la tarea destapó, y **el guard**.
+
+### Todos los rechazos son el mismo rechazo
+
+Sin cookie, cookie inventada, sesión revocada, sesión vencida, sesión que vence en este mismo
+instante, cuenta suspendida y cuenta archivada: **siete caminos, un solo `401`**, sin `details` y
+sin mensaje distinto. `docs/03` §3 lo pide para el estado 401 —«nunca distingue "no existe" de
+"expiró"»— y la razón es P-12: un cuerpo que diferencie «esa sesión ya no existe» de «esa sesión
+venció» le confirma a quien está probando cookies robadas cuáles fueron válidas alguna vez. Hay un
+test que pide con cinco cookies distintas y exige que los cuerpos, sin el `requestId`, sean **uno
+solo**.
+
+### La segunda barrera que parece redundante y no lo es
+
+El guard comprueba el estado de la cuenta además del estado de la sesión, reutilizando
+`accountStatusAllowsLogin` (T-010). En teoría sobra: suspender una cuenta revoca sus sesiones en el
+mismo movimiento (T-056). Pero «en teoría» es justo lo que falla — si esa revocación se rompe, o
+queda una sesión emitida antes del cambio, el suspendido sigue entrando. El costo son **cero
+consultas extra** (el estado viene en el mismo `select`) y lo que compra es que el corte de acceso
+no dependa de que otra tarea haya hecho bien su parte.
+
+La traducción del enum de Prisma al vocabulario del dominio se hace con una función cuyo cuerpo es
+la identidad: hoy las palabras coinciden. Lo que trabaja es la **firma** — si mañana aparece un
+estado nuevo en el esquema, deja de compilar y obliga a decidir si esa cuenta puede entrar.
+
+### El token nunca toca la base de datos
+
+Se guarda `sha256(token)` y se busca por el hash. Hay un test que lo comprueba desde los dos lados:
+buscar por el token en claro no encuentra nada, buscar por su hash sí.
+
+**SHA-256 y no Argon2id**, al revés que las contraseñas, y la diferencia es deliberada: Argon2
+existe para encarecer el adivinado de un secreto de baja entropía elegido por una persona; este
+token son 256 bits aleatorios —no hay diccionario que probar— y se verifica en **cada solicitud**.
+Un hash costoso aquí sería una negación de servicio contra nosotros mismos.
+
+### El guard no escribe
+
+Un guard que actualiza `last_seen_at` convierte cada lectura en una escritura. El cierre por
+inactividad (`auth.session_idle_timeout_hours`, hoy «exacto por definir» en `docs/08` §9) entra con
+su propia tarea, junto con la decisión de cada cuánto refrescar.
+
+### Dos fallos del andamiaje, encontrados aquí
+
+1. **Vitest no emitía la metadata de decoradores.** NestJS resuelve el constructor leyendo lo que
+   produce `emitDecoratorMetadata`, y esbuild no la emite: `this.prisma` llegaba `undefined` y todo
+   respondía `500`. En producción funcionaba —ahí compila `tsc`—, o sea que el test mentía en la
+   dirección peligrosa. Se agregó `unplugin-swc` a las dos configuraciones de Vitest en vez de
+   anotar `@Inject(...)` en todo el proyecto, porque ese olvido produciría el mismo `500` pero en
+   producción.
+2. **`packages/domain` y `packages/contracts` apuntaban a `src/index.ts`.** Node no carga
+   TypeScript: al importar `@polo/domain` desde la API compilada, el proceso moría al arrancar. No
+   se había notado porque hasta hoy el único uso era `import type`, que se borra al compilar. Misma
+   familia que T-005: build verde, proceso que no arranca. Ahora apuntan a `./dist`.
+
+Ambos se verificaron levantando el binario compilado contra el Postgres de desarrollo, no sólo con
+la suite.
+
+### Pendientes declarados
+
+- **La caché de sesión de 60 segundos que pide `docs/06` §1 no se implementó**, y conviene decidirlo
+  con cuidado: choca de frente con «suspender corta el acceso de inmediato» (T-056) y con la
+  revocación de sesiones (R-010-09). Una caché sin invalidación explícita al revocar convierte
+  «inmediato» en «hasta un minuto después». Cuando entre, debe entrar **con** su invalidación.
+- **Falta CSRF.** `docs/06` §1 exige doble envío de token en toda mutación y **no hay ninguna tarea
+  que lo cubra** en `tasks.md`. Hoy no hay mutaciones, así que no hay agujero abierto, pero la
+  primera (T-030, login) ya lo necesita. Debe agregarse una tarea antes de la sección D.
+- **La cookie no lleva todavía prefijo `__Host-`** ni se emiten sus atributos (`httpOnly`,
+  `Secure`, `SameSite=Lax`): eso ocurre al **crear** la sesión, que es T-030. El nombre de la cookie
+  y el formato del token ya viven en `session-token.ts` para que login los reutilice y no invente
+  otros.
+- **El guard todavía no es global.** Se aplica con `@UseGuards(SessionGuard)`. La obligatoriedad
+  —que una ruta mutante sin declarar permiso impida arrancar la aplicación— es T-022.

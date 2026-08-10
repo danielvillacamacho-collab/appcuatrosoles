@@ -196,12 +196,14 @@ describe("configurarApp", () => {
     const montados: string[] = [];
     const appFalsa = {
       getHttpAdapter: () => ({ getInstance: () => ({}) }),
-      use: () => montados.push("middleware"),
+      use: (middleware: { name: string }) => montados.push(middleware.name),
       useGlobalFilters: () => montados.push("filtro"),
     } as unknown as INestApplication;
 
     expect(() => configurarApp(appFalsa)).not.toThrow();
-    expect(montados).toEqual(["middleware", "filtro"]);
+    // El orden es parte del contrato: el `requestId` tiene que existir antes que nada para que
+    // cualquier error posterior tenga identificador que reportar, y el filtro va al final.
+    expect(montados).toEqual(["requestIdMiddleware", "cookieParser", "filtro"]);
   });
 
   it("tampoco si el adaptador no expone servidor alguno", () => {

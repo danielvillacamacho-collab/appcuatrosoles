@@ -100,8 +100,14 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > roadmap; **(b)** implementar el guard contra un puerto `ClubDirectory` con un adaptador falso,
   > y dejar el adaptador de Prisma para 020. La función pura `resolveTenant(host, clubs)` ya está
   > especificada en `specs/140` §9 y puede escribirse en el dominio sin esperar a la tabla.
-- [ ] **T-021** `SessionGuard`: valida cookie de sesión, adjunta `CurrentUser` al request.
-  Verificación: sin cookie → `401`; cookie de sesión revocada → `401`.
+- [x] **T-021** `SessionGuard`: valida cookie de sesión, adjunta `CurrentUser` al request.
+  Verificación: sin cookie → `401`; cookie de sesión revocada → `401`. ✅ 2026-08-10 — 10 tests de
+  integración, ver `verification.md` §T-021.
+  > **Se partió en tres commits**, como manda `docs/10` §2 cuando una tarea desborda: (1) el
+  > andamiaje de NestJS que no existía —`PrismaModule` y `ClockModule`—, (2) dos fallos del
+  > andamiaje que la tarea destapó (Vitest sin metadata de decoradores, y los paquetes del
+  > workspace apuntando a `src/*.ts` en vez de a `dist`), y (3) el guard. Los siete rechazos
+  > posibles responden un `401` idéntico byte a byte.
 - [ ] **T-022** `@RequirePermission()` + `PermissionGuard`: falla el arranque de la app si una
   ruta mutante no declara el decorador (`ADR-014` punto 4). Verificación: test que registra
   una ruta sin decorador y confirma que la app no arranca.
