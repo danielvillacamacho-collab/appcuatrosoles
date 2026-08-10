@@ -27,13 +27,13 @@ export interface RoleGrantRequest {
 
 export type RoleGrantDenial =
   /** El rol no existe en ese ámbito (p. ej. un comisario «de organización»). */
-  | "rol_no_admite_ese_ambito"
+  | "role_scope_invalid"
   /** `platform` exige `scopeId` nulo; `club` y `organization` exigen uno. */
-  | "ambito_incoherente"
+  | "scope_inconsistent"
   /** Falta el club del ámbito, sin el cual no se puede evaluar la autoridad de un `club_admin`. */
-  | "club_del_ambito_desconocido"
+  | "scope_club_unknown"
   /** El actor no tiene ninguna asignación que lo autorice a otorgar esto. */
-  | "actor_no_autorizado";
+  | "actor_not_authorized";
 
 /**
  * Roles de organización que un `organization_admin` puede otorgar dentro de **su** organización.
@@ -64,27 +64,27 @@ export function canAssignRole(
   request: RoleGrantRequest,
 ): Result<void, RoleGrantDenial> {
   if (!roleAllowsScope(request.role, request.scope)) {
-    return err("rol_no_admite_ese_ambito");
+    return err("role_scope_invalid");
   }
 
   if (request.scope === "platform") {
-    if (request.scopeId !== null) return err("ambito_incoherente");
+    if (request.scopeId !== null) return err("scope_inconsistent");
   } else if (request.scopeId === null) {
-    return err("ambito_incoherente");
+    return err("scope_inconsistent");
   }
 
   // Para un ámbito de club, el club del ámbito ES el ámbito: si llegan distintos, el dato viene mal.
   if (request.scope === "club" && request.clubId !== request.scopeId) {
-    return err("ambito_incoherente");
+    return err("scope_inconsistent");
   }
 
   if (request.scope !== "platform" && request.clubId === null) {
-    return err("club_del_ambito_desconocido");
+    return err("scope_club_unknown");
   }
 
   const autorizado = actor.roles.some((asignacion) => autoriza(asignacion, request));
 
-  return autorizado ? ok(undefined) : err("actor_no_autorizado");
+  return autorizado ? ok(undefined) : err("actor_not_authorized");
 }
 
 function autoriza(asignacion: RoleAssignmentRef, request: RoleGrantRequest): boolean {

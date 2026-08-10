@@ -523,7 +523,7 @@ operación real resulta incómoda — relajarla es una línea y su test.
    administrador del club otorga como administrador; quien es jugador *y* comisario sigue sin poder
    otorgar nada. Dos tests, uno por cada mitad de la regla.
 3. **Un rol sólo existe en su ámbito.** Un «comisario de organización» o un «superadministrador de
-   club» se rechazan como **datos incoherentes** (`rol_no_admite_ese_ambito`), no como falta de
+   club» se rechazan como **datos incoherentes** (`role_scope_invalid`), no como falta de
    permisos — distinguirlo importa porque son bugs distintos. `treasurer` es el único rol válido en
    dos ámbitos, y hay un test que lo comprueba recorriendo la tabla, así que si mañana alguien
    agrega otro rol de doble ámbito, se enterará.
@@ -544,7 +544,7 @@ Los más valiosos del conjunto, porque cubren combinaciones que nadie enumeró a
 
 Cuatro tests cubren el borde: ámbito de plataforma con identificador concreto, ámbito de club sin
 identificador, un rol de club cuyo club no coincide con su propio ámbito, y un rol de organización
-sin saber a qué club pertenece. El último devuelve `club_del_ambito_desconocido` en vez de adivinar:
+sin saber a qué club pertenece. El último devuelve `scope_club_unknown` en vez de adivinar:
 sin ese dato no hay forma de saber si un `club_admin` manda ahí, y **adivinar en una función de
 permisos es exactamente cómo se abren los agujeros**.
 

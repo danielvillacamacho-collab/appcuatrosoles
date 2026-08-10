@@ -33,7 +33,7 @@ describe("canAssignRole · R-010-04, el caso que motiva la regla", () => {
   it("un administrador de organización NO puede otorgar el rol de comisario", () => {
     const resultado = canAssignRole({ roles: [adminOrg1] }, enClub("commissioner"));
 
-    expect(resultado).toEqual({ ok: false, error: "actor_no_autorizado" });
+    expect(resultado).toEqual({ ok: false, error: "actor_not_authorized" });
   });
 
   it("un administrador de organización NO puede otorgar el rol de administrador del club", () => {
@@ -134,14 +134,14 @@ describe("canAssignRole · un rol sólo existe en su ámbito", () => {
   it("un comisario «de organización» no tiene sentido y se rechaza", () => {
     expect(canAssignRole({ roles: [superadmin] }, enOrg("commissioner"))).toEqual({
       ok: false,
-      error: "rol_no_admite_ese_ambito",
+      error: "role_scope_invalid",
     });
   });
 
   it("un superadministrador «de club» no tiene sentido y se rechaza", () => {
     expect(canAssignRole({ roles: [superadmin] }, enClub("superadmin"))).toEqual({
       ok: false,
-      error: "rol_no_admite_ese_ambito",
+      error: "role_scope_invalid",
     });
   });
 
@@ -161,7 +161,7 @@ describe("canAssignRole · datos incoherentes se rechazan antes de evaluar permi
         { roles: [superadmin] },
         { role: "superadmin", scope: "platform", scopeId: CLUB_A, clubId: null },
       ),
-    ).toEqual({ ok: false, error: "ambito_incoherente" });
+    ).toEqual({ ok: false, error: "scope_inconsistent" });
   });
 
   it("un rol de club sin identificador de ámbito es incoherente", () => {
@@ -170,7 +170,7 @@ describe("canAssignRole · datos incoherentes se rechazan antes de evaluar permi
         { roles: [superadmin] },
         { role: "commissioner", scope: "club", scopeId: null, clubId: null },
       ),
-    ).toEqual({ ok: false, error: "ambito_incoherente" });
+    ).toEqual({ ok: false, error: "scope_inconsistent" });
   });
 
   it("un rol de club cuyo club no coincide con su propio ámbito es incoherente", () => {
@@ -179,7 +179,7 @@ describe("canAssignRole · datos incoherentes se rechazan antes de evaluar permi
         { roles: [superadmin] },
         { role: "commissioner", scope: "club", scopeId: CLUB_A, clubId: CLUB_B },
       ),
-    ).toEqual({ ok: false, error: "ambito_incoherente" });
+    ).toEqual({ ok: false, error: "scope_inconsistent" });
   });
 
   it("un rol de organización sin saber a qué club pertenece no se puede evaluar", () => {
@@ -189,7 +189,7 @@ describe("canAssignRole · datos incoherentes se rechazan antes de evaluar permi
         { roles: [adminClubA] },
         { role: "instructor", scope: "organization", scopeId: ORG_1, clubId: null },
       ),
-    ).toEqual({ ok: false, error: "club_del_ambito_desconocido" });
+    ).toEqual({ ok: false, error: "scope_club_unknown" });
   });
 });
 
