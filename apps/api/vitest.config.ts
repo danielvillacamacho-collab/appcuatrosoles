@@ -3,6 +3,9 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     include: ["src/**/*.spec.ts"],
+    // Los tests del filtro de errores provocan 500 a propósito; sin esto, cada corrida escupe
+    // trazas de errores esperados y el ruido esconde los fallos de verdad.
+    env: { LOG_LEVEL: "silent" },
     coverage: {
       provider: "v8",
       // Ojo: declarar `exclude` reemplaza los patrones por defecto de Vitest (no los

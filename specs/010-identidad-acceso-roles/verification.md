@@ -715,3 +715,86 @@ existe para vigilar que la comparación como texto no se rompa.
   si lo hace con `now` en UTC reintroduce el desfase por el otro extremo.
 - Quien llame a esta función debe pasarle los vínculos de **un solo** dependiente y de su club: la
   función no puede verificarlo con los datos que recibe. Queda anotado en su firma.
+
+---
+
+## T-024 — Filtro global de excepciones: una sola forma de error en todo el API
+
+**Fecha:** 2026-08-10 · 12 tests · primera pieza de NestJS del proyecto
+
+### Por qué esta tarea y no T-020
+
+T-020 (`TenantGuard`) abre la sección C, pero está **bloqueada por dependencia**: resolver «club
+activo por subdominio» necesita la tabla `club`, y `schema.prisma` la declara como entregable del
+módulo **020**, que aún no tiene `spec.md`. Crearla desde aquí habría sido código de producción sin
+spec. Quedó anotada en `tasks.md` con las dos salidas posibles.
+
+T-024 es además el prerequisito real de los tres guards que siguen: `TenantGuard` responde `404`,
+`SessionGuard` responde `401` y `PermissionGuard` responde `403`. Sin el filtro primero, cada uno
+inventa su propio formato y después hay que unificarlos.
+
+### Lo que el filtro garantiza
+
+| Situación | Respuesta |
+|---|---|
+| `ApiException` (error de negocio nuestro) | su código de contrato, su mensaje y sus `details` |
+| `ZodError` (payload que no cumple su esquema) | `400 VALIDATION_FAILED` + qué campos fallaron |
+| Excepción de NestJS (`401`, `404` de ruta inexistente…) | **el estado sí, el mensaje no** |
+| Cualquier otra cosa | `500 INTERNAL_ERROR`, mensaje fijo, error real sólo en el log |
+
+**Descartar el mensaje de NestJS es la decisión que más protege.** Sus textos vienen en inglés y
+describen la infraestructura: `Cannot GET /users` le dibuja el mapa del API a quien lo escanea, y
+una `UnauthorizedException("Session cookie missing for user 42")` escrita por descuido en un
+servicio publicaría el identificador de un tercero. Hay un test por cada uno de esos dos casos, y
+otro que provoca un error con un nombre de columna real (`user_account.password_hash`) y exige que
+no aparezca en el cuerpo.
+
+Un test recorre las cinco familias de error y valida cada respuesta contra el esquema
+`ApiErrorResponse` de `packages/contracts` — el real, no una copia (`docs/03` §4: que compile no
+basta).
+
+### El `requestId`
+
+Se genera en un middleware que corre antes que nada, viaja en la cabecera `x-request-id` **y** en el
+cuerpo del error, y es lo único que se le entrega al usuario cuando algo se rompe. Verificado a mano
+sobre el binario compilado: la línea de Pino y la respuesta HTTP traen el mismo identificador.
+
+**Nunca se reutiliza el que manda el cliente**, aunque sería cómodo para correlacionar: dejaría que
+cualquiera repita un mismo identificador en miles de solicitudes y vuelva inútil la búsqueda justo
+durante un incidente. Si algún día hay un proxy de confianza que deba propagar el suyo, será una
+decisión explícita con su ADR.
+
+### El montaje vive aparte de `main.ts`
+
+`src/configure-app.ts` monta middleware y filtro, y lo llaman **tanto `main.ts` como los tests**. Es
+la lección de T-005 aplicada por adelantado: allá el build pasaba y la API no arrancaba porque nada
+probaba el arranque real. Un filtro global registrado sólo en `main.ts` produce el mismo problema al
+revés — los tests verían una forma de error que el usuario nunca recibe.
+
+Además de correr la suite, se levantó el binario compilado (`node dist/main.js`) y se pidió una ruta
+inexistente: `404` con mensaje en español, `requestId` en cabecera y cuerpo, y su línea JSON en el
+log. Eso es lo que confirma que el montaje de producción es el que se probó.
+
+### Tres hallazgos al verificar
+
+1. **`X-Powered-By: Express`** venía en todas las respuestas — le regala a quien escanea la lista
+   exacta de tecnologías que buscar en un boletín de CVE. Se apagó (una línea, con su test). El
+   endurecimiento completo de cabeceras sigue siendo una tarea aparte.
+2. **Faltaban `@types/express` y `@types/supertest`**, sin los cuales `typecheck` fallaba: el
+   proyecto nunca había escrito código que tocara el `Request` de Express. Agregados como
+   `devDependencies` de `apps/api`.
+3. **Una aplicación de Express es una función, no un objeto.** El `type guard` que evita castear el
+   servidor comprobaba `typeof === "object"` y por lo tanto no apagaba nada: el montaje seguía
+   corriendo, sin error, sin efecto. Lo atrapó el test de la cabecera, escrito un minuto antes —
+   ejemplo exacto de por qué la verificación va junto al código y no después. Quedó documentado en
+   el propio guard para que nadie lo "simplifique" de vuelta.
+
+### Pendientes declarados
+
+- **Los errores de Prisma no se traducen todavía.** `docs/03` §3 pide `409` para violación de
+  `UNIQUE` (`23505`) y de `EXCLUDE` (`23P01`). No se implementó porque no existe aún ningún
+  repositorio que los produzca, y una traducción sin caso real que la ejerza es una conjetura. Entra
+  con el primer repositorio (T-050 en adelante).
+- **El logger no tiene todavía correlación automática por solicitud**: hoy el `requestId` se
+  escribe explícitamente en la línea de error. Cuando haya más código logueando, conviene un
+  `AsyncLocalStorage` para que ninguna línea quede sin él.

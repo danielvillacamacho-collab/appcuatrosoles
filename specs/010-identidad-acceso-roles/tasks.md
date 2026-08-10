@@ -92,6 +92,14 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 - [ ] **T-020** `TenantGuard`: resuelve club por subdominio del host, `404` si no coincide con
   ningún club activo, antes de tocar cualquier otro guard. Verificación: test con host
   desconocido → `404` sin llegar a consultar usuario.
+  > ⛔ **Bloqueada por dependencia, no por dificultad (detectado 2026-08-10).** «Ningún club
+  > activo» exige la tabla `club`, y `schema.prisma` la declara explícitamente como entregable del
+  > **módulo 020**, que todavía no tiene `spec.md`. Escribirla desde aquí sería código de
+  > producción sin spec (`CLAUDE.md`, Spec Driven Development). Dos salidas posibles, a decidir:
+  > **(a)** escribir `specs/020` y crear ahí `club` antes de volver a esta tarea — es el orden del
+  > roadmap; **(b)** implementar el guard contra un puerto `ClubDirectory` con un adaptador falso,
+  > y dejar el adaptador de Prisma para 020. La función pura `resolveTenant(host, clubs)` ya está
+  > especificada en `specs/140` §9 y puede escribirse en el dominio sin esperar a la tabla.
 - [ ] **T-021** `SessionGuard`: valida cookie de sesión, adjunta `CurrentUser` al request.
   Verificación: sin cookie → `401`; cookie de sesión revocada → `401`.
 - [ ] **T-022** `@RequirePermission()` + `PermissionGuard`: falla el arranque de la app si una
@@ -100,8 +108,13 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 - [ ] **T-023** `AuditInterceptor` + `@Auditable()`: registra automáticamente antes/después en
   mutaciones marcadas. Verificación: una mutación de prueba genera exactamente una fila en
   `audit_log`.
-- [ ] **T-024** Filtro global de excepciones → formato de error único de `docs/03` §2, con
-  `requestId` (Pino) en cada respuesta de error.
+- [x] **T-024** Filtro global de excepciones → formato de error único de `docs/03` §2, con
+  `requestId` (Pino) en cada respuesta de error. ✅ 2026-08-10 — 12 tests, ver
+  `verification.md` §T-024.
+  > Se adelantó al resto de la sección C porque **T-020 quedó bloqueada** (ver su nota) y porque
+  > los tres guards que siguen responden errores: sin este filtro, cada uno inventaría su formato.
+  > El montaje quedó en `src/configure-app.ts`, compartido por `main.ts` y los tests, para que no
+  > se repita lo de T-005 (probar algo distinto de lo que corre en producción).
 
 ## D — Autenticación (`auth/`)
 
