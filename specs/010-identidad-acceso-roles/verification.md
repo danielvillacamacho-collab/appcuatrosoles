@@ -608,3 +608,48 @@ que la firma escrita sea la real.
 - **La invalidación del enlace anterior al reenviar** (T-053) no está aquí. Esta función decide
   sobre `sentAt` y `usedAt`; cómo se marca muerta la invitación previa es del modelo de datos y de
   su endpoint, y todavía no existe la tabla `Invitation` en `schema.prisma` — la crea T-050.
+
+---
+
+## T-013 — `isWaiverAcceptanceCurrent`: quién está cubierto por la exención
+
+**Fecha:** 2026-08-10 · 5 tests · dominio al 100 % de cobertura (57 tests en total)
+
+Ocho líneas de código. La decisión que importa es **contra qué se compara**.
+
+### Por identificador de versión, nunca por número
+
+El correlativo `version` de `waiver_version` es **por club** (`@@unique([clubId, version])`), así
+que «la versión 3» existe en todos los clubes a la vez. Una implementación que comparara números
+—o peor, `aceptada >= vigente`— daría por cubierta en Los Pinos a una persona que firmó el texto
+de otro club: una fuga entre inquilinos (P-05) escondida en un `>=` que a nadie le parecería
+sospechoso en una revisión. El identificador es único en toda la plataforma y no admite esa
+confusión. Hay un test explícito del caso, con dos versiones «3» de clubes distintos.
+
+### Fallar cerrado, por diseño
+
+La función recibe la aceptación **más reciente** de la persona, y que lo sea es responsabilidad de
+quien consulta. Si el llamador se equivoca y pasa una vieja, el resultado es `false`: se vuelve a
+pedir la aceptación. El error se paga con una pantalla de más, nunca con alguien jugando sin
+respaldo legal — que es el único desenlace inaceptable de esta regla.
+
+### Devuelve booleano, y aquí sí alcanza
+
+A diferencia de T-010 —donde el booleano suelto obligaba al controlador a reconstruir el orden de
+la regla— aquí no hay orden que esconder ni información que filtrar: los dos motivos de rechazo
+(nunca aceptó / aceptó una versión vieja) los distingue el llamador mirando si la aceptación es
+nula, y ambos llevan a la misma pantalla. Se respeta la firma del `spec.md` §9.
+
+### Lo que esta función deliberadamente no hace
+
+- **No elige cuál es la versión vigente.** «La de mayor correlativo ya publicada» es una consulta,
+  y vive en el repositorio (T-073). Si ese `SELECT` devolviera una versión con `publishedAt` en el
+  futuro, invalidaría la aceptación de todo el club: el riesgo es real pero es de allá, y queda
+  anotado para T-073.
+- **No contempla vencimiento por tiempo.** La política por defecto
+  `identity.waiver_renewal_policy` (`docs/08` §9) es «una vez; se repite sólo si el texto cambia»,
+  que es exactamente lo que hace comparar versiones. Una política tipo «revalidar cada año»
+  exigiría un `Clock` inyectado; está previsto en el comentario del código para cuando se pida.
+- **No sabe de menores ni de acudientes.** Quién firmó materialmente (`acceptedByPersonId`) es
+  evidencia legal que guarda la fila, no una condición de vigencia: al dominio le basta con que la
+  persona cubierta tenga aceptación de la versión vigente. El flujo del acudiente es T-074.

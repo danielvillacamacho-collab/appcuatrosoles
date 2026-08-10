@@ -73,8 +73,11 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > (`auth.invitation_link_validity_days`, `docs/08` §9), porque los 7 días son configuración
   > (P-04). Y el orden de las dos comprobaciones resultó tener consecuencia operativa: se mira
   > primero el uso y después el vencimiento.
-- [ ] **T-013** `isWaiverAcceptanceCurrent(acceptance, currentVersion)`. Tests: sin
-  aceptación, aceptación de versión anterior, aceptación vigente.
+- [x] **T-013** `isWaiverAcceptanceCurrent(acceptance, currentVersion)`. Tests: sin
+  aceptación, aceptación de versión anterior, aceptación vigente. ✅ 2026-08-10 — 5 tests, ver
+  `verification.md` §T-013.
+  > Compara por **identificador** de versión, no por número: el correlativo `version` es por club,
+  > así que comparar números habría dado por cubierta en un club a quien firmó en otro (P-05).
 - [ ] **T-014** `resolvePrimaryPayer(guardianships, now)`. Tests: cero payers vigentes, uno,
   dos solapados (debe fallar como dato inconsistente, no elegir uno arbitrariamente).
 
