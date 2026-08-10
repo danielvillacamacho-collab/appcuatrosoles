@@ -11,7 +11,7 @@
     "test:cov": "vitest run --coverage",
     "test:int": "vitest run --config vitest.int.config.ts",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
-    "lint": "eslint src test",
+    "lint": "eslint src test prisma",
     "typecheck": "tsc -p tsconfig.json",
     "check:isolation": "vitest run --config vitest.isolation.config.ts"
   },

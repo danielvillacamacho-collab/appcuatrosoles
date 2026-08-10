@@ -341,3 +341,56 @@ GET /ready  → HTTP 200 {"status":"ok"}
 > **Lección para los gates.** Compilar no es correr. Falta un gate que arranque el proceso y le
 > pida `/health` — hoy eso lo cubriría el paso de E2E, que todavía no tiene contenido real. Queda
 > anotado como pendiente de la suite de E2E (T-100 en adelante).
+
+---
+
+## T-006 — Datos de ejemplo (`pnpm db:seed`)
+
+**Fecha:** 2026-08-10
+
+### Qué siembra
+
+Un **club ficticio** (`club-demo`): 5 categorías de membresía del catálogo estándar, la versión 1
+del waiver, y 3 personas con cuenta activa y un rol distinto cada una (`club_admin`,
+`commissioner`, `player`), cada una con su membresía vigente.
+
+Nada se llama Los Pinos ni Cuatro Soles, y ninguna tarifa es real. Es deliberado: la plataforma es
+un producto para clubes de polo, y hardcodear el cliente cero es el primer paso para no poder
+venderla (CLAUDE.md, contexto de negocio). Los datos reales entran por la interfaz de
+administración.
+
+### Idempotencia: automatizada, no verificada a mano
+
+| Comprobación | Resultado |
+|---|---|
+| Tras la primera corrida | 3 personas, 3 cuentas, 3 roles, 5 categorías, 3 membresías, 1 waiver |
+| Tras la segunda corrida | **exactamente los mismos conteos** |
+| Los tres roles son distintos y las tres cuentas quedan `active` | ✅ |
+
+Está en `test/integration/seed.int-spec.ts` (3 tests). Para poder escribirlo, el seed expone
+`sembrarClubDemo(prisma)` y recibe el cliente en vez de crearlo — así el test lo llama dos veces
+contra su propia base. Sin ese cambio, la única verificación posible habría sido manual, que es
+justo la deuda que este módulo lleva arrastrando.
+
+**Cómo se logra la idempotencia**, que no es trivial con ids aleatorios (UUID v7):
+- Donde hay una clave natural única, `upsert`: categorías por `(club_id, code)`, waiver por
+  `(club_id, version)`, persona por `(club_id, email)`, cuenta por `email`.
+- Donde la unicidad real es un **índice parcial** o un `EXCLUDE` (roles y membresías, T-002 y
+  T-003), `upsert` no sirve porque Prisma no sabe apuntar a esos constraints: se busca primero y
+  se crea sólo si falta.
+- El hash de contraseña **no** se reescribe en cada corrida: si alguien la cambió en desarrollo,
+  el seed no debería deshacerlo.
+
+### Detalles con intención
+
+1. **El primer administrador se otorga el rol a sí mismo** (`grantedById` = su propia cuenta).
+   No es un atajo: por definición no hay nadie antes del primer administrador. De ahí en adelante,
+   quien otorga siempre es otra cuenta.
+2. **El seed se niega a correr con `NODE_ENV=production`** salvo que se le pase
+   `SEED_ALLOW_PRODUCTION=true`. Crea cuentas con una contraseña conocida; que eso llegue a
+   producción por accidente es un incidente de seguridad, no una molestia.
+3. **`prisma/` entró en `typecheck` y en ESLint.** `docs/05` §8 dice que un seed desactualizado
+   respecto al esquema es un bug; ahora el compilador lo detecta en vez de que aparezca la próxima
+   vez que alguien lo corra.
+4. **Primer uso real de Argon2id**, verificado: el hash guardado valida la contraseña correcta,
+   rechaza la incorrecta, y el algoritmo es `argon2id` (no `argon2i` ni `argon2d`).

@@ -45,9 +45,11 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > `pnpm test:int`), porque era el primero del proyecto. Y al montarlo salió un bug latente de
   > la Fase 0: `apps/api` compilaba a CommonJS declarando `"type": "module"`, así que
   > `node dist/main.js` se caía al arrancar — el build pasaba y la API nunca había corrido.
-- [ ] **T-006** Seed mínimo (`pnpm db:seed`): un club, tres personas con roles distintos
+- [x] **T-006** Seed mínimo (`pnpm db:seed`): un club, tres personas con roles distintos
   (`club_admin`, `commissioner`, `player`), una categoría de membresía. Verificación: correr
-  el seed dos veces no duplica nada (idempotente).
+  el seed dos veces no duplica nada (idempotente). ✅ 2026-08-10 — ver `verification.md` §T-006.
+  > La idempotencia quedó **automatizada** (`test/integration/seed.int-spec.ts`), no verificada a
+  > mano: el seed expone `sembrarClubDemo(prisma)` para que un test pueda llamarla dos veces.
 
 ## B — Dominio puro (`packages/domain/identity`)
 

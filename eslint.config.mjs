@@ -44,9 +44,13 @@ export default tseslint.config(
     },
   },
   {
-    // El andamiaje de tests necesita reportar progreso por consola (levantar el contenedor,
-    // aplicar migraciones): sin eso, una corrida lenta parece colgada.
-    files: ["**/test/**"],
+    // `no-console` existe para que `console.log` no se cuele en el código del servidor
+    // (ADR-014 punto 10). Estos dos casos son lo contrario de eso:
+    //   - `test/**`: el andamiaje reporta progreso (levantar el contenedor, migrar); sin eso una
+    //     corrida lenta parece colgada.
+    //   - `prisma/**`: el seed es un script de línea de comandos cuyo trabajo *es* contar en la
+    //     consola qué sembró.
+    files: ["**/test/**", "**/prisma/**"],
     rules: {
       "no-console": "off",
     },
