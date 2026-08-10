@@ -12,6 +12,7 @@
     "build": "turbo run build",
     "test": "turbo run test",
     "test:cov": "turbo run test:cov",
+    "test:int": "turbo run test:int",
     "test:e2e": "turbo run test:e2e",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",

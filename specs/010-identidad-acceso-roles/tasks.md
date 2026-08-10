@@ -36,13 +36,15 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   `.env.example`, `docs/07-deployment-ec2.md` y el workflow de CI. Verificación: conectado como
   el rol de aplicación, `UPDATE audit_log` falla **por permisos** (no sólo por el trigger), y
   las migraciones siguen corriendo con el rol administrador.
-- [ ] **T-005** ~~Constraint parcial `UNIQUE(club_id, email) WHERE email IS NOT NULL` en SQL
+- [x] **T-005** ~~Constraint parcial `UNIQUE(club_id, email) WHERE email IS NOT NULL` en SQL
   crudo~~ → **corregido en T-001**: no hace falta SQL crudo. PostgreSQL trata los `NULL` como
   distintos en un índice único, así que el `@@unique([clubId, email])` normal de Prisma ya da
-  exactamente el comportamiento pedido (comprobado empíricamente el 2026-08-10: dos personas
-  del mismo club con `email = NULL` conviven; con el mismo correo no vacío, choca con `P2002`).
-  Lo que queda de esta tarea es **escribir el test automatizado** de esos dos casos, que hoy
-  sólo están verificados a mano.
+  exactamente el comportamiento pedido. Test automatizado escrito.
+  ✅ 2026-08-10 — ver `verification.md` §T-005.
+  > Esta tarea arrastró el **andamiaje de tests de integración** (Testcontainers + Postgres real,
+  > `pnpm test:int`), porque era el primero del proyecto. Y al montarlo salió un bug latente de
+  > la Fase 0: `apps/api` compilaba a CommonJS declarando `"type": "module"`, así que
+  > `node dist/main.js` se caía al arrancar — el build pasaba y la API nunca había corrido.
 - [ ] **T-006** Seed mínimo (`pnpm db:seed`): un club, tres personas con roles distintos
   (`club_admin`, `commissioner`, `player`), una categoría de membresía. Verificación: correr
   el seed dos veces no duplica nada (idempotente).

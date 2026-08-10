@@ -278,3 +278,66 @@ aceptó en 2026, la respuesta tiene que ser ese texto exacto y no el vigente.
 
 - Los 15 chequeos son, otra vez, prueba de humo **manual y desechable**. La red contra regresión
   llega con T-081 (test que verifica que cada acción auditable deja exactamente una fila).
+
+---
+
+## T-005 — Unicidad del correo, y el primer test automatizado del proyecto
+
+**Fecha:** 2026-08-10
+
+### Lo que se verificó (ya no a mano)
+
+Primer test que corre solo y falla si alguien rompe el comportamiento:
+`apps/api/test/integration/person-email.int-spec.ts`, 4 tests, contra PostgreSQL 16 real.
+
+| Test | Qué fija |
+|---|---|
+| Dos personas del mismo club con correo vacío | Conviven — los `NULL` son distintos entre sí |
+| Dos personas del mismo club con el mismo correo | Rechazado (`P2002`) |
+| El mismo correo en dos clubes distintos | Permitido — `person.email` es único **por club** |
+| El mismo correo de **acceso** en dos clubes | Rechazado — `user_account.email` es único **global** (`docs/09` D-05) |
+
+Los dos últimos existen para fijar una distinción que es fácil de confundir y romper: el correo
+*de contacto* de una persona y el correo *de acceso* de su cuenta son datos distintos con reglas
+distintas.
+
+### La tarea arrastró el andamiaje de pruebas de integración
+
+Era el primer test de integración del proyecto, así que hubo que montarlo: `test/global-setup.ts`
+levanta un PostgreSQL 16 con Testcontainers y le aplica las migraciones; `test/db.ts` entrega el
+cliente. Se corre con `pnpm test:int` y está en el CI.
+
+**Decisión de aislamiento, forzada por T-004.** Un contenedor por corrida (arrancar Postgres
+cuesta ~15 s) y los tests **etiquetan sus datos** con un `clubId` único en vez de limpiar entre
+tests. No es preferencia de estilo: `audit_log` es append-only, así que un test que escriba ahí no
+puede borrar lo que escribió, ni con `DELETE` ni con `TRUNCATE`. El patrón habitual de «limpiar
+entre tests» simplemente no funciona en este esquema, y descubrirlo ahora evita construir la suite
+entera sobre una base equivocada.
+
+### Bug latente encontrado: la API no arrancaba
+
+Al hacer que `typecheck` y ESLint cubrieran también `test/`, salió un problema de la Fase 0 que
+nada había detectado hasta ahora: **`apps/api` compilaba a CommonJS mientras su `package.json`
+declaraba `"type": "module"`**. Consecuencia:
+
+```
+node dist/main.js
+→ ReferenceError: exports is not defined in ES module scope
+```
+
+El `build` pasaba, el CI habría pasado, y **la API nunca había corrido**. Es el caso de libro de
+«verde en CI, roto en producción»: ningún gate lo cubría porque ninguno arrancaba el proceso.
+
+Corregido pasando `apps/api` a ESM de verdad (coherente con `packages/domain`, `packages/contracts`
+y `apps/web`, todos ESM), con `tsconfig.json` para desarrollo/lint (incluye `src` + `test`, no
+emite) y `tsconfig.build.json` para el build (sólo `src`). Verificado como debe verificarse:
+arrancando el proceso y pidiéndole las dos rutas.
+
+```
+GET /health → HTTP 200 {"status":"ok"}
+GET /ready  → HTTP 200 {"status":"ok"}
+```
+
+> **Lección para los gates.** Compilar no es correr. Falta un gate que arranque el proceso y le
+> pida `/health` — hoy eso lo cubriría el paso de E2E, que todavía no tiene contenido real. Queda
+> anotado como pendiente de la suite de E2E (T-100 en adelante).

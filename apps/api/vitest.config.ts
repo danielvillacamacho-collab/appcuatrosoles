@@ -16,6 +16,11 @@ export default defineConfig({
         "**/*.config.*",
         "src/main.ts", // bootstrap puro (docs/05 §9: no hay lógica de negocio que probar).
         "**/*.module.ts", // wiring de NestJS: metadata declarativa, sin lógica ejecutable.
+        // `test/` es el andamiaje de pruebas (contenedor, cliente Prisma, tests de
+        // integración), no código de producción. Excluirlo **acota qué se mide**; no baja
+        // ningún umbral, que sigue en 50 % (CLAUDE.md regla 12). Su propio correcto
+        // funcionamiento se comprueba porque los tests de integración pasan o fallan.
+        "test/**",
       ],
       thresholds: { lines: 50, statements: 50, branches: 50, functions: 50 },
     },

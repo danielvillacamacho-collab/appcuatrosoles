@@ -44,6 +44,14 @@ export default tseslint.config(
     },
   },
   {
+    // El andamiaje de tests necesita reportar progreso por consola (levantar el contenedor,
+    // aplicar migraciones): sin eso, una corrida lenta parece colgada.
+    files: ["**/test/**"],
+    rules: {
+      "no-console": "off",
+    },
+  },
+  {
     ignores: ["**/dist/**", "**/coverage/**", "**/*.config.*"],
   },
 );

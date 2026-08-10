@@ -5,13 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "nest start --watch",
-    "build": "nest build",
+    "build": "nest build -p tsconfig.build.json",
     "start": "node dist/main.js",
     "test": "vitest run",
     "test:cov": "vitest run --coverage",
+    "test:int": "vitest run --config vitest.int.config.ts",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
-    "lint": "eslint src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src test",
+    "typecheck": "tsc -p tsconfig.json",
     "check:isolation": "vitest run --config vitest.isolation.config.ts"
   },
   "dependencies": {
@@ -31,6 +32,7 @@
   "devDependencies": {
     "@nestjs/cli": "^10.4.0",
     "@nestjs/testing": "^10.4.0",
+    "@types/node": "^26.2.0",
     "@vitest/coverage-v8": "^2.1.0",
     "prisma": "^6.19.3",
     "supertest": "^7.0.0",

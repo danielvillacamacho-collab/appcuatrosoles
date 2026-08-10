@@ -1,0 +1,10 @@
+{
+  // Config de build: sólo `src`, y sí emite a `dist`. Los tests no se empaquetan.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src"]
+}

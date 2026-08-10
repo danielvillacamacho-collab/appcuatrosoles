@@ -76,6 +76,12 @@ jobs:
       - name: Tests con umbrales de cobertura (docs/05 §2)
         run: pnpm test:cov
 
+      # Levantan su propio PostgreSQL con Testcontainers (docs/05 §5), independiente del
+      # servicio `postgres` de arriba: cada corrida parte de una base nueva, que es la única
+      # forma de que un test que escribe en `audit_log` no arrastre el estado del anterior.
+      - name: Tests de integración contra PostgreSQL real
+        run: pnpm test:int
+
       - name: Prueba de aislamiento de tenant por endpoint (ADR-014 punto 3)
         run: pnpm check:isolation
 

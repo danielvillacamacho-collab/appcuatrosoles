@@ -66,6 +66,22 @@ Testcontainers, con las mismas extensiones y constraints que producción (inclui
 restricción de base de datos (doble reserva de cancha) no prueba nada — probaría que el mock
 hace lo que el mock dice, no que la base de datos lo impide.
 
+**Cómo está montado** (T-005): `apps/api/test/global-setup.ts` levanta el contenedor y aplica
+las migraciones; `apps/api/test/db.ts` entrega el cliente Prisma apuntado a esa base. Se corre
+con `pnpm test:int`, y los archivos se llaman `*.int-spec.ts` bajo `apps/api/test/integration/`.
+La URL se publica con `provide`/`inject` de Vitest, nunca se lee del `.env`: así un test no puede
+tocar por accidente la base de desarrollo.
+
+**Un contenedor por corrida, no por archivo.** Arrancar Postgres cuesta unos 15 segundos; hacerlo
+por archivo volvería la suite inutilizable. La contrapartida es que los archivos comparten la
+misma base.
+
+**Aislamiento sin limpiar: los tests etiquetan sus datos.** Un test **no** asume que una tabla
+está vacía ni cuenta filas globalmente: crea sus datos con un `clubId` único (`etiqueta()` de
+`test/db.ts`) y filtra por él. Esto no es una preferencia de estilo, es una necesidad descubierta
+en T-004: `audit_log` es append-only, así que un test que escriba ahí **no puede borrar lo que
+escribió**, ni con `DELETE` ni con `TRUNCATE`. Un patrón de «limpiar entre tests» no funcionaría.
+
 ## 6. Migraciones
 
 Toda migración se prueba en CI aplicando `up` y luego `down` contra Postgres real

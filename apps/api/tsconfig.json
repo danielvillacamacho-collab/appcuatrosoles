@@ -1,12 +1,17 @@
 {
+  // Config de desarrollo: cubre `src` **y** `test`, y no emite. Es la que usan `typecheck`,
+  // ESLint y el editor. El build usa `tsconfig.build.json`, que excluye los tests.
+  //
+  // `module: NodeNext` (heredado de la base) y no CommonJS: `apps/api/package.json` declara
+  // `"type": "module"`, así que Node interpreta el `dist` como ESM. Compilar a CommonJS con esa
+  // declaración hacía que `node dist/main.js` se cayera al arrancar con
+  // «exports is not defined in ES module scope» — el build pasaba y la API no corría.
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "CommonJS",
-    "moduleResolution": "Node",
-    "outDir": "dist",
-    "rootDir": "src",
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "types": ["node"],
+    "noEmit": true
   },
-  "include": ["src"]
+  "include": ["src", "test"]
 }
