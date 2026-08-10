@@ -7,6 +7,9 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     include: ["test/integration/**/*.int-spec.ts"],
+    // Mismo motivo que en `vitest.config.ts`: los errores provocados a propósito no deben
+    // ensuciar la salida, o el ruido esconde los fallos de verdad.
+    env: { LOG_LEVEL: "silent" },
     globalSetup: ["./test/global-setup.ts"],
     // Arrancar el contenedor y aplicar migraciones tarda; los tests en sí son rápidos.
     testTimeout: 30_000,
