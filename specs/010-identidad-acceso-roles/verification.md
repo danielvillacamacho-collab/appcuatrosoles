@@ -473,3 +473,85 @@ invitación (T-053), no un mensaje en la pantalla de ingreso.
    dejarlo permitido —o prohibido— por accidente.
 4. **El plan se corrigió, no se ignoró.** Preveía sólo un booleano; se anotó en `plan.md` por qué
    resultó insuficiente para su propio spec.
+
+---
+
+## T-011 — `canAssignRole`: quién puede otorgar qué rol
+
+**Fecha:** 2026-08-10 · 27 tests · dominio al 100 % de cobertura
+
+Es la función más delicada del módulo: un error aquí no es un bug de permisos, es una **escalada de
+privilegios**. Por eso tiene más tests que código y decide únicamente sobre datos explícitos.
+
+### La ambigüedad que había que resolver antes de escribir nada
+
+Dos documentos del propio repositorio se contradecían sobre si un `organization_admin` puede
+nombrar a **otro** `organization_admin`:
+
+| Fuente | Qué decía |
+|---|---|
+| `docs/06` §4 | `organization_admin` es «otorgado por `superadmin` o `club_admin`» → **no puede** |
+| `spec.md` R-010-04 | «`organization_admin` sólo otorga roles dentro de su propia organización» → leído literalmente, **sí puede** |
+
+**Resuelto por el lado del menor privilegio.** Si un administrador de organización pudiera
+clonarse, una sola cuenta comprometida se multiplica sin que ningún administrador del club se
+entere, y el club pierde la capacidad de saber quién manda en sus organizaciones. El costo es que
+los nombra el club: con una o dos organizaciones, un trámite de un minuto.
+
+Quedó escrito en `spec.md` R-010-04 y en `docs/06` §4, marcado como **decisión revisable** si en la
+operación real resulta incómoda — relajarla es una línea y su test.
+
+### Los casos del spec
+
+| Test | Resultado |
+|---|---|
+| Administrador de organización intenta otorgar `commissioner` | ✅ rechazado |
+| Administrador de organización intenta otorgar `club_admin` | ✅ rechazado |
+| Administrador de club intenta otorgar en una organización de **otro** club | ✅ rechazado |
+| Administrador de club intenta otorgar en **otro** club | ✅ rechazado |
+| Administrador de organización intenta otorgar en **otra** organización | ✅ rechazado |
+| Administrador de club otorga `commissioner` en su club | ✅ permitido |
+| Administrador de organización otorga `instructor` y `groom` en la suya | ✅ permitido |
+| Sólo un `superadmin` puede crear otro `superadmin` | ✅ |
+
+### Tres reglas que no eran obvias y quedaron probadas
+
+1. **Tener un rol no es poder repartirlo.** El **comisario** —máxima autoridad deportiva— no
+   otorga ningún rol: su autoridad es sobre handicaps, equipos y resultados, no administrativa.
+   Está probado explícitamente para que nadie lo lea como un olvido y lo «arregle».
+2. **Los permisos se acumulan, pero acumular no crea autoridad** (R-010-03). Quien es jugador *y*
+   administrador del club otorga como administrador; quien es jugador *y* comisario sigue sin poder
+   otorgar nada. Dos tests, uno por cada mitad de la regla.
+3. **Un rol sólo existe en su ámbito.** Un «comisario de organización» o un «superadministrador de
+   club» se rechazan como **datos incoherentes** (`rol_no_admite_ese_ambito`), no como falta de
+   permisos — distinguirlo importa porque son bugs distintos. `treasurer` es el único rol válido en
+   dos ámbitos, y hay un test que lo comprueba recorriendo la tabla, así que si mañana alguien
+   agrega otro rol de doble ámbito, se enterará.
+
+### Dos tests que comprueban propiedades, no casos
+
+Los más valiosos del conjunto, porque cubren combinaciones que nadie enumeró a mano:
+
+- **«Sólo tres tipos de actor pueden otorgar algo, en algún ámbito»**: recorre los 8 roles × sus
+  ámbitos válidos × 6 tipos de actor, y verifica que la lista de quienes tienen *alguna* autoridad
+  es exactamente `superadmin`, `club_admin` y `organization_admin`. Si un rol ganara autoridad por
+  accidente, aparece aquí.
+- **«Ningún actor puede otorgar un rol en un club que no es el suyo»**: barre todos los roles de
+  ámbito de club contra un club ajeno y exige que la lista de infractores esté vacía. Es la
+  propiedad de aislamiento entre clubes (P-05) aplicada a los permisos.
+
+### Datos incoherentes se rechazan antes de evaluar permisos
+
+Cuatro tests cubren el borde: ámbito de plataforma con identificador concreto, ámbito de club sin
+identificador, un rol de club cuyo club no coincide con su propio ámbito, y un rol de organización
+sin saber a qué club pertenece. El último devuelve `club_del_ambito_desconocido` en vez de adivinar:
+sin ese dato no hay forma de saber si un `club_admin` manda ahí, y **adivinar en una función de
+permisos es exactamente cómo se abren los agujeros**.
+
+### Pendiente declarado
+
+- `R-010-05` (nadie se retira roles a sí mismo) **no** está aquí: es sobre *revocar*, no otorgar, y
+  le corresponde a T-058 y T-061. Otorgarse un rol a uno mismo sí está permitido, y es lo que hace
+  el seed con el primer administrador: por definición no hay nadie antes que él.
+- `player` es el rol base que el sistema asigna al activarse una cuenta, no un otorgamiento
+  discrecional. Esta función lo trata como el rol de club que es si alguien lo otorga a mano.

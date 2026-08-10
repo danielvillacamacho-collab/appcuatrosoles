@@ -212,7 +212,20 @@ tener respaldo legal.
   que otro rol del mismo usuario permite.
 - `R-010-04` Sólo `superadmin` y `club_admin` otorgan roles de alcance de club
   (`commissioner`, `club_admin`, `treasurer` de club). `organization_admin` sólo otorga roles
-  dentro de su propia organización.
+  dentro de su propia organización, y **únicamente** `instructor`, `groom` y `treasurer`.
+
+  > **Precisión hecha en T-011.** «Roles dentro de su propia organización», leído literalmente,
+  > incluiría `organization_admin` — es decir, un administrador de organización podría nombrar a
+  > otro como él. `docs/06` §4 dice lo contrario («otorgado por `superadmin` o `club_admin`»), y se
+  > resolvió por ese lado: si pudiera clonarse, **una sola cuenta comprometida se multiplica sin
+  > que ningún administrador del club se entere**, y el club pierde la capacidad de saber quién
+  > manda en sus organizaciones. El costo es que los administradores de organización los nombra el
+  > club; con una o dos organizaciones es un trámite de un minuto. **Decisión revisable si en la
+  > operación real resulta incómoda** — relajarla es una línea y su test.
+  >
+  > `superadmin` sólo lo otorga otro `superadmin`, y ningún rol del club llega a él.
+  > El **comisario no otorga roles**: su autoridad es deportiva (handicaps, equipos, resultados),
+  > no administrativa. Es intencional, no un olvido.
 - `R-010-05` Un administrador no puede suspender, archivar ni retirarse roles a sí mismo.
 - `R-010-06` Nada se borra desde la operación normal; los estados transicionan a `suspended`
   o `archived`, ambos reversibles por un administrador (P-06). El borrado real sólo procede

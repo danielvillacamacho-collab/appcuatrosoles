@@ -60,9 +60,12 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > orden y una fuga de enumeración de cuentas quedaría a un despiste de distancia. Y de paso se
   > descubrió que **la barrera de arquitectura que protege el dominio no detectaba nada** — ver
   > verification.md.
-- [ ] **T-011** `canAssignRole(actor, targetRole, targetScope)`. Tests: cubre R-010-04 exacto
+- [x] **T-011** `canAssignRole(actor, targetRole, targetScope)`. Tests: cubre R-010-04 exacto
   (admin de organización intentando rol de club → rechazado; club_admin asignando rol de
-  organización ajena → rechazado).
+  organización ajena → rechazado). ✅ 2026-08-10 — 27 tests, ver `verification.md` §T-011.
+  > Resolvió una ambigüedad con consecuencia de seguridad: si `organization_admin` puede nombrar a
+  > otro como él. `docs/06` decía que no, el spec leído literalmente decía que sí. Se resolvió por
+  > menor privilegio y quedó escrito en ambos documentos.
 - [ ] **T-012** `isInvitationLinkValid(invitation, now)`, con `Clock` inyectado. Tests: recién
   creado, a las 6 días 23h, a los 7 días exactos, ya usado.
 - [ ] **T-013** `isWaiverAcceptanceCurrent(acceptance, currentVersion)`. Tests: sin

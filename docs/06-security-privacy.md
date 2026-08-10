@@ -59,8 +59,19 @@ Alcance de cada rol — `platform` (toda la plataforma), `club`, u `organization
 | `commissioner` | club | `superadmin` o `club_admin` |
 | `organization_admin` | organización | `superadmin` o `club_admin` |
 | `instructor`, `groom` | organización | `organization_admin` (dentro de su organización) o superior |
-| `treasurer` | club u organización | según a qué ámbito se asigna |
+| `treasurer` | club u organización | según a qué ámbito se asigna: el del club, `club_admin` o `superadmin`; el de una organización, además su `organization_admin` |
 | `player` | club | rol base automático de toda cuenta activa |
+
+Implementado y probado en `packages/domain/identity/canAssignRole` (T-011), con 27 tests. Tres
+consecuencias de esta tabla que conviene tener presentes porque no son obvias:
+
+1. **Un `organization_admin` no puede nombrar a otro `organization_admin`.** Los nombra el club.
+   Evita que una cuenta comprometida multiplique su propio poder sin que el club lo note.
+   Ver la precisión de `R-010-04` en `specs/010-identidad-acceso-roles/spec.md`.
+2. **El comisario no otorga roles.** Su autoridad es deportiva, no administrativa.
+3. **Un rol sólo existe en su ámbito**: un «comisario de organización» o un «superadministrador de
+   club» se rechazan como datos incoherentes, no como falta de permisos. `treasurer` es el único
+   rol válido en dos ámbitos.
 
 **Matriz de permisos del módulo base** (PRD Parte II §11 — ✓ = puede, · = limitado a lo
 propio/su ámbito):
