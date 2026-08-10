@@ -74,14 +74,33 @@ correcto — el día que haga falta un rollback en producción no es el momento 
 `down` estaba mal escrito.
 
 **Prisma no genera el `down` por sí solo** (sus migraciones son sólo hacia adelante). Por eso
-cada carpeta de migración lleva, al lado de su `migration.sql`, un `down.sql` escrito con:
+cada carpeta de migración lleva, al lado de su `migration.sql`, un `down.sql`. No se escribe a
+mano: lo genera un script, porque hacerlo a mano es exactamente donde se cuela el error que
+sólo se descubre el día del rollback.
 
 ```bash
-pnpm dlx prisma migrate diff --from-schema-datamodel apps/api/prisma/schema.prisma \
-  --to-schema-datasource apps/api/prisma/schema.prisma --script > down.sql
+pnpm db:down-sql                 # la última migración
+pnpm db:down-sql <nombre_migra>  # una concreta
 ```
 
-(para la primera migración, `--to-empty` en vez de `--to-schema-datasource`).
+El script reconstruye **los dos extremos** del diff desde las carpetas de migración: el estado
+«después de N» y el estado «después de N-1». Así el `down` deshace exactamente una migración.
+
+> **La trampa que esto evita** (encontrada al construir T-002, vale la pena entenderla):
+> si el `down` se genera comparando contra el *esquema actual*, el resultado incluye deshacer
+> también las migraciones **posteriores**. El `down` de T-001, generado así, salía borrando las
+> tablas de T-002 — y encadenar reversiones habría fallado al intentar borrar algo ya borrado.
+> Un `down` sólo se prueba de verdad el día del rollback, que es el peor momento para
+> descubrirlo.
+
+**Se revierten en orden inverso** (primero la última, después la anterior): cada `down.sql`
+asume que las migraciones posteriores ya se revirtieron. Verificado en T-002 con el ciclo
+completo — revertir las dos en cascada deja la base vacía sin un solo error, y volver a
+aplicarlas la reconstruye entera.
+
+Necesita una base de datos «sombra» que Prisma usa para reconstruir el estado intermedio; el
+script la crea si no existe. Es una herramienta de desarrollo local: el CI no genera `down.sql`,
+sólo comprueba que exista y lo ejecuta.
 
 **Revertir una migración son dos pasos, no uno:** aplicar su `down.sql` **y** borrar su fila
 de `_prisma_migrations`. Sin el segundo paso, Prisma cree que sigue aplicada y no la vuelve a

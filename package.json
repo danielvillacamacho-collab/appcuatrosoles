@@ -23,7 +23,8 @@
     "db:studio": "dotenv -e .env -- pnpm --filter @polo/api exec prisma studio",
     "db:seed": "dotenv -e .env -- pnpm --filter @polo/api exec tsx prisma/seed.ts",
     "check:isolation": "pnpm --filter @polo/api run check:isolation",
-    "check:arch": "depcruise --config .dependency-cruiser.cjs apps/*/src packages/*/src"
+    "check:arch": "depcruise --config .dependency-cruiser.cjs apps/*/src packages/*/src",
+    "db:down-sql": "bash scripts/down-sql.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",

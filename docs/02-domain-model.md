@@ -44,17 +44,31 @@ puede_inscribir_copas, requiere_aptitud, puede_reservar_taqueo…), `active`.
 **session** — `user_account_id`, `token_hash`, `user_agent`, `ip_hash`, `created_at`,
 `last_seen_at`, `expires_at`, `revoked_at`, `remember_me`.
 
-**person_organization** — `person_id`, `organization_id`, `relationship`
+**person_organization** — `club_id`, `person_id`, `organization_id`, `relationship`
 (student | client | team_member | staff), `joined_on`, `left_on`.
+> `club_id` se agregó en T-002 por P-05, aunque `organization_id` ya lo implique: mantiene el
+> filtro de tenant uniforme en todas las tablas, sin excepciones que alguien deba recordar.
+> Invariantes en base de datos: único parcial `(person_id, organization_id, relationship)`
+> mientras `left_on IS NULL` — una persona puede ser estudiante **y** jugadora de equipo en la
+> misma organización, pero no dos veces lo mismo; y `left_on >= joined_on`.
 
 **role_assignment** — `user_account_id`, `role` (enum), `scope` (platform | club | organization),
 `scope_id`, `granted_by_id`, `granted_at`, `revoked_at`, `revoked_by_id`.
 > Roles: `superadmin`, `club_admin`, `organization_admin`, `commissioner`, `instructor`,
 > `groom`, `treasurer`, `player`. `player` es el rol base de toda cuenta activa.
+> **Única excepción deliberada a P-05: esta tabla no lleva `club_id`.** `scope` + `scope_id`
+> ya *son* la frontera de tenant, y un `superadmin` tiene `scope = platform`, donde no existe
+> club alguno; un `club_id` paralelo sería una segunda fuente de verdad capaz de contradecir a
+> `scope_id`. Invariantes en base de datos: `scope_id` es NULL **exactamente** cuando
+> `scope = platform`, y un mismo rol con el mismo alcance no puede estar otorgado dos veces a
+> la vez (único parcial sobre las no revocadas).
 
-**commissioner_delegation** — `delegator_id`, `delegate_id`, `starts_at`, `ends_at`,
+**commissioner_delegation** — `club_id`, `delegator_id`, `delegate_id`, `starts_at`, `ends_at`,
 `scope` (season | tournament), `scope_id`, `revoked_at`.
 > Toda acción bajo delegación se audita con `on_behalf_of_id`.
+> `club_id` agregado en T-002 (P-05): el rol de comisario es de alcance de club, así que la
+> delegación siempre pertenece a un club. Invariantes en base de datos: `ends_at > starts_at`
+> y `delegator_id <> delegate_id`.
 
 **guardianship** — `guardian_person_id`, `dependent_person_id`, `is_primary_payer`,
 `starts_on`, `ends_on`.

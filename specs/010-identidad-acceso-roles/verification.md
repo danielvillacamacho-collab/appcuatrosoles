@@ -49,3 +49,65 @@ criterios de aceptación de `spec.md` §12 marcados) es T-110.
   versionada. Los tests automatizados del módulo empiezan en T-010 (dominio puro) y los de
   integración contra Postgres en T-030 en adelante. Hasta entonces, estas garantías **no
   están protegidas contra regresión** — es deuda conocida y acotada, no un descuido.
+
+---
+
+## T-002 — `PersonOrganization`, `RoleAssignment`, `CommissionerDelegation`
+
+**Fecha:** 2026-08-10 · **Migración:** `20260810204818_identity_organizations_roles_delegation`
+
+### Verificación exigida por la tarea
+
+| Criterio | Resultado |
+|---|---|
+| Migración `up`/`down` contra Postgres real | ✅ ciclo completo, y además **reversión en cascada**: revertir T-002 deja intactas las tablas de T-001; revertir T-001 encima deja la base vacía sin un solo error; volver a aplicar reconstruye todo |
+
+### Invariantes puestos en la base de datos (P-09), cada uno probado provocando el rechazo
+
+Se añadieron en SQL dentro de la migración, porque Prisma no sabe expresarlos. **Todos
+comprobados en ambas direcciones** — que rechacen lo que deben y permitan lo que deben:
+
+| Invariante | Comprobación |
+|---|---|
+| Un mismo rol con el mismo alcance no se otorga dos veces a la vez | ✅ segundo intento rechazado; ✅ el mismo rol con **otro** alcance sí se permite; ✅ tras revocar, se puede volver a otorgar (el índice es parcial) |
+| `scope_id` es NULL exactamente cuando `scope = platform` | ✅ `platform` **con** `scope_id` → rechazado; ✅ `club` **sin** `scope_id` → rechazado; ✅ `platform` sin `scope_id` → permitido |
+| Un vínculo persona-organización no se duplica mientras esté activo | ✅ duplicado exacto rechazado; ✅ la misma persona puede ser `student` **y** `team_member` en la misma organización |
+| `left_on >= joined_on` | ✅ salir antes de entrar → rechazado |
+| `ends_at > starts_at` en una delegación | ✅ terminar antes de empezar → rechazado |
+| `delegator_id <> delegate_id` | ✅ el comisario no se delega a sí mismo |
+
+### Decisiones de modelado tomadas y su razón
+
+1. **`club_id` agregado a `person_organization` y `commissioner_delegation`**, aunque `docs/02`
+   no lo listaba: P-05 dice que toda tabla de negocio lo lleva. El valor está en que el filtro
+   de tenant de la capa de repositorio sea **uniforme**, sin un join distinto por tabla ni una
+   lista de excepciones que alguien deba recordar.
+2. **`role_assignment` es la única excepción deliberada a P-05.** No lleva `club_id` porque
+   `scope` + `scope_id` ya *son* la frontera de tenant, y un `superadmin` tiene
+   `scope = platform`, donde no hay club. Un `club_id` paralelo sería una segunda fuente de
+   verdad capaz de contradecir a `scope_id`. Queda documentado en el esquema y en `docs/02`
+   para que no se lea como un olvido.
+3. **`revoked_by_id` con `onDelete: Restrict`**, corrigiendo el `SET NULL` que Prisma pone por
+   defecto en relaciones opcionales: `SET NULL` borraría en silencio **quién revocó un rol**,
+   justo el dato que la auditoría existe para conservar (P-07).
+4. **Los punteros de auditoría son llaves foráneas reales** (`granted_by_id`, `revoked_by_id`,
+   `delegator_id`, `delegate_id`): un puntero a una cuenta inexistente haría inútil el registro
+   precisamente cuando se necesita.
+
+### Hallazgo importante: el generador de `down.sql` estaba mal
+
+Al automatizar la generación del `down` se descubrió que compararlo contra el **esquema actual**
+produce un `down` que deshace también las migraciones **posteriores**: el `down` de T-001 salía
+borrando las tablas de T-002, y encadenar reversiones habría fallado al borrar algo ya borrado.
+Corregido reconstruyendo ambos extremos del diff desde las carpetas de migración, y encapsulado
+en `scripts/down-sql.sh` (`pnpm db:down-sql`) para que no dependa de que alguien recuerde el
+detalle. Un `down` sólo se ejerce el día del rollback, que es el peor momento para descubrirlo.
+
+### Pendiente declarado
+
+- Igual que T-001: verificado con prueba de humo **manual y desechable**. Los 14 chequeos de
+  invariantes de esta tarea **no están protegidos contra regresión** hasta que existan los tests
+  de integración (T-030 en adelante). Deuda conocida y acotada.
+- `person_organization.organization_id` sigue sin llave foránea porque la tabla `organization`
+  la crea el **módulo 020**. Anotado como entregable de 020 en el propio `schema.prisma`: hasta
+  entonces nada impide una fila apuntando a una organización inexistente, y eso toca P-05.

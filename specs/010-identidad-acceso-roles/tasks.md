@@ -14,8 +14,9 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 - [x] **T-001** Agregar a `prisma/schema.prisma` los modelos `Person`, `UserAccount`,
   `Session` (`plan.md` §1). Generar migración. Verificación: `pnpm db:migrate:dev` corre
   limpio; migración revierte con `down`. ✅ 2026-08-10 — ver `verification.md` §T-001.
-- [ ] **T-002** Agregar `PersonOrganization`, `RoleAssignment`, `CommissionerDelegation`.
-  Verificación: migración `up`/`down` en CI contra Postgres real.
+- [x] **T-002** Agregar `PersonOrganization`, `RoleAssignment`, `CommissionerDelegation`.
+  Verificación: migración `up`/`down` en CI contra Postgres real. ✅ 2026-08-10 — ver
+  `verification.md` §T-002.
 - [ ] **T-003** Agregar `Guardianship`, `MembershipCategory`, `MembershipAssignment`.
   Verificación: igual que T-002.
 - [ ] **T-004** Agregar `WaiverVersion`, `WaiverAcceptance`, `AuditLog` + migración SQL cruda

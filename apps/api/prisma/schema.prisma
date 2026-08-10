@@ -49,10 +49,11 @@ model Person {
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   createdById String?  @map("created_by_id")
 
-  userAccount UserAccount?
+  userAccount   UserAccount?
+  organizations PersonOrganization[]
 
-  // Las relaciones hacia organizaciones, roles, membresías, waivers y guardianías se
-  // agregan en T-002 a T-004, cuando existan esos modelos.
+  // Las relaciones hacia membresías, waivers y guardianías se agregan en T-003 y T-004,
+  // cuando existan esos modelos.
 
   @@unique([clubId, email])
   @@index([clubId, status])
@@ -98,8 +99,17 @@ model UserAccount {
   person   Person    @relation(fields: [personId], references: [id])
   sessions Session[]
 
-  // `roleAssignments` se agrega en T-002: el rol se asigna a la cuenta, no a la persona
-  // (una persona sin cuenta no tiene rol — plan.md §1, nota final).
+  /// Los roles se asignan a la CUENTA, no a la persona: una persona sin acceso no tiene
+  /// permisos que ejercer (plan.md §1, nota final).
+  roleAssignments RoleAssignment[] @relation("AccountRoles")
+
+  // Rastro de quién otorgó y quién revocó cada rol, y de las delegaciones de comisario.
+  // Son punteros de auditoría con llave foránea real: un `granted_by_id` que apunte a una
+  // cuenta inexistente haría inútil el registro justo cuando se necesita (R-010-11).
+  rolesGranted        RoleAssignment[]         @relation("RolesGranted")
+  rolesRevoked        RoleAssignment[]         @relation("RolesRevoked")
+  delegationsGiven    CommissionerDelegation[] @relation("DelegationsGiven")
+  delegationsReceived CommissionerDelegation[] @relation("DelegationsReceived")
 
   @@map("user_account")
 }
@@ -141,3 +151,157 @@ model Session {
   @@index([userAccountId, revokedAt])
   @@map("session")
 }
+
+// ─── T-002 · Organizaciones, roles y delegación ─────────────────────────────────
+// docs/02-domain-model.md §B · specs/010-identidad-acceso-roles/plan.md §1
+
+/// Vínculo de una persona con una organización que opera dentro del club (hoy, Cuatro
+/// Soles). Se guarda historia (`leftOn`) en vez de un campo mutable: alguien puede salir y
+/// volver, y el club necesita poder responder «desde cuándo era estudiante» (P-06).
+model PersonOrganization {
+  id String @id @default(uuid(7))
+
+  /// P-05: toda tabla de negocio lleva `club_id`, aunque `organizationId` ya lo implique.
+  /// Denormalizado a propósito, para que el filtro de tenant de la capa de repositorio sea
+  /// uniforme en TODAS las tablas — sin un join distinto por tabla ni una lista de
+  /// excepciones que alguien tenga que recordar.
+  clubId String @map("club_id")
+
+  personId String @map("person_id")
+  /// Todavía sin llave foránea: la tabla `organization` la crea el módulo 020. Ver la nota
+  /// «Integridad pendiente» al final de este archivo.
+  organizationId String          @map("organization_id")
+  relationship   OrgRelationship
+
+  /// Fechas de calendario, no instantes: el día en que entró o salió de la organización.
+  joinedOn DateTime  @map("joined_on") @db.Date
+  leftOn   DateTime? @map("left_on") @db.Date
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  person Person @relation(fields: [personId], references: [id])
+
+  @@index([clubId, organizationId, relationship])
+  @@index([personId])
+  @@map("person_organization")
+}
+
+enum OrgRelationship {
+  student
+  client
+  team_member
+  staff
+
+  @@map("org_relationship")
+}
+
+/// Un rol otorgado a una cuenta, con su alcance. Los permisos son acumulativos y nunca
+/// restrictivos entre sí (R-010-03): no existe un rol que quite lo que otro concede, así
+/// que evaluar permisos es unir los de todas las asignaciones vigentes.
+model RoleAssignment {
+  id            String   @id @default(uuid(7))
+  userAccountId String   @map("user_account_id")
+  role          RoleName
+
+  /// Esta tabla es la **única excepción deliberada a P-05**, y conviene entender por qué:
+  /// `scope` + `scopeId` ya *son* la frontera de tenant (scope=club → `scopeId` es el club;
+  /// scope=organization → es la organización), y un `superadmin` tiene scope=platform,
+  /// donde no existe club alguno. Un `club_id` paralelo sería una segunda fuente de verdad
+  /// que puede contradecir a `scopeId` — peor que no tenerlo.
+  scope ScopeKind
+  /// Nulo únicamente cuando `scope = platform`, que no cuelga de ninguna entidad.
+  scopeId String? @map("scope_id")
+
+  /// `grantedAt` cumple el papel de `created_at` de esta tabla; no se duplica.
+  grantedById String    @map("granted_by_id")
+  grantedAt   DateTime  @default(now()) @map("granted_at") @db.Timestamptz(3)
+  revokedById String?   @map("revoked_by_id")
+  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz(3)
+
+  userAccount UserAccount @relation("AccountRoles", fields: [userAccountId], references: [id])
+  grantedBy   UserAccount @relation("RolesGranted", fields: [grantedById], references: [id])
+  /// `onDelete: Restrict` explícito: el default de Prisma para una relación opcional es
+  /// `SET NULL`, que borraría en silencio **quién revocó el rol** — precisamente el dato que
+  /// la auditoría existe para conservar (P-07). Si algún día el flujo de datos personales
+  /// (Ley 1581) necesita eliminar la cuenta, que falle y obligue a decidir explícitamente
+  /// cómo anonimizar, en vez de perder el rastro sin que nadie se entere.
+  revokedBy UserAccount? @relation("RolesRevoked", fields: [revokedById], references: [id], onDelete: Restrict)
+
+  @@index([userAccountId, revokedAt])
+  @@index([scope, scopeId])
+  @@map("role_assignment")
+}
+
+/// `player` es el rol base de toda cuenta activa; los demás se suman encima
+/// (docs/02 §B, spec.md §4).
+enum RoleName {
+  superadmin
+  club_admin
+  organization_admin
+  commissioner
+  instructor
+  groom
+  treasurer
+  player
+
+  @@map("role_name")
+}
+
+enum ScopeKind {
+  platform
+  club
+  organization
+
+  @@map("scope_kind")
+}
+
+/// El comisario puede enfermarse, viajar o estar jugando, y la operación deportiva no puede
+/// quedar bloqueada: delega temporalmente su autoridad en un subcomisario. Toda acción hecha
+/// bajo delegación se audita con `on_behalf_of_id`, nunca como si la hubiera hecho el
+/// comisario en persona (docs/02 §B, R-010-11).
+model CommissionerDelegation {
+  id String @id @default(uuid(7))
+
+  /// El rol de comisario es de alcance de club, así que la delegación siempre pertenece a
+  /// un club concreto (P-05).
+  clubId String @map("club_id")
+
+  delegatorId String @map("delegator_id")
+  delegateId  String @map("delegate_id")
+
+  /// La delegación siempre tiene inicio y fin: una autoridad delegada «hasta nuevo aviso»
+  /// es justamente lo que R-010 quiere evitar.
+  startsAt DateTime @map("starts_at") @db.Timestamptz(3)
+  endsAt   DateTime @map("ends_at") @db.Timestamptz(3)
+
+  /// Acotada a una temporada o a un torneo. `scopeId` apunta a esa temporada o torneo, cuyas
+  /// tablas llegan en los módulos 020 y 060.
+  scope   DelegationScope
+  scopeId String?         @map("scope_id")
+
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  delegator UserAccount @relation("DelegationsGiven", fields: [delegatorId], references: [id])
+  delegate  UserAccount @relation("DelegationsReceived", fields: [delegateId], references: [id])
+
+  @@index([clubId, delegateId, revokedAt])
+  @@map("commissioner_delegation")
+}
+
+enum DelegationScope {
+  season
+  tournament
+
+  @@map("delegation_scope")
+}
+
+// ─── Integridad pendiente (no es un olvido) ─────────────────────────────────────
+// `person.club_id`, `person_organization.club_id` / `.organization_id` y
+// `commissioner_delegation.club_id` son todavía TEXT sin llave foránea, porque las tablas
+// `club` y `organization` las crea el **módulo 020** (el siguiente, misma Fase 1 del
+// roadmap). Cuando existan, 020 debe agregar una migración que ponga esas llaves foráneas:
+// hasta entonces nada impide una fila con un `club_id` que no corresponde a ningún club, y
+// eso toca directamente P-05. Está anotado como entregable de 020, no como algo opcional.
