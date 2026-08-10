@@ -49,11 +49,29 @@ jobs:
       - name: Fitness functions de arquitectura (dependency-cruiser)
         run: pnpm check:arch
 
+      # CLAUDE.md: toda migración es reversible y se prueba contra Postgres real.
+      # Prisma no genera el `down` solo, así que cada migración lleva su `down.sql` al lado
+      # (ver docs/05-testing-strategy.md §6). Este paso prueba el ciclo completo: aplicar,
+      # revertir la última, y volver a aplicarla.
       - name: Migraciones — up, down, up contra Postgres real
         run: |
-          pnpm --filter @polo/api exec prisma migrate deploy
-          pnpm --filter @polo/api exec prisma migrate reset --force --skip-seed
-          pnpm --filter @polo/api exec prisma migrate deploy
+          set -euo pipefail
+          pnpm db:migrate:deploy
+
+          ULTIMA=$(ls -d apps/api/prisma/migrations/*/ | sort | tail -1)
+          NOMBRE=$(basename "$ULTIMA")
+          if [ ! -f "${ULTIMA}down.sql" ]; then
+            echo "::error::La migración ${NOMBRE} no tiene down.sql. Toda migración debe ser reversible (CLAUDE.md)."
+            exit 1
+          fi
+
+          echo "Revirtiendo ${NOMBRE}..."
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "${ULTIMA}down.sql"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q \
+            -c "DELETE FROM _prisma_migrations WHERE migration_name = '${NOMBRE}';"
+
+          echo "Re-aplicando ${NOMBRE}..."
+          pnpm db:migrate:deploy
 
       - name: Tests con umbrales de cobertura (docs/05 §2)
         run: pnpm test:cov

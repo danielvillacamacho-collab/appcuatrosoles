@@ -1,13 +1,143 @@
-// Fuente única del esquema (docs/01-architecture.md §1). Los modelos concretos del módulo
-// 010 se agregan tarea por tarea siguiendo specs/010-identidad-acceso-roles/tasks.md (T-001
-// en adelante) y el detalle de specs/010-identidad-acceso-roles/plan.md §1 — no se pegan aquí
-// de una vez para no adelantarse al ciclo de una tarea, un commit (docs/10 §2).
+// Fuente única del esquema (docs/01-architecture.md §1). Los modelos se agregan tarea por
+// tarea siguiendo specs/010-identidad-acceso-roles/tasks.md y el detalle de su plan.md §1.
+//
+// Convenciones obligatorias (docs/02-domain-model.md, memory/constitution.md):
+//   - `id` = UUID v7, ordenable por tiempo → `@default(uuid(7))`.
+//   - Todo timestamp se persiste `timestamptz` en UTC (P-08) → `@db.Timestamptz(3)`.
+//     Ojo: el default de Prisma para `DateTime` es `timestamp(3)` SIN zona; hay que ser
+//     explícito en cada campo o se viola el principio en silencio.
+//   - Tablas y columnas en snake_case (`@@map`/`@map`), porque el SQL crudo de las
+//     migraciones (T-004, T-005) y los reportes referencian los nombres así.
+//   - Dinero en `BigInt` de centavos, sufijo `_cents` (P-02). Handicap en `Int` de medios
+//     goles, sufijo `_halves` (P-03). Ninguno de los dos aparece todavía en este módulo.
 
 generator client {
   provider = "prisma-client-js"
+  // Sin `output` explícito a propósito: con pnpm, `@prisma/client` está enlazado al store
+  // central, así que el cliente generado tiene que escribirse junto a él (allí lo busca en
+  // runtime). Fijar una ruta propia lo rompe. La consecuencia es que el CLI debe correr con
+  // el directorio de trabajo en `apps/api`; ver los scripts `db:*` de la raíz.
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ─── T-001 · Identidad: persona, cuenta y sesión ────────────────────────────────
+// docs/02-domain-model.md §B · specs/010-identidad-acceso-roles/plan.md §1
+
+/// El individuo real. Existe aunque no tenga acceso a la plataforma: un invitado externo
+/// a una copa, o un menor de edad bajo la cuenta de su acudiente, son `person` sin
+/// `user_account` (HU-010-03, HU-010-10).
+model Person {
+  id        String    @id @default(uuid(7))
+  clubId    String    @map("club_id")
+  fullName  String    @map("full_name")
+  phone     String?
+  /// Informativo y de contacto. El correo de *acceso* vive en `UserAccount.email`; no son
+  /// el mismo dato y no tienen por qué coincidir.
+  email     String?
+  birthdate DateTime? @db.Date
+
+  photoKey String?      @map("photo_key")
+  isMinor  Boolean      @default(false) @map("is_minor")
+  status   PersonStatus @default(active)
+  notes    String?
+
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdById String?  @map("created_by_id")
+
+  userAccount UserAccount?
+
+  // Las relaciones hacia organizaciones, roles, membresías, waivers y guardianías se
+  // agregan en T-002 a T-004, cuando existan esos modelos.
+
+  @@unique([clubId, email])
+  @@index([clubId, status])
+  @@map("person")
+}
+
+/// Nada se borra: se archiva (constitution P-06).
+enum PersonStatus {
+  active
+  archived
+
+  @@map("person_status")
+}
+
+/// El acceso de una persona a la plataforma.
+/// Invariante R-010-01: una persona tiene como máximo una cuenta (`personId` único).
+model UserAccount {
+  id       String @id @default(uuid(7))
+  personId String @unique @map("person_id")
+
+  /// Correo de acceso, único en toda la plataforma (no por club). Una persona = un correo
+  /// = un solo acceso, incluso si opera en varios clubes: el club se resuelve por
+  /// subdominio y la sesión lleva un «club activo» explícito (ADR-013, specs/140
+  /// HU-140-03 — nuestro personal atiende varios clubes sin manejar credenciales
+  /// distintas). Ver el riesgo R-1 de plan.md §7.
+  email        String @unique
+  /// Argon2id (docs/06-security-privacy.md §2). Nunca texto legible, nunca reversible.
+  passwordHash String @map("password_hash")
+
+  status UserAccountStatus @default(invited)
+
+  /// Bloqueo por intentos fallidos: 5 intentos → 15 minutos (T-032, configurable en
+  /// `docs/08-configuration-catalog.md` §9).
+  failedAttempts Int       @default(0) @map("failed_attempts")
+  lockedUntil    DateTime? @map("locked_until") @db.Timestamptz(3)
+
+  lastLoginAt     DateTime? @map("last_login_at") @db.Timestamptz(3)
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  person   Person    @relation(fields: [personId], references: [id])
+  sessions Session[]
+
+  // `roleAssignments` se agrega en T-002: el rol se asigna a la cuenta, no a la persona
+  // (una persona sin cuenta no tiene rol — plan.md §1, nota final).
+
+  @@map("user_account")
+}
+
+/// Estados y transiciones en spec.md HU-010-04 y §6 R-010-06. Sólo `active` puede iniciar
+/// sesión; la regla vive en `packages/domain/identity/accountStatusAllowsLogin` (T-010).
+enum UserAccountStatus {
+  invited
+  active
+  suspended
+  archived
+
+  @@map("user_account_status")
+}
+
+/// Sesión de servidor con cookie opaca, no JWT (ADR-005): el documento exige poder revocar
+/// una sesión ya emitida — ver dispositivos activos, cerrar todas, y que suspender una
+/// cuenta corte el acceso de inmediato (R-010-09, T-056).
+model Session {
+  id            String @id @default(uuid(7))
+  userAccountId String @map("user_account_id")
+
+  /// Se guarda el hash del token, no el token. Si la base de datos se filtra, las sesiones
+  /// activas no son secuestrables.
+  tokenHash String  @unique @map("token_hash")
+  userAgent String? @map("user_agent")
+  /// IP hasheada: sirve para «inicio de sesión desde un dispositivo nuevo» sin almacenar
+  /// el dato personal en claro (docs/06 §8).
+  ipHash    String? @map("ip_hash")
+
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(3)
+  rememberMe Boolean   @default(false) @map("remember_me")
+
+  userAccount UserAccount @relation(fields: [userAccountId], references: [id])
+
+  @@index([userAccountId, revokedAt])
+  @@map("session")
 }

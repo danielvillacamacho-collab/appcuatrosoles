@@ -19,6 +19,16 @@ dinero que le corresponde al club y transferírselo después. Consecuencias: cad
 **beneficiario** (a quién le pertenece la plata) y **recaudador** (quién la recibe), y hace
 falta un módulo de liquidación entre entidades. Ver `specs/105`.
 
+**D-05 — Un correo = un acceso en toda la plataforma, con selector de club.** (2026-08-10)
+Resuelve el riesgo R-1 de `specs/010-identidad-acceso-roles/plan.md` §7. Una persona tiene una
+sola cuenta y una sola contraseña aunque opere en varios clubes: el club se resuelve por
+subdominio y la sesión lleva un **club activo** explícito y auditado. Es lo que ya exigía
+`ADR-013` y `specs/140` HU-140-03 (nuestro comisario atiende tres clubes sin manejar tres
+credenciales). Consecuencia técnica: `user_account.email` es único **global**, no por club —
+corrige la nota "(único por club)" de `docs/02` §B, que contradecía a `docs/02` §L.
+Descartado: cuenta separada por club (mayor aislamiento, pero rompe el requisito de una sola
+credencial para el personal de servicio).
+
 **D-04 — Construye Daniel con Claude Code, sin supervisión de ingenieros.**
 Consecuencias en todo el kit: se elimina Redis para reducir piezas; las tareas se escriben
 más pequeñas y con verificación automática; se agregan barreras de CI que sustituyen la

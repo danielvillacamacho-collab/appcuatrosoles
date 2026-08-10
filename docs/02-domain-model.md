@@ -36,7 +36,7 @@ puede_inscribir_copas, requiere_aptitud, puede_reservar_taqueo…), `active`.
 `photo_key`, `is_minor`, `status` (active | archived), `notes`.
 > Un invitado externo a una copa es una `person` sin `user_account`.
 
-**user_account** — el acceso. `person_id` (único), `email` (único por club, ciudadano),
+**user_account** — el acceso. `person_id` (único), `email` (**único global**, ver `docs/09` D-05),
 `password_hash` (Argon2id), `status` (invited | active | suspended | archived),
 `failed_attempts`, `locked_until`, `last_login_at`, `email_verified_at`.
 > Invariante: una persona tiene como máximo una cuenta.

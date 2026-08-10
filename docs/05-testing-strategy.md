@@ -73,6 +73,25 @@ Toda migración se prueba en CI aplicando `up` y luego `down` contra Postgres re
 correcto — el día que haga falta un rollback en producción no es el momento de descubrir que
 `down` estaba mal escrito.
 
+**Prisma no genera el `down` por sí solo** (sus migraciones son sólo hacia adelante). Por eso
+cada carpeta de migración lleva, al lado de su `migration.sql`, un `down.sql` escrito con:
+
+```bash
+pnpm dlx prisma migrate diff --from-schema-datamodel apps/api/prisma/schema.prisma \
+  --to-schema-datasource apps/api/prisma/schema.prisma --script > down.sql
+```
+
+(para la primera migración, `--to-empty` en vez de `--to-schema-datasource`).
+
+**Revertir una migración son dos pasos, no uno:** aplicar su `down.sql` **y** borrar su fila
+de `_prisma_migrations`. Sin el segundo paso, Prisma cree que sigue aplicada y no la vuelve a
+correr. El CI hace exactamente esos dos pasos y luego re-aplica, y **falla si una migración
+llega sin su `down.sql`**.
+
+> No se usa `prisma migrate reset` en automatizaciones: es destructivo (borra la base
+> completa) y Prisma 6 lo bloquea cuando lo invoca un agente sin consentimiento explícito.
+> Para rehacer la base local desde cero, córrelo tú a mano.
+
 ## 7. E2E — pocos, pero de los flujos que de verdad importan
 
 Playwright cubre los flujos que, si se rompen, paran la operación real del club, no cada

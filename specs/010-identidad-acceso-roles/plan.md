@@ -328,9 +328,7 @@ Todo job se encola en la misma transacción que el cambio de datos que lo origin
 
 | Riesgo | Mitigación |
 |---|---|
-| R-1: unicidad de correo global (`UserAccount.email` único de plataforma) choca con
-  `docs/02` que dice "único por club" — en un modelo multi-tenant real (`ADR-013`) dos
-  clubes clientes distintos podrían necesitar la misma persona con el mismo correo | **Decisión pendiente antes de T-0XX de migración**: se opta por único global por ahora (una persona = un correo = una cuenta en toda la plataforma, coherente con "una persona tiene máximo una cuenta"); si dos clubes necesitan la misma persona, se vincula vía `PersonOrganization`/`staff_membership`, no se duplica la cuenta. Se documenta como `[SUPUESTO]` a confirmar con Daniel antes de correr la migración. |
+| ~~R-1: unicidad de correo global vs. por club~~ — **RESUELTO** (2026-08-10) | Confirmado por Daniel como **`docs/09` D-05**: `UserAccount.email` es único **global**. Una persona = un correo = un acceso, con club activo explícito en la sesión. Implementado en T-001. Se corrigió la nota contradictoria de `docs/02` §B. |
 | Constraint de "exactamente un payer vigente" no es expresable como `CHECK` simple en Postgres (depende de fecha vigente, no de un booleano único por fila) | se aplica en transacción de aplicación (al crear un guardianship como payer, se cierra `endsOn` del anterior) + job de integridad diario (§5) que alerta, no corrige solo |
 | `PermissionGuard` mal implementado deja pasar una acción de alcance equivocado | test de autorización obligatorio por endpoint (`docs/05` §3) cubre exactamente este caso; además test específico "admin de organización X no puede asignar rol de club" |
 | Argon2id mal configurado (parámetros de costo insuficientes) | se fija el perfil de parámetros (memoria/iteraciones) en `password.service.ts` con un comentario del por qué, revisado en la primera auditoría externa (`docs/10` §4 punto 1) |

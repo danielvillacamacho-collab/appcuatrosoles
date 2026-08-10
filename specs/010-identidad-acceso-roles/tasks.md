@@ -11,9 +11,9 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 
 ## A — Esquema y migraciones
 
-- [ ] **T-001** Agregar a `prisma/schema.prisma` los modelos `Person`, `UserAccount`,
+- [x] **T-001** Agregar a `prisma/schema.prisma` los modelos `Person`, `UserAccount`,
   `Session` (`plan.md` §1). Generar migración. Verificación: `pnpm db:migrate:dev` corre
-  limpio; migración revierte con `down`.
+  limpio; migración revierte con `down`. ✅ 2026-08-10 — ver `verification.md` §T-001.
 - [ ] **T-002** Agregar `PersonOrganization`, `RoleAssignment`, `CommissionerDelegation`.
   Verificación: migración `up`/`down` en CI contra Postgres real.
 - [ ] **T-003** Agregar `Guardianship`, `MembershipCategory`, `MembershipAssignment`.
@@ -22,9 +22,13 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   de permisos (`REVOKE UPDATE, DELETE` / `GRANT SELECT, INSERT` sobre `audit_log` para el rol
   de aplicación). Verificación: un `UPDATE` manual contra `audit_log` con el usuario de
   aplicación falla por permisos (test de integración que lo confirma).
-- [ ] **T-005** Constraint parcial `UNIQUE(club_id, email) WHERE email IS NOT NULL` en
-  `Person`, en SQL crudo dentro de la migración. Verificación: insertar dos personas del mismo
-  club con el mismo correo falla; con `email = NULL` no falla.
+- [ ] **T-005** ~~Constraint parcial `UNIQUE(club_id, email) WHERE email IS NOT NULL` en SQL
+  crudo~~ → **corregido en T-001**: no hace falta SQL crudo. PostgreSQL trata los `NULL` como
+  distintos en un índice único, así que el `@@unique([clubId, email])` normal de Prisma ya da
+  exactamente el comportamiento pedido (comprobado empíricamente el 2026-08-10: dos personas
+  del mismo club con `email = NULL` conviven; con el mismo correo no vacío, choca con `P2002`).
+  Lo que queda de esta tarea es **escribir el test automatizado** de esos dos casos, que hoy
+  sólo están verificados a mano.
 - [ ] **T-006** Seed mínimo (`pnpm db:seed`): un club, tres personas con roles distintos
   (`club_admin`, `commissioner`, `player`), una categoría de membresía. Verificación: correr
   el seed dos veces no duplica nada (idempotente).
