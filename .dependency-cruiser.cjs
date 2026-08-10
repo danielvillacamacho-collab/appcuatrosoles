@@ -35,6 +35,10 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: "node_modules" },
+    // Defensa en profundidad: aunque el script de package.json ya apunta sólo a src/,
+    // esto evita que dist/ o coverage/ (artefactos generados, no código) se cuelen si
+    // alguien corre depcruise directo sobre todo el árbol.
+    exclude: { path: "(^|/)(dist|coverage)(/|$)" },
     tsPreCompilationDeps: true,
     tsConfig: { fileName: "tsconfig.base.json" },
   },

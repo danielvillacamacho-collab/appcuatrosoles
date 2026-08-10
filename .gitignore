@@ -11,5 +11,6 @@ coverage/
 apps/web/dist/
 apps/api/dist/
 prisma/*.db
+*.tsbuildinfo
 .vscode/*
 !.vscode/extensions.json
