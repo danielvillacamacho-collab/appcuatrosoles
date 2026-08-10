@@ -111,3 +111,88 @@ detalle. Un `down` sólo se ejerce el día del rollback, que es el peor momento 
 - `person_organization.organization_id` sigue sin llave foránea porque la tabla `organization`
   la crea el **módulo 020**. Anotado como entregable de 020 en el propio `schema.prisma`: hasta
   entonces nada impide una fila apuntando a una organización inexistente, y eso toca P-05.
+
+---
+
+## T-003 — `MembershipCategory`, `MembershipAssignment`, `Guardianship`
+
+**Fecha:** 2026-08-10 · **Migración:** `20260810210251_identity_membership_and_guardianship`
+
+### Verificación exigida por la tarea
+
+| Criterio | Resultado |
+|---|---|
+| Migración `up`/`down` contra Postgres real | ✅ ciclo completo; el `down` revierte sólo T-003 y el `EXCLUDE` se reconstruye al volver a aplicar |
+
+### El primer dinero del proyecto (P-02), demostrado
+
+`membership_category.monthly_fee_cents` es el primer campo de dinero. Quedó `BIGINT` en la base
+y `BigInt` en el cliente. La prueba no se quedó en «funciona con una cuota normal»:
+
+| Comprobación | Resultado |
+|---|---|
+| Cuota realista (1.500.000 COP = 150.000.000 centavos) vuelve exacta y como `BigInt` | ✅ |
+| Un valor por encima de 2⁵³ (`9007199254740993`) **no pierde precisión** | ✅ |
+| …y el mismo test demuestra que en punto flotante ese número y su vecino **son el mismo valor** (`9007199254740992`) | ✅ |
+| Cuota de cero es válida (hay categorías sin cuota) | ✅ |
+| Cuota negativa es rechazada | ✅ |
+
+Esa tercera línea es la razón de existir de P-02, hecha evidencia ejecutable en lugar de
+argumento: si el dinero pasara por un `number` de JavaScript, dos cifras distintas de centavos
+serían indistinguibles.
+
+### La regla de producto del PRD §2, vuelta imposible de violar
+
+*«Cada persona tiene una única categoría vigente a la vez, pero la plataforma guarda el
+historial»* dejó de ser una intención y pasó a ser un `EXCLUDE USING gist` sobre
+`(person_id, daterange(effective_from, effective_to, '[)'))`:
+
+| Comprobación | Resultado |
+|---|---|
+| Dos categorías con períodos solapados para la misma persona | ✅ rechazado por la base |
+| Abrir una segunda membresía mientras hay una vigente sin cerrar | ✅ rechazado |
+| Cambio de categoría el mismo día en que termina la anterior | ✅ **permitido** — el rango semiabierto `'[)'` hace válido el caso normal |
+| Una membresía que termina antes de empezar | ✅ rechazado |
+
+Vale la pena notar el tercer caso: un constraint que rechazara también los períodos adyacentes
+habría hecho imposible el cambio de categoría normal. El invariante correcto no es «que no se
+toquen», es «que no se solapen».
+
+### Cuentas familiares (R-010-10)
+
+| Comprobación | Resultado |
+|---|---|
+| Un menor con **dos** acudientes (madre y padre) | ✅ permitido |
+| Dos pagadores principales vigentes para el mismo menor | ✅ rechazado |
+| El mismo acudiente vinculado dos veces al mismo menor | ✅ rechazado |
+| Nadie es acudiente de sí mismo | ✅ rechazado |
+| Vínculo que termina antes de empezar | ✅ rechazado |
+
+**División honesta de la garantía:** la base asegura «**como máximo** un pagador principal
+vigente». El «**al menos** uno» depende de la fecha y no cabe en un constraint — lo vigila el job
+diario de integridad (T-071). Media garantía está en el motor y media en la aplicación, y eso
+queda escrito para que nadie asuma más de lo que hay.
+
+### Decisiones de modelado
+
+1. **`code` de categoría es texto, no un enum.** Las categorías son un catálogo administrable
+   (P-04, PRD §16): el club puede crear las suyas sin que nadie despliegue. Un enum las habría
+   congelado en el código.
+2. **`monthly_fee_cents` es el valor vigente, no un histórico.** Los importes ya cobrados se
+   congelan en `charge.amount_cents` (módulo 100), así que cambiar la cuota no reescribe el
+   pasado. Se documentó en el esquema para que nadie añada una tabla de histórico creyendo que
+   falta.
+3. **`effective_from`/`effective_to` y `starts_on`/`ends_on` son `DATE`, no timestamps.** Un
+   cambio de categoría «aplica desde el siguiente ciclo de facturación»: eso es un día, no un
+   momento del día.
+4. **`btree_gist` se crea aquí** y el `down` **no** la elimina a propósito: es una capacidad del
+   motor, no un dato de este módulo, y los módulos 040 (canchas) y 090 (caballos) la necesitan
+   para su propio antidoble-reserva.
+
+### Pendiente declarado
+
+- Igual que T-001 y T-002: los 17 chequeos son una prueba de humo **manual y desechable**. Sin
+  protección contra regresión hasta los tests de integración (T-030 en adelante).
+- `membership_category.rights` es `jsonb` sin validación de forma en la base. La estructura la
+  debe validar el dominio (Zod) cuando se implemente la gestión de categorías; hoy nada impide
+  guardar una clave mal escrita.

@@ -49,11 +49,16 @@ model Person {
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   createdById String?  @map("created_by_id")
 
-  userAccount   UserAccount?
-  organizations PersonOrganization[]
+  userAccount       UserAccount?
+  organizations     PersonOrganization[]
+  membershipHistory MembershipAssignment[]
 
-  // Las relaciones hacia membresías, waivers y guardianías se agregan en T-003 y T-004,
-  // cuando existan esos modelos.
+  /// Cuentas familiares: una misma persona puede ser acudiente de varios menores y, a la
+  /// vez, estar a cargo de alguien (`guardianship`, HU-010-10).
+  guardianOf  Guardianship[] @relation("Guardian")
+  dependentOf Guardianship[] @relation("Dependent")
+
+  // Las relaciones hacia waivers se agregan en T-004, cuando exista ese modelo.
 
   @@unique([clubId, email])
   @@index([clubId, status])
@@ -110,6 +115,7 @@ model UserAccount {
   rolesRevoked        RoleAssignment[]         @relation("RolesRevoked")
   delegationsGiven    CommissionerDelegation[] @relation("DelegationsGiven")
   delegationsReceived CommissionerDelegation[] @relation("DelegationsReceived")
+  membershipsAssigned MembershipAssignment[]   @relation("MembershipsAssigned")
 
   @@map("user_account")
 }
@@ -296,6 +302,110 @@ enum DelegationScope {
   tournament
 
   @@map("delegation_scope")
+}
+
+// ─── T-003 · Membresías y cuentas familiares ────────────────────────────────────
+// docs/02-domain-model.md §A y §B · specs/010-identidad-acceso-roles/plan.md §1
+
+/// Categoría de membresía del club: estudiante, miembro temporal, miembro permanente, socio,
+/// invitado. Es un **catálogo administrable**, no un enum de código: el club puede crear o
+/// retirar categorías sin que nadie despliegue nada (P-04, PRD §16 «todo administrable»).
+/// Por eso `code` es texto y no un tipo cerrado.
+model MembershipCategory {
+  id     String @id @default(uuid(7))
+  clubId String @map("club_id")
+
+  /// Identificador estable para que el código pueda referirse a una categoría sin depender
+  /// del nombre visible: `student`, `temporary_member`, `permanent_member`, `partner`,
+  /// `guest`… El club puede añadir otros.
+  code String
+  name String
+
+  /// **Primer campo de dinero del proyecto.** `BigInt` de centavos de peso colombiano, nunca
+  /// decimal ni punto flotante (P-02): `0.1 + 0.2 !== 0.3` en punto flotante, y un error de
+  /// redondeo aquí es plata real de una persona real. El sufijo `_cents` es obligatorio para
+  /// que la unidad sea imposible de confundir al leer el código.
+  ///
+  /// Es el valor **vigente**, no un histórico: los importes ya cobrados quedan congelados en
+  /// `charge.amount_cents` (módulo 100), así que cambiar esta cuota no reescribe el pasado.
+  monthlyFeeCents BigInt @map("monthly_fee_cents")
+
+  /// Derechos de la categoría, administrables sin desplegar (P-04). Claves esperadas:
+  /// `puede_postular_practicas`, `puede_inscribir_copas`, `requiere_aptitud`,
+  /// `puede_reservar_taqueo`. Es `jsonb` porque el club puede añadir derechos que hoy no
+  /// existen; la forma la valida el dominio, no la base.
+  rights Json
+
+  /// Se desactiva, no se borra (P-06): una categoría retirada sigue apareciendo en el
+  /// historial de quien la tuvo.
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  assignments MembershipAssignment[]
+
+  @@unique([clubId, code])
+  @@index([clubId, active])
+  @@map("membership_category")
+}
+
+/// Qué categoría tuvo cada persona y desde cuándo. Es **historial**, no un campo mutable en
+/// `person`: el club necesita poder responder «con qué categoría jugaba en marzo» sin
+/// adivinar, y las tarifas cobradas dependen de eso (PRD §2).
+model MembershipAssignment {
+  id     String @id @default(uuid(7))
+  clubId String @map("club_id")
+
+  personId             String @map("person_id")
+  membershipCategoryId String @map("membership_category_id")
+
+  /// Fechas de calendario, no instantes: un cambio de categoría «aplica desde el siguiente
+  /// ciclo de facturación» (PRD §2), que es un día, no un momento del día.
+  /// `effectiveTo` nulo = vigente hoy.
+  effectiveFrom DateTime  @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+
+  assignedById String   @map("assigned_by_id")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  person     Person             @relation(fields: [personId], references: [id])
+  category   MembershipCategory @relation(fields: [membershipCategoryId], references: [id])
+  assignedBy UserAccount        @relation("MembershipsAssigned", fields: [assignedById], references: [id])
+
+  @@index([clubId, personId, effectiveFrom])
+  @@index([membershipCategoryId])
+  @@map("membership_assignment")
+}
+
+/// Un adulto a cargo de un perfil de menor. El menor es una `person` completa —con su
+/// caballada, su bolsa de clases y su handicap— pero **sin cuenta de usuario**: no inicia
+/// sesión. El acudiente reserva, paga y firma en su nombre (PRD §3, HU-010-10).
+model Guardianship {
+  id     String @id @default(uuid(7))
+  clubId String @map("club_id")
+
+  guardianPersonId  String @map("guardian_person_id")
+  dependentPersonId String @map("dependent_person_id")
+
+  /// Un menor puede tener dos acudientes (padre y madre), pero **uno solo** es el pagador
+  /// principal: en su estado de cuenta se consolidan los cobros del menor (R-010-10).
+  /// La base garantiza «como máximo uno vigente»; que haya «al menos uno» lo vigila el job
+  /// diario de integridad (T-071), porque depende de la fecha y no cabe en un constraint.
+  isPrimaryPayer Boolean @default(false) @map("is_primary_payer")
+
+  startsOn DateTime  @map("starts_on") @db.Date
+  endsOn   DateTime? @map("ends_on") @db.Date
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  guardian  Person @relation("Guardian", fields: [guardianPersonId], references: [id])
+  dependent Person @relation("Dependent", fields: [dependentPersonId], references: [id])
+
+  @@index([clubId, dependentPersonId])
+  @@index([guardianPersonId])
+  @@map("guardianship")
 }
 
 // ─── Integridad pendiente (no es un olvido) ─────────────────────────────────────

@@ -26,6 +26,10 @@ histórica sigue siendo consultable. Catálogo completo en `docs/08-configuratio
 **membership_category** — `club_id`, `code` (student | temporary_member | permanent_member |
 partner | guest), `name`, `monthly_fee_cents`, `rights jsonb` (puede_postular_practicas,
 puede_inscribir_copas, requiere_aptitud, puede_reservar_taqueo…), `active`.
+> `code` es **texto, no un enum**: las categorías son un catálogo administrable y el club
+> puede crear las suyas sin desplegar nada (P-04). `monthly_fee_cents` es el valor **vigente**;
+> los importes ya cobrados quedan congelados en `charge.amount_cents`, así que cambiar la cuota
+> no reescribe el pasado. Invariante en base de datos: `monthly_fee_cents >= 0`.
 
 ---
 
@@ -70,13 +74,27 @@ puede_inscribir_copas, requiere_aptitud, puede_reservar_taqueo…), `active`.
 > delegación siempre pertenece a un club. Invariantes en base de datos: `ends_at > starts_at`
 > y `delegator_id <> delegate_id`.
 
-**guardianship** — `guardian_person_id`, `dependent_person_id`, `is_primary_payer`,
+**guardianship** — `club_id`, `guardian_person_id`, `dependent_person_id`, `is_primary_payer`,
 `starts_on`, `ends_on`.
 > Invariante: exactamente un `is_primary_payer = true` vigente por dependiente.
 > Los cobros del dependiente se consolidan en el estado de cuenta del pagador principal.
+> **Cómo se garantiza (T-003):** la base asegura «**como máximo** uno vigente» con un índice
+> único parcial; el «**al menos** uno» no cabe en un constraint porque depende de la fecha, y lo
+> vigila el job diario de integridad (T-071). Conviene tener clara la división: media garantía
+> está en el motor y media en la aplicación. Otros invariantes en base: un mismo acudiente no se
+> vincula dos veces al mismo menor mientras el vínculo esté activo, nadie es acudiente de sí
+> mismo, y `ends_on >= starts_on`.
 
-**membership_assignment** — `person_id`, `membership_category_id`, `effective_from`,
+**membership_assignment** — `club_id`, `person_id`, `membership_category_id`, `effective_from`,
 `effective_to`, `assigned_by_id`. Historial; la vigente es la de mayor `effective_from`.
+> **Invariante en base de datos (T-003):** `EXCLUDE USING gist` sobre
+> `(person_id, daterange(effective_from, effective_to, '[)'))` — dos períodos de membresía de la
+> misma persona **no pueden solaparse**, ni con dos administradores guardando en el mismo
+> segundo. Es la regla de producto del PRD §2 («una única categoría vigente a la vez, pero con
+> historial») convertida en algo imposible de violar. El rango semiabierto `'[)'` hace que un
+> cambio de categoría el mismo día en que termina la anterior sea válido, que es el caso normal.
+> Requiere la extensión `btree_gist`, que se crea en esta migración y que también usarán los
+> módulos 040 (canchas) y 090 (caballos).
 
 **waiver_version** / **waiver_acceptance** — `version`, `body`, `published_at` /
 `person_id`, `waiver_version_id`, `accepted_by_person_id` (el acudiente si es menor),

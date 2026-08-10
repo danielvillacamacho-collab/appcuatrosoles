@@ -17,8 +17,8 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 - [x] **T-002** Agregar `PersonOrganization`, `RoleAssignment`, `CommissionerDelegation`.
   Verificación: migración `up`/`down` en CI contra Postgres real. ✅ 2026-08-10 — ver
   `verification.md` §T-002.
-- [ ] **T-003** Agregar `Guardianship`, `MembershipCategory`, `MembershipAssignment`.
-  Verificación: igual que T-002.
+- [x] **T-003** Agregar `Guardianship`, `MembershipCategory`, `MembershipAssignment`.
+  Verificación: igual que T-002. ✅ 2026-08-10 — ver `verification.md` §T-003.
 - [ ] **T-004** Agregar `WaiverVersion`, `WaiverAcceptance`, `AuditLog` + migración SQL cruda
   de permisos (`REVOKE UPDATE, DELETE` / `GRANT SELECT, INSERT` sobre `audit_log` para el rol
   de aplicación). Verificación: un `UPDATE` manual contra `audit_log` con el usuario de
