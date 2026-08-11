@@ -14,7 +14,7 @@ por salir.
 
 ## A — Esquema y migraciones
 
-- [ ] **T-401** Modelos `Field` y `FieldBooking` (`plan.md` §1), con el SQL a mano que Prisma no
+- [x] **T-401** Modelos `Field` y `FieldBooking` (`plan.md` §1), con el SQL a mano que Prisma no
   sabe expresar: `CREATE EXTENSION btree_gist`, la columna **generada** `time_range`, la restricción
   de exclusión `no_field_overlap` y el `CHECK` de `ends_at > starts_at`.
   Verificación: cada invariante probado **provocando su rechazo**, no asumiéndolo. Los cinco casos
@@ -23,11 +23,21 @@ por salir.
   ocupa, y escribir `time_range` a mano es imposible. Migración `up` y `down` contra Postgres real.
   > El `down.sql` **no borra la extensión**: puede estar en uso por otra cosa —`specs/020` ya la usa
   > para las temporadas— y quitarla es más peligroso que dejarla.
+  ✅ 2026-08-11 — 11 tests de integración. Ciclo `up`/`down`/`up` verificado contra Postgres real, y
+  la extensión sigue en pie después del `down`.
+  > Los tests **no pasan por la aplicación**: van directo a la base, porque lo que se prueba es que
+  > la **base** impide el solapamiento. Probándolo contra un servicio, el día que alguien cambie el
+  > servicio el test seguiría pasando y la garantía se habría ido sin que nadie lo notara.
 
-- [ ] **T-402** Las tres canchas nacen con el club: agregarlas a `crearClubCompleto`
+- [x] **T-402** Las tres canchas nacen con el club: agregarlas a `crearClubCompleto`
   (`specs/020`) y a `pnpm db:seed`, tomando la cantidad de `field.count` (`docs/08` §5).
   Verificación: un club recién creado por `POST /platform/clubs` ya tiene sus canchas; correr el
   seed dos veces no las duplica.
+  ✅ 2026-08-11 — 2 tests. **Cierra la sección A.**
+  > Se numeran («Cancha 1», «Cancha 2», «Cancha 3») porque es como las llama el club al hablar. Un
+  > nombre inventado —«Principal», «Norte»— obligaría a renombrarlas el primer día.
+  > La cantidad sale de `field.count` del catálogo y no de un literal: un club con dos canchas o con
+  > cinco no debería necesitar un despliegue (P-04).
 
 ## B — Dominio puro (antes que el API, a propósito)
 

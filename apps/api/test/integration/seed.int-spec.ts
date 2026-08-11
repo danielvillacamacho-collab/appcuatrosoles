@@ -82,6 +82,15 @@ describe("Seed del club de ejemplo", () => {
     expect(activas).toBe(3);
   });
 
+  it("el club de ejemplo tiene sus canchas: sin ellas no se puede programar nada", async () => {
+    const canchas = await prisma.field.findMany({
+      where: { club: { slug: "club-demo" } },
+      orderBy: { name: "asc" },
+    });
+
+    expect(canchas.map((cancha) => cancha.name)).toEqual(["Cancha 1", "Cancha 2", "Cancha 3"]);
+  });
+
   it("correrlo una segunda vez no duplica nada", async () => {
     const antes = await contar();
 

@@ -1,5 +1,7 @@
 import type { Prisma } from "@prisma/client";
+import { SETTING_CATALOG } from "@polo/domain";
 import { CATEGORIAS_POR_DEFECTO } from "./default-membership-categories.js";
+import { canchasPorDefecto } from "./default-fields.js";
 
 export interface DatosDeClubNuevo {
   slug: string;
@@ -37,6 +39,16 @@ export async function crearClubCompleto(
 
   await tx.membershipCategory.createMany({
     data: CATEGORIAS_POR_DEFECTO.map((categoria) => ({ clubId: club.id, ...categoria })),
+  });
+
+  // Las canchas del club (T-402). Sin ellas, la primera práctica no tendría dónde ocurrir y quien
+  // acaba de recibir su club tendría que registrarlas antes de poder hacer nada.
+  //
+  // La cantidad sale del catálogo (`field.count`) y no de un literal: un club con dos canchas o con
+  // cinco no debería necesitar un despliegue (P-04). Se lee el default del catálogo porque el club
+  // se está creando **en esta misma transacción** — todavía no puede tener un valor propio.
+  await tx.field.createMany({
+    data: canchasPorDefecto(cuantasCanchas()).map((cancha) => ({ clubId: club.id, ...cancha })),
   });
 
   // Una temporada abierta desde el día uno: sin ella, la primera práctica que alguien cree no
@@ -91,3 +103,10 @@ export async function crearClubCompleto(
  * coincidir con ella al verificar. La persona define la suya al aceptar la invitación.
  */
 export const SIN_CONTRASENA = "sin-contrasena-hasta-aceptar-la-invitacion";
+
+/** El default del catálogo, con respaldo por si la clave cambiara de tipo. */
+function cuantasCanchas(): number {
+  const definido = SETTING_CATALOG["field.count"]?.default;
+
+  return typeof definido === "number" ? definido : 3;
+}

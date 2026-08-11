@@ -1,6 +1,7 @@
 import { pathToFileURL } from "node:url";
 import argon2 from "argon2";
 import { PrismaClient, type OrgRelationship, type RoleName } from "@prisma/client";
+import { canchasPorDefecto } from "../src/club/default-fields.js";
 import { CATEGORIAS_POR_DEFECTO } from "../src/club/default-membership-categories.js";
 
 /**
@@ -135,6 +136,19 @@ export async function sembrarClubDemo(
     });
   }
   log(`  ${CATEGORIAS_POR_DEFECTO.length} categorías de membresía`);
+
+  // ── Canchas (T-402) ─────────────────────────────────────────────────────────
+  // `upsert` sobre (club_id, name), que es único: correrlo de nuevo no duplica. Sin canchas no se
+  // puede programar nada, así que un seed sin ellas no sirve para probar el módulo que sigue.
+  const canchas = canchasPorDefecto(3);
+  for (const cancha of canchas) {
+    await prisma.field.upsert({
+      where: { clubId_name: { clubId: CLUB_ID, name: cancha.name } },
+      create: { clubId: CLUB_ID, ...cancha },
+      update: {},
+    });
+  }
+  log(`  ${canchas.length} canchas`);
 
   // ── Versión del waiver ──────────────────────────────────────────────────────
   // Sin un waiver publicado nadie puede postularse a una práctica ni reservar una clase

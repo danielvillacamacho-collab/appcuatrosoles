@@ -115,6 +115,11 @@ describe("Alta y suspensión de clubes (T-230, T-231)", () => {
       const clubId = respuesta.body.id;
       expect(await prisma.membershipCategory.count({ where: { clubId } })).toBe(5);
 
+      // T-402: sin canchas, quien acaba de recibir su club tendría que registrarlas antes de poder
+      // programar la primera práctica.
+      const canchas = await prisma.field.findMany({ where: { clubId }, orderBy: { name: "asc" } });
+      expect(canchas.map((cancha) => cancha.name)).toEqual(["Cancha 1", "Cancha 2", "Cancha 3"]);
+
       const temporada = await prisma.season.findFirstOrThrow({ where: { clubId } });
       expect(temporada.status).toBe("open");
 

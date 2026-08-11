@@ -75,6 +75,32 @@ export const SETTING_CATALOG = {
     source: "docs/08 §9 · PRD Parte II §6 (exacto por definir)",
     note: "Hoy sin efecto: el cierre por inactividad no está implementado. Ver T-021.",
   },
+  /**
+   * Cuántas canchas nacen con un club (`docs/08` §5).
+   *
+   * No es una restricción: el club agrega o archiva las que quiera después. Es cuántas se crean el
+   * primer día para que nadie tenga que registrarlas a mano antes de poder programar nada.
+   */
+  "field.count": {
+    scope: "club",
+    type: "number",
+    default: 3,
+    source: "docs/08 §5 · PRD Parte I §6",
+  },
+
+  /**
+   * Horario en el que se puede programar, en la zona del club (`specs/040` R-040-06).
+   *
+   * Existe porque **las canchas no tienen iluminación**: lo que acota el día es la luz natural, no
+   * una decisión del club. Por eso es una sola clave y no un atributo por cancha.
+   */
+  "field.operating_hours": {
+    scope: "club",
+    type: "string",
+    default: "06:00-18:00",
+    source: "specs/040 §13 — decidido con Daniel el 2026-08-11",
+  },
+
   "identity.minor_profile_max_age": {
     scope: "club",
     type: "number",

@@ -60,7 +60,7 @@ model Person {
 
   /// Exenciones de responsabilidad: las que aceptó esta persona, y las que aceptó *en nombre
   /// de* otra (un acudiente firmando por su hijo menor).
-  waiverAcceptances    WaiverAcceptance[] @relation("WaiverSubject")
+  waiverAcceptances       WaiverAcceptance[] @relation("WaiverSubject")
   waiversAcceptedOnBehalf WaiverAcceptance[] @relation("WaiverAcceptedBy")
 
   /// T-202: la llave foránea que 010 dejó anotada como deuda. Ver `specs/020` §T-202.
@@ -125,17 +125,18 @@ model UserAccount {
   // Rastro de quién otorgó y quién revocó cada rol, y de las delegaciones de comisario.
   // Son punteros de auditoría con llave foránea real: un `granted_by_id` que apunte a una
   // cuenta inexistente haría inútil el registro justo cuando se necesita (R-010-11).
-  rolesGranted        RoleAssignment[]         @relation("RolesGranted")
-  rolesRevoked        RoleAssignment[]         @relation("RolesRevoked")
-  delegationsGiven    CommissionerDelegation[] @relation("DelegationsGiven")
-  delegationsReceived CommissionerDelegation[] @relation("DelegationsReceived")
-  membershipsAssigned MembershipAssignment[]   @relation("MembershipsAssigned")
-  auditEntries        AuditLog[]               @relation("AuditActor")
-  auditEntriesOnBehalf AuditLog[]              @relation("AuditOnBehalfOf")
+  rolesGranted         RoleAssignment[]         @relation("RolesGranted")
+  rolesRevoked         RoleAssignment[]         @relation("RolesRevoked")
+  delegationsGiven     CommissionerDelegation[] @relation("DelegationsGiven")
+  delegationsReceived  CommissionerDelegation[] @relation("DelegationsReceived")
+  membershipsAssigned  MembershipAssignment[]   @relation("MembershipsAssigned")
+  auditEntries         AuditLog[]               @relation("AuditActor")
+  auditEntriesOnBehalf AuditLog[]               @relation("AuditOnBehalfOf")
 
-  settingsCreated Setting[]
-  oneTimeTokens   OneTimeToken[]
+  settingsCreated         Setting[]
+  oneTimeTokens           OneTimeToken[]
   notificationPreferences NotificationPreference[]
+  fieldBookingsCreated    FieldBooking[]
 
   @@map("user_account")
 }
@@ -193,7 +194,7 @@ model PersonOrganization {
   /// excepciones que alguien tenga que recordar.
   clubId String @map("club_id")
 
-  personId String @map("person_id")
+  personId       String          @map("person_id")
   /// Todavía sin llave foránea: la tabla `organization` la crea el módulo 020. Ver la nota
   /// «Integridad pendiente» al final de este archivo.
   organizationId String          @map("organization_id")
@@ -241,9 +242,9 @@ model RoleAssignment {
   /// scope=organization → es la organización), y un `superadmin` tiene scope=platform,
   /// donde no existe club alguno. Un `club_id` paralelo sería una segunda fuente de verdad
   /// que puede contradecir a `scopeId` — peor que no tenerlo.
-  scope ScopeKind
+  scope   ScopeKind
   /// Nulo únicamente cuando `scope = platform`, que no cuelga de ninguna entidad.
-  scopeId String? @map("scope_id")
+  scopeId String?   @map("scope_id")
 
   /// `grantedAt` cumple el papel de `created_at` de esta tabla; no se duplica.
   grantedById String    @map("granted_by_id")
@@ -251,14 +252,14 @@ model RoleAssignment {
   revokedById String?   @map("revoked_by_id")
   revokedAt   DateTime? @map("revoked_at") @db.Timestamptz(3)
 
-  userAccount UserAccount @relation("AccountRoles", fields: [userAccountId], references: [id])
-  grantedBy   UserAccount @relation("RolesGranted", fields: [grantedById], references: [id])
+  userAccount UserAccount  @relation("AccountRoles", fields: [userAccountId], references: [id])
+  grantedBy   UserAccount  @relation("RolesGranted", fields: [grantedById], references: [id])
   /// `onDelete: Restrict` explícito: el default de Prisma para una relación opcional es
   /// `SET NULL`, que borraría en silencio **quién revocó el rol** — precisamente el dato que
   /// la auditoría existe para conservar (P-07). Si algún día el flujo de datos personales
   /// (Ley 1581) necesita eliminar la cuenta, que falle y obligue a decidir explícitamente
   /// cómo anonimizar, en vez de perder el rastro sin que nadie se entere.
-  revokedBy UserAccount? @relation("RolesRevoked", fields: [revokedById], references: [id], onDelete: Restrict)
+  revokedBy   UserAccount? @relation("RolesRevoked", fields: [revokedById], references: [id], onDelete: Restrict)
 
   @@index([userAccountId, revokedAt])
   @@index([scope, scopeId])
@@ -486,7 +487,7 @@ model WaiverAcceptance {
   clubId String @map("club_id")
 
   /// La persona a la que cubre la exención (puede ser un menor sin cuenta).
-  personId String @map("person_id")
+  personId           String @map("person_id")
   /// Quién la aceptó materialmente: la propia persona, o su acudiente si es menor.
   acceptedByPersonId String @map("accepted_by_person_id")
   waiverVersionId    String @map("waiver_version_id")
@@ -494,7 +495,7 @@ model WaiverAcceptance {
   acceptedAt DateTime @default(now()) @map("accepted_at") @db.Timestamptz(3)
   /// IP hasheada, no en claro: sirve como evidencia de la aceptación sin almacenar un dato
   /// personal innecesario (docs/06 §8).
-  ipHash String? @map("ip_hash")
+  ipHash     String?  @map("ip_hash")
 
   person     Person        @relation("WaiverSubject", fields: [personId], references: [id])
   acceptedBy Person        @relation("WaiverAcceptedBy", fields: [acceptedByPersonId], references: [id])
@@ -526,7 +527,7 @@ model AuditLog {
 
   /// Nulo cuando la acción la ejecutó el sistema y no una persona (un job programado, una
   /// reconciliación). Distinguirlo importa: «nadie» y «no sabemos quién» no son lo mismo.
-  actorUserId String? @map("actor_user_id")
+  actorUserId  String? @map("actor_user_id")
   /// Presente cuando se actuó **por delegación**: el subcomisario que firma con la autoridad
   /// del comisario queda registrado como tal, nunca como si fuera el comisario en persona
   /// (docs/02 §B, R-010-11).
@@ -536,7 +537,7 @@ model AuditLog {
   entityType String @map("entity_type")
   /// Referencia polimórfica a propósito: la auditoría cubre cualquier entidad del sistema, así
   /// que no puede tener llave foránea. Debe sobrevivir aunque la entidad ya no exista.
-  entityId String @map("entity_id")
+  entityId   String @map("entity_id")
 
   before Json?
   after  Json?
@@ -544,7 +545,7 @@ model AuditLog {
   occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz(3)
   /// El mismo identificador que viaja en la respuesta de error de la API y en los logs de
   /// Pino (docs/03 §2): es el hilo que conecta el reclamo de un usuario con lo que pasó.
-  requestId String @map("request_id")
+  requestId  String   @map("request_id")
 
   actor      UserAccount? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
   onBehalfOf UserAccount? @relation("AuditOnBehalfOf", fields: [onBehalfOfId], references: [id], onDelete: Restrict)
@@ -584,11 +585,11 @@ model Club {
   /// enteros (P-02, R-020-14).
   currency String @default("COP")
 
-  status ClubStatus @default(active)
+  status          ClubStatus @default(active)
   /// Cuándo y por qué se suspendió. Se conserva tras reactivar: la historia de un corte de
   /// servicio es justo lo que se necesita cuando hay una discusión contractual.
-  suspendedAt     DateTime? @map("suspended_at") @db.Timestamptz(3)
-  suspendedReason String?   @map("suspended_reason")
+  suspendedAt     DateTime?  @map("suspended_at") @db.Timestamptz(3)
+  suspendedReason String?    @map("suspended_reason")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -597,15 +598,17 @@ model Club {
   seasons       Season[]
 
   // T-202 · Todo lo que cuelga del club, ahora con integridad referencial de verdad.
-  people                 Person[]
-  peopleOrganizations    PersonOrganization[]
+  people                  Person[]
+  peopleOrganizations     PersonOrganization[]
   commissionerDelegations CommissionerDelegation[]
-  membershipCategories   MembershipCategory[]
-  membershipAssignments  MembershipAssignment[]
-  guardianships          Guardianship[]
-  waiverVersions         WaiverVersion[]
-  waiverAcceptances      WaiverAcceptance[]
-  auditEntries           AuditLog[]
+  membershipCategories    MembershipCategory[]
+  membershipAssignments   MembershipAssignment[]
+  guardianships           Guardianship[]
+  waiverVersions          WaiverVersion[]
+  waiverAcceptances       WaiverAcceptance[]
+  auditEntries            AuditLog[]
+  fields                  Field[]
+  fieldBookings           FieldBooking[]
 
   @@index([status])
   @@map("club")
@@ -817,10 +820,10 @@ model OutboxMessage {
   payload Json
 
   /// Desde cuándo se puede procesar. Permite reintentos con espera y envíos programados.
-  availableAt DateTime @default(now()) @map("available_at") @db.Timestamptz(3)
+  availableAt DateTime  @default(now()) @map("available_at") @db.Timestamptz(3)
   sentAt      DateTime? @map("sent_at") @db.Timestamptz(3)
-  attempts    Int      @default(0)
-  lastError   String?  @map("last_error")
+  attempts    Int       @default(0)
+  lastError   String?   @map("last_error")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
@@ -836,3 +839,98 @@ model OutboxMessage {
 // roadmap). Cuando existan, 020 debe agregar una migración que ponga esas llaves foráneas:
 // hasta entonces nada impide una fila con un `club_id` que no corresponde a ningún club, y
 // eso toca directamente P-05. Está anotado como entregable de 020, no como algo opcional.
+
+// ─── T-401 · Canchas y calendario ───────────────────────────────────────────────
+// specs/040-canchas/plan.md §1 · docs/02-domain-model.md §D
+
+enum FieldStatus {
+  active
+  maintenance
+  archived
+}
+
+/// Una cancha del club.
+model Field {
+  id     String @id @default(uuid(7))
+  clubId String @map("club_id")
+
+  name          String
+  surface       String?
+  capacityNotes String? @map("capacity_notes")
+
+  status FieldStatus @default(active)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  club     Club           @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  bookings FieldBooking[]
+
+  /// Dos canchas del mismo club no se llaman igual: «¿reservaste la Cancha 2?» tiene que tener una
+  /// sola respuesta posible.
+  @@unique([clubId, name])
+  @@index([clubId, status])
+  @@map("field")
+}
+
+/// Qué ocupa la cancha. El vocabulario es del dominio y no de lo que esté implementado esta
+/// semana: `stick_and_ball` existe aunque los taqueos sean de Fase 3 (`spec.md` §3).
+enum BookingType {
+  practice
+  lesson
+  tournament_match
+  stick_and_ball
+  coaching
+  maintenance
+  block
+}
+
+enum BookingVisibility {
+  public
+  private
+}
+
+/// **La tabla central antidoble-reserva.** Toda ocupación de una cancha pasa por aquí (R-040-01).
+///
+/// Si cada módulo llevara su propia agenda, la garantía de no solapamiento tendría que
+/// reimplementarse en cada uno — y con eso desaparecería.
+model FieldBooking {
+  id      String @id @default(uuid(7))
+  clubId  String @map("club_id")
+  fieldId String @map("field_id")
+
+  startsAt DateTime @map("starts_at") @db.Timestamptz(3)
+  endsAt   DateTime @map("ends_at") @db.Timestamptz(3)
+
+  /// Columna **generada** en la migración: `tstzrange(starts_at, ends_at, '[)')`.
+  ///
+  /// Prisma no sabe leer un `tstzrange` y no hace falta que lo lea: existe para que la restricción
+  /// de exclusión tenga sobre qué operar. Se declara `Unsupported` para que `migrate` no intente
+  /// borrarla en la siguiente migración, y **no se puede escribir** — PostgreSQL rechaza cualquier
+  /// intento, así que no existe forma de guardar un rango incoherente con sus propios extremos.
+  timeRange Unsupported("tstzrange")? @map("time_range")
+
+  type       BookingType
+  visibility BookingVisibility @default(public)
+
+  /// El evento que originó la reserva: la práctica, la clase, la copa. Nulo en un bloqueo
+  /// administrativo, que no tiene otro evento detrás — es el evento.
+  sourceId String? @map("source_id")
+
+  /// Por qué se bloqueó. Sólo tiene sentido en `maintenance` y `block`.
+  reason String?
+
+  createdById String    @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  cancelledAt DateTime? @map("cancelled_at") @db.Timestamptz(3)
+
+  club      Club        @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  field     Field       @relation(fields: [fieldId], references: [id], onDelete: Restrict)
+  createdBy UserAccount @relation(fields: [createdById], references: [id])
+
+  /// El calendario de un día es siempre «este club, este rango»: sin este índice es un recorrido
+  /// completo de una tabla que crece con cada práctica del año.
+  @@index([clubId, startsAt])
+  @@index([fieldId, startsAt])
+  @@map("field_booking")
+}
