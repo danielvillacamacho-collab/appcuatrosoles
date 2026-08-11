@@ -880,3 +880,59 @@ la suite.
   otros.
 - **El guard todavía no es global.** Se aplica con `@UseGuards(SessionGuard)`. La obligatoriedad
   —que una ruta mutante sin declarar permiso impida arrancar la aplicación— es T-022.
+
+---
+
+## T-022a — `hasPermission`: la matriz de permisos como regla, no como plomería
+
+**Fecha:** 2026-08-10 · 21 tests · dominio al 100 % de cobertura (96 tests en total)
+
+T-022 pide un decorador y un guard, pero adentro hay una **regla de negocio** —quién puede qué, y
+dónde— y esa mitad no depende de NestJS. Va en `packages/domain` (P-01), donde se prueba sin
+levantar una aplicación ni una base de datos. El guard queda para T-022b.
+
+### Qué puede cada rol, y dónde, en una sola tabla
+
+Cada rol declara junto **su lista de permisos** y **su alcance**. Van juntos a propósito: separados,
+se puede agregar un permiso a un rol y olvidar acotarle el ámbito, que es la mitad silenciosa del
+problema.
+
+Las tres filas administrativas tienen hoy la misma lista de permisos, y no es un error de
+transcripción: la diferencia entre un `club_admin` y un `organization_admin` no está en *qué*
+permisos tienen sino en *dónde*. Se escribe igual la tabla completa porque es lo que hace que
+agregar un permiso obligue a decidir, rol por rol, quién lo tiene. Con una regla implícita —«los
+administradores pueden todo»— un permiso nuevo quedaría concedido por omisión, que es exactamente
+como se abren los agujeros.
+
+### Es la puerta gruesa, y está declarado que lo es
+
+`hasPermission` responde «este actor tiene autoridad administrativa **aquí**». La regla fina de cada
+operación vive aparte —`canAssignRole` (T-011) para otorgar roles— y se evalúa después, en el
+servicio. Las dos capas son deliberadas (`plan.md` §7): el guard impide que una petición de otro
+ámbito llegue siquiera a la lógica, y la función de dominio decide el caso exacto. Que la puerta
+gruesa sea permisiva con el detalle no es un descuido; lo sería si fuera la única.
+
+Lo que sí queda cerrado en la puerta es **R-010-04**: un `organization_admin` no pasa ningún permiso
+con ámbito de club, ni siquiera el de su propio club. Está probado explícitamente.
+
+### Dos tests que comprueban propiedades, no casos
+
+Los mismos dos que en T-011, y por la misma razón — cubren combinaciones que nadie enumeró:
+
+- **«Ningún rol operativo pasa ningún permiso, en ningún ámbito válido»**: recorre los cinco roles
+  no administrativos × sus ámbitos válidos × los siete permisos, y exige lista de infractores
+  vacía. Si al agregar un permiso alguien lo concede de más, aparece aquí.
+- **«Sólo tres roles tienen alguna autoridad»**: barre los ocho roles y verifica que la lista es
+  exactamente `superadmin`, `club_admin`, `organization_admin`.
+
+Además, un test exige que **ningún permiso del catálogo quede muerto** —sin nadie que pueda
+ejercerlo—, que es el error opuesto y también silencioso.
+
+### Pendientes declarados
+
+- **Dos filas de la matriz de `docs/06` §4 no tienen todavía nombre canónico de permiso**: «editar
+  categoría de membresía» y «configurar reglas globales». No se inventaron: `plan.md` §4 nombra
+  siete permisos y son los que están. La primera la necesita T-072; la segunda pertenece a
+  `specs/020` (configuración). Cada una nombra el suyo al llegar.
+- El catálogo no cubre `/me`: editar el propio perfil no pasa por permiso sino por ser el dueño de
+  la sesión (T-040 en adelante).

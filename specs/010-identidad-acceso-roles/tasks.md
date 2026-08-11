@@ -111,6 +111,10 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 - [ ] **T-022** `@RequirePermission()` + `PermissionGuard`: falla el arranque de la app si una
   ruta mutante no declara el decorador (`ADR-014` punto 4). Verificación: test que registra
   una ruta sin decorador y confirma que la app no arranca.
+  > **Se parte en dos**, porque la evaluación de permisos es una regla de negocio y no plomería de
+  > NestJS: **(a)** `hasPermission` y la matriz de `docs/06` §4 en `packages/domain` — hecho
+  > 2026-08-10, 21 tests, ver `verification.md` §T-022a; **(b)** el decorador, el guard y la
+  > comprobación de arranque, que es lo que queda.
 - [ ] **T-023** `AuditInterceptor` + `@Auditable()`: registra automáticamente antes/después en
   mutaciones marcadas. Verificación: una mutación de prueba genera exactamente una fila en
   `audit_log`.
