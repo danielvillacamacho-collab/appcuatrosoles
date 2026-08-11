@@ -10,6 +10,7 @@ import type { RoleName, ScopeKind } from "./roles.js";
  * suyos a esta lista; inventar uno en una ruta sin registrarlo aquí no compila.
  */
 export const PERMISSIONS = [
+  // Identidad y acceso (`specs/010` plan §4)
   "user.create",
   "user.edit",
   "user.suspend",
@@ -17,6 +18,14 @@ export const PERMISSIONS = [
   "user.export",
   "role.assign",
   "audit.view",
+  // Club y configuración (`specs/020` plan §4). `membership.manage` y `setting.edit` son las dos
+  // filas de la matriz de `docs/06` §4 que T-022a había dejado sin nombre canónico.
+  "club.edit",
+  "organization.manage",
+  "season.manage",
+  "membership.manage",
+  "setting.edit",
+  "platform.club.manage",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -59,12 +68,12 @@ const NINGUNO = (): boolean => false;
  * propósito: separados, se puede agregar un permiso a un rol y olvidar acotarle el ámbito, que es
  * la mitad silenciosa del problema.
  *
- * **Las tres filas administrativas tienen la misma lista de permisos hoy, y no es un error de
- * transcripción.** La diferencia entre un `club_admin` y un `organization_admin` no está en *qué*
- * permisos tienen sino en *dónde*: eso es lo que decide su `alcanza`. Se escribe igual la tabla
- * completa porque es la que hace que agregar un permiso obligue a decidir, rol por rol, quién lo
- * tiene — con una regla implícita («los administradores pueden todo») el permiso nuevo quedaría
- * concedido por omisión, que es como se abren los agujeros.
+ * **Hasta T-212 las tres filas administrativas eran idénticas y la diferencia estaba sólo en el
+ * ámbito. Dejaron de serlo al llegar los permisos del módulo 020**, y eso es exactamente lo que la
+ * tabla existía para capturar: un `organization_admin` no edita el club, ni sus temporadas, ni sus
+ * categorías; un `club_admin` no administra la plataforma. Si la regla hubiera sido implícita
+ * —«los administradores pueden todo»— los seis permisos nuevos habrían quedado concedidos por
+ * omisión el día que se agregaron, que es como se abren los agujeros.
  *
  * Los roles operativos —comisario, instructor, petisero, tesorero, jugador— **no aparecen con
  * permisos administrativos a propósito**: la autoridad deportiva del comisario es sobre handicaps
@@ -82,14 +91,31 @@ const AUTORIDAD_POR_ROL: Record<RoleName, AutoridadDelRol> = {
    * plataforma: configurar reglas globales es de `superadmin`, y un club no administra a otro.
    */
   club_admin: {
-    permisos: PERMISSIONS,
+    // Todo lo suyo, menos administrar la plataforma: dar de alta o suspender clubes es de quien
+    // opera la plataforma, no de un cliente — y un club que pudiera suspender clubes podría
+    // suspender a otro.
+    permisos: PERMISSIONS.filter((permiso) => permiso !== "platform.club.manage"),
     alcanza: (asignacion, target) =>
       asignacion.scope === "club" && asignacion.scopeId === target.clubId,
   },
 
   /** Sólo dentro de su propia organización; nunca sobre el club entero ni sobre otra. */
   organization_admin: {
-    permisos: PERMISSIONS,
+    // Su organización y su gente. **No** el club: ni sus datos, ni sus temporadas, ni sus
+    // categorías de membresía, ni por supuesto la plataforma. Con la lista completa —como estaba
+    // cuando todas las filas eran iguales— un administrador de organización habría podido editar
+    // el club entero en cuanto existieran esas rutas.
+    permisos: [
+      "user.create",
+      "user.edit",
+      "user.suspend",
+      "user.archive",
+      "user.export",
+      "role.assign",
+      "audit.view",
+      "organization.manage",
+      "setting.edit",
+    ],
     alcanza: (asignacion, target) =>
       asignacion.scope === "organization" &&
       target.scope === "organization" &&

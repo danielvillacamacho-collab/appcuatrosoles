@@ -48,10 +48,17 @@ describe("hasPermission · superadministrador", () => {
 });
 
 describe("hasPermission · administrador de club", () => {
-  it("puede todos los permisos del módulo dentro de su club", () => {
-    for (const permiso of PERMISSIONS) {
-      expect(hasPermission(actor(ADMIN_DEL_CLUB), permiso, EN_EL_CLUB).ok).toBe(true);
-    }
+  it("puede todo dentro de su club, salvo administrar la plataforma", () => {
+    const negados = PERMISSIONS.filter(
+      (permiso) => !hasPermission(actor(ADMIN_DEL_CLUB), permiso, EN_EL_CLUB).ok,
+    );
+
+    expect(negados).toEqual(["platform.club.manage"]);
+  });
+
+  it("no puede dar de alta ni suspender clubes: un club que pudiera hacerlo podría suspender a otro", () => {
+    expect(hasPermission(actor(ADMIN_DEL_CLUB), "platform.club.manage", PLATAFORMA).ok).toBe(false);
+    expect(hasPermission(actor(ADMIN_DEL_CLUB), "platform.club.manage", EN_EL_CLUB).ok).toBe(false);
   });
 
   it("alcanza también a las organizaciones que viven dentro de su club", () => {
@@ -75,9 +82,29 @@ describe("hasPermission · administrador de club", () => {
 });
 
 describe("hasPermission · administrador de organización (R-010-04 en la puerta)", () => {
-  it("puede dentro de su propia organización", () => {
-    for (const permiso of PERMISSIONS) {
+  it("puede administrar su organización y su gente", () => {
+    const suyos = [
+      "user.create",
+      "user.edit",
+      "user.suspend",
+      "user.archive",
+      "user.export",
+      "role.assign",
+      "audit.view",
+      "organization.manage",
+      "setting.edit",
+    ] as const;
+
+    for (const permiso of suyos) {
       expect(hasPermission(actor(ADMIN_DE_LA_ORG), permiso, EN_LA_ORG).ok).toBe(true);
+    }
+  });
+
+  it("no toca lo que es del club: sus datos, sus temporadas ni sus categorías de membresía", () => {
+    // Cuando las tres filas administrativas eran idénticas, esto pasaba: un administrador de
+    // organización habría podido editar el club entero en cuanto existieran esas rutas.
+    for (const ajeno of ["club.edit", "season.manage", "membership.manage", "platform.club.manage"] as const) {
+      expect(hasPermission(actor(ADMIN_DE_LA_ORG), ajeno, EN_LA_ORG).ok).toBe(false);
     }
   });
 

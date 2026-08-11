@@ -104,11 +104,16 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
   > El token del dominio base tuvo que salir del módulo a su propio archivo: el guard necesita el
   > token y el módulo necesita el guard, y NestJS detecta la dependencia circular al arrancar.
 
-- [ ] **T-222** Permisos nuevos en `hasPermission` y en la matriz de `docs/06` §4: `club.edit`,
+- [x] **T-222** Permisos nuevos en `hasPermission` y en la matriz de `docs/06` §4: `club.edit`,
   `organization.manage`, `season.manage`, `membership.manage`, `setting.edit`,
   `platform.club.manage`. `membership.manage` y `setting.edit` son las dos filas de `docs/06` que
   T-022a dejó sin nombre canónico. Verificación: los tests de propiedad de T-022a siguen pasando
-  con el catálogo ampliado — ningún rol operativo gana autoridad.
+  con el catálogo ampliado — ningún rol operativo gana autoridad. ✅ 2026-08-11 — ver
+  `verification.md` §T-222.
+  > **Las tres filas administrativas dejaron de ser idénticas**, que era justo lo que la tabla de
+  > T-022a existía para capturar: un `organization_admin` no edita el club ni sus temporadas ni sus
+  > categorías, y un `club_admin` no administra la plataforma. Con una regla implícita («los
+  > administradores pueden todo») los seis permisos habrían quedado concedidos por omisión.
 
 - [ ] **T-223** Resolvedor de ámbito de organización en `PermissionGuard` (pendiente declarado de
   T-022b): una ruta puede indicar de dónde sale la organización objetivo. Verificación: un

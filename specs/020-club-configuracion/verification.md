@@ -534,3 +534,44 @@ HTTP/1.1 lo exige, pero un cliente puede omitirlo. Tiene su test: `404`, como to
 - **`BASE_DOMAIN` tiene default `localhost`** para que un clon recién hecho funcione sin
   configurar nada. En el despliegue es obligatorio, y su ausencia se nota de inmediato porque
   ningún subdominio real resolvería; queda anotado en `.env.example`.
+
+---
+
+## T-222 — Los seis permisos del módulo, y el día que la tabla sirvió
+
+**Fecha:** 2026-08-11 · 183 tests de dominio (dos reescritos)
+
+`club.edit`, `organization.manage`, `season.manage`, `membership.manage`, `setting.edit` y
+`platform.club.manage`. Los dos del medio son las filas de la matriz de `docs/06` §4 que T-022a
+había dejado sin nombre canónico; ahora lo tienen, y la matriz quedó actualizada.
+
+### Las tres filas administrativas dejaron de ser idénticas
+
+En T-022a las tres tenían la misma lista de permisos y la diferencia estaba **sólo en el ámbito**.
+Quedó anotado entonces que la tabla se escribía completa igual, «porque es la que hace que agregar
+un permiso obligue a decidir, rol por rol, quién lo tiene». Hoy se cobró esa decisión:
+
+- un **`organization_admin`** no edita el club, ni sus temporadas, ni sus categorías de membresía;
+- un **`club_admin`** no administra la plataforma — un club que pudiera suspender clubes podría
+  suspender a otro.
+
+Con una regla implícita —«los administradores pueden todo»— los seis permisos habrían quedado
+concedidos por omisión el día que se agregaron, sin que nadie escribiera una línea al respecto.
+
+### Dos tests que fallaron, y por qué eso es la prueba de que sirven
+
+`«club_admin puede todos los permisos del módulo»` y `«organization_admin puede dentro de su
+organización»` se pusieron en rojo al agregar los permisos. Estaban afirmando la realidad vieja.
+Se reescribieron para afirmar la nueva, y con la forma que resiste el próximo cambio: en vez de
+«puede todos», **«los que no puede son exactamente éstos»** — una lista que hay que actualizar a
+conciencia, no un bucle que se traga lo que venga.
+
+Los dos tests de propiedad de T-022a siguieron pasando sin tocarlos: ningún rol operativo ganó
+autoridad, y los únicos con alguna siguen siendo los tres administradores.
+
+### Pendiente declarado
+
+- **`setting.edit` es el primer permiso cuyo alcance depende del ámbito del valor**, no del recurso
+  de la ruta: un `organization_admin` puede fijar la configuración de su organización pero no la
+  del club. La puerta gruesa ya lo distingue; el resolvedor que le dice al guard **de qué
+  organización se trata** es T-223.

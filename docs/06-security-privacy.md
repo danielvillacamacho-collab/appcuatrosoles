@@ -85,8 +85,21 @@ propio/su ámbito):
 | Editar categoría de membresía | ✓ | ✓ | · | |
 | Ver listado / exportar usuarios | ✓ | ✓ | · | |
 | Ver registro de auditoría | ✓ | ✓ | · (su ámbito) | |
-| Configurar reglas globales | ✓ | | | |
+| Configurar reglas globales (`setting.edit`, ámbito plataforma) | ✓ | | | |
 | Editar su propio perfil | ✓ | ✓ | ✓ | ✓ |
+| Editar datos del club (`club.edit`) | ✓ | ✓ | | |
+| Administrar organizaciones (`organization.manage`) | ✓ | ✓ | · | |
+| Administrar temporadas (`season.manage`) | ✓ | ✓ | | |
+| Editar categorías de membresía (`membership.manage`) | ✓ | ✓ | | |
+| Configuración de su ámbito (`setting.edit`) | ✓ | ✓ (club) | · (su organización) | |
+| Dar de alta y suspender clubes (`platform.club.manage`) | ✓ | | | |
+
+> Los seis últimos los agregó `specs/020` (T-222). Dos de ellos —`membership.manage` y
+> `setting.edit`— son las filas que en T-022a se habían quedado sin nombre canónico de permiso.
+> **Un `organization_admin` no edita el club**: ni sus datos, ni sus temporadas, ni sus categorías.
+> Hasta que existieron estos permisos, las tres filas administrativas tenían la misma lista y la
+> diferencia estaba sólo en el ámbito; ahora la lista también difiere, y por eso la matriz de
+> `packages/domain/identity/hasPermission.ts` se escribe completa rol por rol.
 
 Las matrices de los módulos deportivo, clases, caballos y pagos se definen en sus propios
 specs (`specs/NNN/spec.md §Reglas de negocio`), no aquí — este documento fija el mecanismo,
