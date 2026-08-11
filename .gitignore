@@ -28,3 +28,9 @@ apps/api/.down-tmp/
 # Playwright: navegadores descargados, resultados e informes de las corridas locales.
 apps/web/test-results/
 apps/web/playwright-report/
+
+# Terraform: estado, proveedores descargados y valores por instalación.
+# (infra/terraform tiene además su propio .gitignore)
+.terraform/
+*.tfstate
+*.tfstate.*

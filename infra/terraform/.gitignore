@@ -1,0 +1,10 @@
+# El estado nunca se versiona: tiene identificadores de recursos y, según el proveedor, secretos en
+# claro. Vive en S3 (ver `providers.tf`).
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Los valores de cada instalación, que cambian por ambiente.
+*.tfvars
+!*.tfvars.example

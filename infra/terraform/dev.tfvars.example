@@ -1,0 +1,10 @@
+# Copiar a `dev.tfvars` y llenar. **`dev.tfvars` no se versiona**: no lleva secretos hoy, pero es el
+# archivo donde alguien los pondría el día que haga falta uno.
+
+repositorio_github = "tu-organizacion/tu-repositorio"
+
+# Los demás tienen valor por defecto y sólo se tocan si hace falta:
+# dominio           = "cuatrosoles.co"
+# entorno           = "dev"
+# region            = "us-east-1"
+# tipo_de_instancia = "t3.small"

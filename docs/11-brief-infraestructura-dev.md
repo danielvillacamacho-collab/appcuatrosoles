@@ -5,6 +5,11 @@
 >
 > Alcance: **sólo el ambiente de desarrollo** y la tubería de despliegue automático. Producción se
 > monta después, copiando esta misma receta cuando ya esté probada.
+>
+> **Casi todo esto ya está escrito como Terraform**, en [`infra/terraform/`](../infra/terraform/).
+> Este documento explica el *por qué* de cada pieza y cubre lo que Terraform no puede hacer; el
+> *cómo* está en el código. Si el equipo prefiere aplicar el Terraform y saltarse los pasos
+> manuales, mejor — sólo quedan fuera comprar el dominio (§3) y sacar SES del sandbox (§4).
 
 ---
 
