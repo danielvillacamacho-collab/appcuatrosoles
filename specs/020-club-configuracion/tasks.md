@@ -135,9 +135,13 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
   ✅ 2026-08-11 — **hecha junto con T-230**: comparten controlador y servicio, y partirlas
   significaba escribir el mismo controlador dos veces.
 
-- [ ] **T-232** Script de arranque (`pnpm bootstrap:club`, HU-020-03): crea el primer club, su
+- [x] **T-232** Script de arranque (`pnpm bootstrap:club`, HU-020-03): crea el primer club, su
   administrador y el superadministrador. Verificación: correrlo dos veces no duplica nada y avisa;
-  y un test confirma que **no existe ninguna ruta HTTP** que haga esto.
+  y un test confirma que **no existe ninguna ruta HTTP** que haga esto. ✅ 2026-08-11 — 5 tests,
+  ver `verification.md` §T-232.
+  > La creación del club se extrajo a `crearClubCompleto`, compartida con T-230: si cada camino
+  > escribiera la suya, un club creado desde el servidor terminaría distinto de uno creado desde la
+  > plataforma, y esa diferencia sólo se nota cuando algo falla en uno de los dos.
 
 ## E — Club, organizaciones, temporadas, categorías
 

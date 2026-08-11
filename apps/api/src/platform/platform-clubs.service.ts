@@ -9,7 +9,7 @@ import type { Clock } from "@polo/domain";
 import { CLOCK } from "../common/clock/clock.module.js";
 import type { ClubResponse, CreateClubRequest } from "@polo/contracts";
 import { validateSlug } from "@polo/domain";
-import { CATEGORIAS_POR_DEFECTO } from "../club/default-membership-categories.js";
+import { crearClubCompleto, SIN_CONTRASENA } from "../club/create-club.js";
 import { PrismaService } from "../common/prisma/prisma.service.js";
 import { ClubDirectory } from "../tenant/club-directory.js";
 
@@ -46,60 +46,19 @@ export class PlatformClubsService {
 
     // Todo en una transacción: un club a medio crear —con su fila pero sin categorías, o con
     // categorías y sin administrador— es peor que ningún club, porque parece que existe.
-    const club = await this.prisma.$transaction(async (tx) => {
-      const creado = await tx.club.create({
-        data: {
-          slug: slug.value,
-          name: datos.name,
-          timezone: datos.timezone,
-          currency: datos.currency,
-        },
-      });
-
-      await tx.membershipCategory.createMany({
-        data: CATEGORIAS_POR_DEFECTO.map((categoria) => ({ clubId: creado.id, ...categoria })),
-      });
-
-      // Una temporada abierta desde el día uno: sin ella, la primera práctica que alguien cree no
-      // tendría a qué período pertenecer (HU-020-06, última viñeta).
-      const año = creado.createdAt.getUTCFullYear();
-      await tx.season.create({
-        data: {
-          clubId: creado.id,
-          name: `Temporada ${año}`,
-          startsOn: new Date(Date.UTC(año, 0, 1)),
-          endsOn: new Date(Date.UTC(año, 11, 31)),
-        },
-      });
-
-      const persona = await tx.person.create({
-        data: { clubId: creado.id, fullName: datos.adminFullName, email: datos.adminEmail },
-      });
-      const cuenta = await tx.userAccount.create({
-        data: {
-          personId: persona.id,
-          email: datos.adminEmail,
-          // Sin contraseña utilizable: la define la persona al aceptar la invitación. Un hash
-          // vacío no es una contraseña vacía — Argon2 nunca produce esta cadena, así que ninguna
-          // contraseña puede coincidir con ella.
-          passwordHash: "sin-contrasena-hasta-aceptar-la-invitacion",
-          status: "invited",
-        },
-      });
-      await tx.roleAssignment.create({
-        data: {
-          userAccountId: cuenta.id,
-          role: "club_admin",
-          scope: "club",
-          scopeId: creado.id,
-          // Se otorga a sí mismo, igual que el primer administrador del seed: por definición no
-          // hay nadie antes que él en ese club.
-          grantedById: cuenta.id,
-        },
-      });
-
-      return creado;
-    });
+    const club = await this.prisma.$transaction(async (tx) =>
+      crearClubCompleto(tx, {
+        slug: slug.value,
+        name: datos.name,
+        timezone: datos.timezone,
+        currency: datos.currency,
+        adminEmail: datos.adminEmail,
+        adminFullName: datos.adminFullName,
+        // Sin contraseña utilizable: la define la persona al aceptar la invitación.
+        adminPasswordHash: SIN_CONTRASENA,
+        adminStatus: "invited",
+      }),
+    );
 
     // La caché no sabe de este club todavía, y sin esto el subdominio nuevo respondería 404
     // durante hasta un minuto — justo mientras quien lo creó lo está probando.

@@ -23,6 +23,7 @@
     "db:validate": "dotenv -e .env -- pnpm --filter @polo/api exec prisma validate",
     "db:studio": "dotenv -e .env -- pnpm --filter @polo/api exec prisma studio",
     "db:seed": "dotenv -e .env -- pnpm --filter @polo/api exec tsx prisma/seed.ts",
+    "bootstrap:club": "dotenv -e .env -- pnpm --filter @polo/api exec tsx prisma/bootstrap.ts",
     "check:isolation": "pnpm --filter @polo/api run check:isolation",
     "check:arch": "depcruise --config .dependency-cruiser.cjs apps/*/src packages/*/src",
     "db:down-sql": "bash scripts/down-sql.sh"

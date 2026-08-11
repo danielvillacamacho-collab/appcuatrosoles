@@ -677,3 +677,54 @@ revivir sola.
 - **La ruta de plataforma se sirve desde cualquier subdominio.** `specs/140` §8 pide **dos**
   condiciones: el permiso *y* que se sirva desde el dominio de administración, no desde el de un
   cliente. La primera está; la segunda es de despliegue (`docs/07`) y entra con `specs/140`.
+
+---
+
+## T-232 — El arranque del primer club
+
+**Fecha:** 2026-08-11 · 5 tests de integración (121 en total)
+
+Resuelve el problema del huevo y la gallina: dar de alta clubes exige `platform.club.manage`, y en
+una instalación nueva no hay ningún superadministrador con quien autenticarse para pedirlo.
+
+### No hay ruta HTTP, y hay un test que lo vigila
+
+Es la decisión D-020-04 del spec. Cualquier atajo para el caso inicial —una clave de arranque, una
+ruta abierta «sólo la primera vez»— es exactamente el tipo de puerta que después nadie recuerda
+cerrar. Correr el script exige acceso al servidor, **que es la única credencial que no se puede
+robar por internet**.
+
+El criterio literal de la tarea está probado recorriendo la aplicación entera y exigiendo que
+ninguna ruta registrada mencione `bootstrap`, `arranque` ni `first-club`. Si alguien agrega ese
+atajo alguna vez, el test lo detiene.
+
+### La creación del club es una sola, compartida
+
+`crearClubCompleto` la usan el alta por API (T-230) y este script. Si cada camino escribiera la
+suya, un club creado desde el servidor terminaría distinto de uno creado desde la plataforma —y esa
+clase de diferencia no se nota hasta que algo falla sólo en uno de los dos caminos.
+
+### Una diferencia deliberada entre los dos caminos
+
+| | Alta por API (T-230) | Arranque (T-232) |
+|---|---|---|
+| Estado del administrador | `invited` | **`active`** |
+| Contraseña | la define al aceptar la invitación | generada y **mostrada una sola vez** en la terminal |
+
+La razón es concreta: el correo de invitación todavía no existe (T-050 de `specs/010`), y una
+cuenta invitada sin forma de recibir la invitación no puede entrar a ningún lado. Aquí la
+contraseña se entrega por el canal por el que se corre el script, que es una persona. Tiene test,
+para que cuando exista el envío de correo alguien decida explícitamente si esto cambia.
+
+### Idempotencia por la vía más difícil de discutir
+
+Si ya hay **un** club, esta instalación ya fue arrancada: no hace nada y lo dice. No intenta
+«completar» lo que falte, que es donde un script de arranque se vuelve peligroso. El test corre la
+función dos veces y exige que la segunda no cambie nada.
+
+### Pendiente declarado
+
+- **El superadministrador cuelga del primer club.** Su `person` necesita un `club_id` por el
+  esquema, así que se le pone el del club recién creado; su rol, en cambio, es de plataforma, así
+  que no manda ahí por ser de ahí sino en todos por ser superadministrador. Es la tensión que
+  `specs/140` HU-140-03 resuelve de verdad, con personal que trabaja en varios clubes.
