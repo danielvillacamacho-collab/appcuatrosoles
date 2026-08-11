@@ -122,6 +122,15 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > El montaje quedó en `src/configure-app.ts`, compartido por `main.ts` y los tests, para que no
   > se repita lo de T-005 (probar algo distinto de lo que corre en producción).
 
+- [ ] **T-025** Protección CSRF por doble envío de token en toda mutación (`docs/06` §1).
+  > **Tarea agregada el 2026-08-10, al cerrar T-021.** No estaba en el plan y el requisito sí:
+  > `docs/06` §1 la exige para toda mutación. Hoy no hay agujero abierto porque el API todavía no
+  > tiene ninguna, pero **la primera es T-030 (login)**, así que esta tarea va antes de la sección
+  > D. Con `SameSite=Lax` el riesgo baja pero no desaparece: `Lax` no protege entre **subdominios
+  > del mismo sitio**, y nuestra topología es justamente un subdominio por club (P-05, ADR-013).
+  > Verificación: una mutación sin el encabezado del token responde `403`; con el token correcto
+  > pasa; y el token de CSRF no viaja en una cookie que pueda leer otro subdominio.
+
 ## D — Autenticación (`auth/`)
 
 - [ ] **T-030** `POST /auth/login`: camino feliz (HU-010-04, cuenta activa). Test de contrato
