@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Button } from "@polo/ui";
 import { useSesion } from "../../features/session/api/useSesion.js";
 import { useSalir } from "../../features/auth/api/useSalir.js";
@@ -11,11 +11,10 @@ import { copy } from "../../i18n/es-CO.js";
  * Es la pantalla que cierra el recorrido de T-100 y la que contesta, de un vistazo, las tres cosas
  * que alguien quiere saber al entrar: **quién soy aquí, qué puedo hacer, y a dónde voy**.
  *
- * **Todavía no tiene los accesos a las demás pantallas, y no es un olvido**: no existen. Cada una
- * agrega el suyo al llegar (T-130 a T-136). Un menú con enlaces a pantallas en blanco es peor que
- * un panel corto — y cuando estén, se mostrarán según los roles, que es comodidad y no seguridad:
- * esconder un enlace no protege nada —el API decide en cada petición (`docs/06` §4)— pero
- * ofrecerle a un jugador «Usuarios del club» para después responderle `403` es mentirle.
+ * Los accesos aparecen a medida que existen sus pantallas — la administración entra con T-134 —
+ * y cuando dependan del rol, eso será comodidad y no seguridad: esconder un enlace no protege
+ * nada, el API decide en cada petición (`docs/06` §4). Pero ofrecerle a un jugador «Usuarios del
+ * club» para después responderle `403` es mentirle.
  */
 export const Route = createFileRoute("/_authenticated/")({ component: Panel });
 
@@ -96,11 +95,55 @@ function Panel(): React.JSX.Element {
         </section>
       )}
 
+      <nav aria-labelledby="mis-cosas">
+        <h2 id="mis-cosas" className="text-sm font-semibold uppercase tracking-[0.15em] text-muted">
+          {copy.panel.misCosas}
+        </h2>
+        <ul className="mt-2 flex flex-col">
+          <li>
+            <Acceso a="/me/profile">{copy.panel.miPerfil}</Acceso>
+          </li>
+          <li>
+            <Acceso a="/me/sessions">{copy.panel.misDispositivos}</Acceso>
+          </li>
+          <li>
+            <Acceso a="/me/notifications">{copy.panel.misAvisos}</Acceso>
+          </li>
+          <li>
+            <Acceso a="/me/dependents">{copy.panel.misPerfilesACargo}</Acceso>
+          </li>
+        </ul>
+      </nav>
+
       <footer className="mt-auto">
         <Button variante="secundaria" onClick={() => void cerrar()} cargando={salir.isPending}>
           {copy.comun.salir}
         </Button>
       </footer>
     </main>
+  );
+}
+
+/**
+ * Un acceso de la lista.
+ *
+ * `min-h-tap` porque esto se toca con el pulgar (`docs/04` §2), y la lista completa se muestra a
+ * todo el mundo: «perfiles a cargo» vacío es una respuesta útil —«no tienes»— y esconderlo obligaría
+ * a consultar los dependientes de todos sólo para decidir si pintar un enlace.
+ */
+function Acceso({
+  a,
+  children,
+}: {
+  a: "/me/profile" | "/me/sessions" | "/me/notifications" | "/me/dependents";
+  children: string;
+}): React.JSX.Element {
+  return (
+    <Link
+      to={a}
+      className="flex min-h-tap items-center border-b border-sage/60 text-base font-medium text-brunswick"
+    >
+      {children}
+    </Link>
   );
 }

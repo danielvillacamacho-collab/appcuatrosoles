@@ -482,16 +482,45 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 
 ### M.3 — Lo propio de cada quien
 
-- [ ] **T-129** **Olvidé mi contraseña** y **restablecer** (`/forgot-password`, `/reset-password`):
+- [x] **T-129** **Olvidé mi contraseña** y **restablecer** (`/forgot-password`, `/reset-password`):
   la misma respuesta exista o no la cuenta, y el aviso de que las demás sesiones se cerraron.
-- [ ] **T-130** **Mi perfil** (`/me/profile`): editable vs. sólo lectura **diferenciado visualmente**
+  ✅ 2026-08-11 — `/forgot-password` entró con T-124; aquí se cierra con `/reset-password`.
+  > Al terminar **no queda dentro**: el API revoca todas las sesiones al cambiar la contraseña
+  > (R-010-09), incluida la de este navegador. La pantalla lo dice y manda a ingresar, en vez de
+  > llevar al panel y que la persona se encuentre con un `401` que no se explica.
+- [x] **T-130** **Mi perfil** (`/me/profile`): editable vs. sólo lectura **diferenciado visualmente**
   (`docs/04`), y el cambio de correo con su confirmación pendiente a la vista.
-- [ ] **T-131** **Mis dispositivos** (`/me/sessions`): lista, cuál es la actual, cerrar una y cerrar
+  ✅ 2026-08-11 — 9 tests, incluida la pantalla de confirmación (`/me/confirm-email`).
+  > Lo que administra el club **no se presenta como campo deshabilitado sino como dato**: un campo
+  > gris invita a intentar escribir en él. Y borrar el teléfono manda `null`, no `""` — son cosas
+  > distintas para el API.
+  > La confirmación no tiene botón: llegar con el token **es** la confirmación. Lleva una guarda
+  > contra el doble montaje de React 19 en modo estricto, que si no gastaría el token de un solo uso
+  > en el primer montaje y mostraría «este enlace ya no sirve» sobre un cambio que sí funcionó.
+- [x] **T-131** **Mis dispositivos** (`/me/sessions`): lista, cuál es la actual, cerrar una y cerrar
   todas.
-- [ ] **T-132** **Mis avisos** (`/me/notifications`): los inevitables se muestran en gris con su
+  ✅ 2026-08-11 — 4 tests, y **un hueco del API que sólo se vio al construir la pantalla**: la
+  columna `session.user_agent` existía desde T-002 y **el login nunca la llenaba**, así que la
+  lista mostraba un guion por fila. Una pantalla para reconocer dispositivos ajenos en la que
+  ningún dispositivo se distingue no sirve para nada. Corregido en `auth.service`, con su test.
+  > Las fechas se muestran en la zona horaria **del club** (`GET /clubs/current/public`), no en una
+  > constante: una sesión de las 7 p.m. en Bogotá figuraría como del día siguiente.
+  > La sesión actual va marcada y **sin botón de cerrar**: cerrarla desde la lista se siente como un
+  > accidente, y para eso está «cerrar sesión» en el panel.
+- [x] **T-132** **Mis avisos** (`/me/notifications`): los inevitables se muestran en gris con su
   motivo, no se esconden — esconderlos haría creer que el sistema no los manda.
-- [ ] **T-133** **Perfiles a cargo** (`/me/dependents`): los menores, quién paga, y si les falta
+  ✅ 2026-08-11 — 2 tests. Hoy los cuatro avisos del módulo son inevitables, así que la pantalla no
+  tiene nada que apagar todavía: el primer interruptor real llega con `specs/050`. Se construye
+  igual porque el mecanismo ya existe y probarlo ahora es lo que evita que cada módulo invente el
+  suyo.
+- [x] **T-133** **Perfiles a cargo** (`/me/dependents`): los menores, quién paga, y si les falta
   firmar la exención.
+  ✅ 2026-08-11 — 2 tests. Cada ficha contesta las dos preguntas que traen a alguien aquí: **¿a mí
+  me van a cobrar lo de este niño?** (R-010-10) y **¿puede entrar a la cancha?** (R-010-12).
+  > La fecha de nacimiento se arma a mano desde `YYYY-MM-DD`: `new Date("2015-03-04")` la interpreta
+  > como medianoche UTC y en Bogotá la muestra un día antes. Es el mismo error que `LocalDate` evita
+  > en el dominio, y aquí no había quien lo evitara.
+  **Cierra la sección M.3.**
 
 ### M.4 — La administración del club
 

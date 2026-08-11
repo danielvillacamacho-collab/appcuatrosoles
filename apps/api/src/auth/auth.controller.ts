@@ -1,5 +1,5 @@
 import { Body, Controller, HttpCode, Post, Req, Res, UseGuards } from "@nestjs/common";
-import type { Response } from "express";
+import type { Request, Response } from "express";
 import type { ConTenant } from "../tenant/tenant-context.js";
 import {
   ForgotPasswordRequest,
@@ -47,7 +47,7 @@ export class AuthController {
   @SinPermiso("Iniciar sesión es lo que uno hace antes de tener autoridad: no hay permiso que exigir.")
   async login(
     @Body(new ZodValidationPipe(LoginRequest)) cuerpo: LoginRequest,
-    @Req() req: ConTenant,
+    @Req() req: ConTenant & Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<LoginResponse> {
     const sesion = await this.servicio.login(
@@ -56,6 +56,7 @@ export class AuthController {
       cuerpo.rememberMe,
       // El club del subdominio: una cuenta sólo inicia sesión donde tiene algo que hacer.
       clubDeLaSolicitud(req),
+      req.headers["user-agent"],
     );
 
     // La cookie de sesión: `httpOnly` para que ningún script pueda leerla —ni el nuestro ni uno

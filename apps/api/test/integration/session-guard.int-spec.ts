@@ -76,7 +76,7 @@ describe("SessionGuard (T-021, docs/06 §1)", () => {
   }
 
   function pedirCon(token: string | null): request.Test {
-    const peticion = request(app.getHttpServer()).get("/protegido");
+    const peticion = request(app.getHttpServer()).get("/api/protegido");
 
     return token === null ? peticion : peticion.set("Cookie", `${COOKIE_DE_SESION}=${token}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(token));

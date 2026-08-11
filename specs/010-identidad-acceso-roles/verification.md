@@ -2157,3 +2157,59 @@ Los nombres entre «comillas» son el título literal del test; el archivo es su
    frontend y `apps/web` no tiene ninguna de las siete pantallas que enumera `spec.md` §10. Es el
    hueco más grande del módulo y el trabajo que sigue.
 4. **SES y MJML**, ambos con su motivo escrito en §J.
+
+---
+
+## Sección M.1 a M.3 — La interfaz de la cuenta propia
+
+**Fecha:** 2026-08-11 · 72 tests de interfaz
+
+### El API pasó a colgar de `/api`, y no fue una preferencia
+
+La aplicación web y el API **comparten origen** —lo exige la cookie de sesión, que es del subdominio
+del club (`ADR-013`)— así que sus rutas comparten espacio de nombres. Sin prefijo, `/me/profile`
+escrito en el navegador entra al controlador `/me` del servidor: la pantalla del perfil devolvía el
+JSON del API en vez de existir. Se descubrió al abrirla por primera vez.
+
+La topología de `docs/07` §4 ya lo daba por hecho (`reverse_proxy /api/*`, salud en `/api/health`);
+lo que faltaba era que el API lo cumpliera. Ahora `configurarApp` fija el prefijo global, el arnés de
+aislamiento lo agrega al enumerar rutas —la metadata de los controladores no lo incluye— y el proxy
+de desarrollo tiene **una sola entrada** en vez de una por recurso.
+
+**Los enlaces de los correos también estaban rotos**, por lo mismo al revés: apuntaban a
+`/aceptar-invitacion` y `/restablecer-contrasena`, en español, y las rutas de la aplicación son
+inglesas (`docs/04` §3 — `login.tsx`, no `ingresar.tsx`). Nadie lo habría notado hasta que alguien
+hiciera clic en una invitación real.
+
+### Tres bugs que sólo aparecen escribiendo la pantalla
+
+1. **La política de contraseñas no se aplicaba** en la pantalla de invitación. Estaba escrita como
+   regla `validate` de un campo, y cuando `useForm` usa un `resolver`, **las reglas por campo se
+   ignoran por completo**. Ahora va dentro del esquema, con `validatePassword` de `packages/domain`:
+   la misma función que aplica el API, importada.
+2. **Un campo opcional en HTML llega como `""`**, no como `undefined`, y `min(1).optional()` lo
+   rechaza: dejar el nombre en blanco impedía enviar el formulario.
+3. **`session.user_agent` nunca se llenaba.** La columna existía desde T-002 y el login la ignoraba,
+   así que «mis dispositivos» mostraba un guion por fila. Una pantalla cuyo propósito es reconocer
+   un dispositivo ajeno, en la que ningún dispositivo se distingue, no sirve para nada.
+
+Los tres son de la misma familia: código que se lee bien y no hace nada. Ninguno lo habría atrapado
+una revisión leyendo el diff.
+
+### Decisiones que quedan fijas
+
+- **La sesión no se guarda en el cliente.** Es el resultado de `GET /me`. Un `401` es la respuesta
+  —«no hay sesión»—; un `500` es un fallo y se muestra como tal, porque tratarlo como falta de sesión
+  sacaría a alguien de su cuenta por una caída del servidor.
+- **El `message` del API no se muestra nunca.** La interfaz traduce por `code`, con la lista
+  canónica en `packages/contracts` y un test que falla si el API agrega uno sin texto.
+- **El `QueryClient` se instancia en `main.tsx`**, no en el módulo de rutas. Como singleton de
+  módulo, la caché sobrevivía entre montajes: en los tests, la respuesta de un caso quedaba servida
+  al siguiente.
+- **Las fechas se renderizan en la zona del club**, tomada de `GET /clubs/current/public`. Las de
+  calendario (`YYYY-MM-DD`) se arman a mano, porque `new Date("2015-03-04")` las corre un día.
+
+### Pendiente declarado
+
+- **La foto de perfil no se puede cambiar todavía.** El contrato acepta `photoKey`, pero no hay
+  dónde subir el archivo: entra con el almacenamiento de objetos, en el despliegue.

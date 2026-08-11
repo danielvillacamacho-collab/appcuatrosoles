@@ -24,7 +24,7 @@ describe("Cambio de la propia contraseña (T-037, T-038)", () => {
 
   async function entrar(password = CONTRASENA): Promise<string> {
     const respuesta = await request(app.getHttpServer())
-      .post("/auth/login")
+      .post("/api/auth/login")
       .set("Host", `${club.slug}.${BASE}`)
       .send({ email: correo, password });
 
@@ -36,7 +36,7 @@ describe("Cambio de la propia contraseña (T-037, T-038)", () => {
 
   function cambiar(token: string, cuerpo: Record<string, unknown>): request.Test {
     return request(app.getHttpServer())
-      .post("/me/password")
+      .post("/api/me/password")
       .set("Host", `${club.slug}.${BASE}`)
       .set("Cookie", `${COOKIE_DE_SESION}=${token}`)
       .set(CABECERA_CSRF, tokenCsrfParaSesion(token))
@@ -112,7 +112,7 @@ describe("Cambio de la propia contraseña (T-037, T-038)", () => {
     });
 
     const conLaVieja = await request(app.getHttpServer())
-      .post("/auth/login")
+      .post("/api/auth/login")
       .set("Host", `${club.slug}.${BASE}`)
       .send({ email: correo, password: CONTRASENA });
 
@@ -213,11 +213,11 @@ describe("Cambio de la propia contraseña (T-037, T-038)", () => {
       });
 
       const conLaVieja = await request(app.getHttpServer())
-        .get("/clubs/current")
+        .get("/api/clubs/current")
         .set("Host", `${club.slug}.${BASE}`)
         .set("Cookie", `${COOKIE_DE_SESION}=${enElCelular}`);
       const conLaActual = await request(app.getHttpServer())
-        .get("/clubs/current")
+        .get("/api/clubs/current")
         .set("Host", `${club.slug}.${BASE}`)
         .set("Cookie", `${COOKIE_DE_SESION}=${enLaComputadora}`);
 
@@ -228,7 +228,7 @@ describe("Cambio de la propia contraseña (T-037, T-038)", () => {
 
   it("sin sesión no se puede cambiar nada", async () => {
     const respuesta = await request(app.getHttpServer())
-      .post("/me/password")
+      .post("/api/me/password")
       .set("Host", `${club.slug}.${BASE}`)
       .send({
         currentPassword: CONTRASENA,

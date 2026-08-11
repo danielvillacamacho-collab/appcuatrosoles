@@ -27,7 +27,7 @@ describe("Perfil propio (T-040 a T-043)", () => {
 
   async function entrar(): Promise<string> {
     const respuesta = await request(app.getHttpServer())
-      .post("/auth/login")
+      .post("/api/auth/login")
       .set("Host", `${club.slug}.${BASE}`)
       .send({ email: correo, password: CONTRASENA });
     const cookies = (respuesta.headers["set-cookie"] as unknown as string[]) ?? [];
@@ -136,7 +136,7 @@ describe("Perfil propio (T-040 a T-043)", () => {
 
   describe("ver el perfil (T-040)", () => {
     it("devuelve quién es, qué puede hacer y a qué pertenece", async () => {
-      const respuesta = await con(await entrar()).get("/me");
+      const respuesta = await con(await entrar()).get("/api/me");
 
       expect(respuesta.status).toBe(200);
       expect(MeResponse.safeParse(respuesta.body).success).toBe(true);
@@ -148,7 +148,7 @@ describe("Perfil propio (T-040 a T-043)", () => {
     it("NO expone campos administrativos sobre la persona", async () => {
       // Hay datos que son *sobre* alguien y no *para* alguien: las notas internas del club son el
       // ejemplo más claro. La respuesta se arma campo por campo justamente por esto.
-      const respuesta = await con(await entrar()).get("/me");
+      const respuesta = await con(await entrar()).get("/api/me");
 
       expect(JSON.stringify(respuesta.body)).not.toContain("NOTA INTERNA");
       expect(respuesta.body).not.toHaveProperty("status");
@@ -157,7 +157,7 @@ describe("Perfil propio (T-040 a T-043)", () => {
 
     it("sin sesión no hay perfil", async () => {
       const respuesta = await request(app.getHttpServer())
-        .get("/me")
+        .get("/api/me")
         .set("Host", `${club.slug}.${BASE}`);
 
       expect(respuesta.status).toBe(401);
@@ -167,7 +167,7 @@ describe("Perfil propio (T-040 a T-043)", () => {
   describe("editar el perfil (T-041)", () => {
     it("cambia teléfono y foto", async () => {
       const respuesta = await con(await entrar())
-        .patch("/me")
+        .patch("/api/me")
         .send({ phone: "+57 300 000 0000", photoKey: "fotos/perfil.jpg" });
 
       expect(respuesta.status).toBe(200);
@@ -179,7 +179,7 @@ describe("Perfil propio (T-040 a T-043)", () => {
       const antes = await prisma.person.findUniqueOrThrow({ where: { id: personaId } });
 
       const respuesta = await con(await entrar())
-        .patch("/me")
+        .patch("/api/me")
         .send({ fullName: "Nombre Cambiado", categoryId: "otra", roles: ["club_admin"] });
 
       expect(respuesta.status).toBe(200);
@@ -197,7 +197,7 @@ describe("Perfil propio (T-040 a T-043)", () => {
       const nuevo = `${etiqueta("nuevo")}@ejemplo.test`;
 
       const pedido = await con(await entrar())
-        .post("/me/email-change")
+        .post("/api/me/email-change")
         .send({ newEmail: nuevo, currentPassword: CONTRASENA });
 
       expect(pedido.status).toBe(202);
@@ -213,7 +213,7 @@ describe("Perfil propio (T-040 a T-043)", () => {
     it("al confirmar, el nuevo reemplaza al anterior", async () => {
       const nuevo = `${etiqueta("confirmado")}@ejemplo.test`;
       await con(await entrar())
-        .post("/me/email-change")
+        .post("/api/me/email-change")
         .send({ newEmail: nuevo, currentPassword: CONTRASENA });
 
       const mensaje = await prisma.outboxMessage.findFirstOrThrow({
@@ -223,7 +223,7 @@ describe("Perfil propio (T-040 a T-043)", () => {
       const token = ((mensaje.payload as { link?: string }).link ?? "").split("token=")[1] ?? "";
 
       const confirmado = await con(await entrar())
-        .post("/me/email-change/confirm")
+        .post("/api/me/email-change/confirm")
         .send({ token });
 
       expect(confirmado.status).toBe(204);
@@ -238,7 +238,7 @@ describe("Perfil propio (T-040 a T-043)", () => {
 
     it("exige la contraseña actual: es cambiar la llave de la cuenta", async () => {
       const respuesta = await con(await entrar())
-        .post("/me/email-change")
+        .post("/api/me/email-change")
         .send({ newEmail: `${etiqueta("otro")}@ejemplo.test`, currentPassword: "no-es-esa" });
 
       expect(respuesta.status).toBe(401);
@@ -260,7 +260,7 @@ describe("Perfil propio (T-040 a T-043)", () => {
       });
 
       const respuesta = await con(await entrar())
-        .post("/me/email-change")
+        .post("/api/me/email-change")
         .send({ newEmail: otra.email, currentPassword: CONTRASENA });
 
       expect(respuesta.status).toBe(409);
@@ -269,11 +269,31 @@ describe("Perfil propio (T-040 a T-043)", () => {
   });
 
   describe("dispositivos y sesiones (T-043)", () => {
+    it("guarda de qué dispositivo se entró, o esa lista no sirve para nada", async () => {
+      // Sin `user_agent`, «mis dispositivos» muestra un guion por fila y nadie puede reconocer —ni
+      // dejar de reconocer— la sesión que no abrió. La columna existía desde T-002 y el login no
+      // la llenaba; se descubrió al construir la pantalla (T-131).
+      const respuesta = await request(app.getHttpServer())
+        .post("/api/auth/login")
+        .set("Host", `${club.slug}.${BASE}`)
+        .set("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0)")
+        .send({ email: correo, password: CONTRASENA });
+
+      expect(respuesta.status).toBe(200);
+
+      const sesion = await prisma.session.findFirstOrThrow({
+        where: { userAccountId: cuentaId },
+        orderBy: { createdAt: "desc" },
+      });
+
+      expect(sesion.userAgent).toBe("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0)");
+    });
+
     it("lista las sesiones activas y marca cuál es la actual", async () => {
       const enElCelular = await entrar();
       const enLaComputadora = await entrar();
 
-      const respuesta = await con(enLaComputadora).get("/me/sessions");
+      const respuesta = await con(enLaComputadora).get("/api/me/sessions");
 
       expect(respuesta.status).toBe(200);
       expect(respuesta.body.every((s: unknown) => SessionResponse.safeParse(s).success)).toBe(true);
@@ -287,11 +307,11 @@ describe("Perfil propio (T-040 a T-043)", () => {
       const enElCelular = await entrar();
       const enLaComputadora = await entrar();
 
-      const lista = await con(enLaComputadora).get("/me/sessions");
+      const lista = await con(enLaComputadora).get("/api/me/sessions");
       const otra = lista.body.find((s: { current: boolean }) => !s.current);
 
-      expect((await con(enLaComputadora).delete(`/me/sessions/${otra.id}`)).status).toBe(204);
-      expect((await con(enElCelular).get("/me")).status).toBe(401);
+      expect((await con(enLaComputadora).delete(`/api/me/sessions/${otra.id}`)).status).toBe(204);
+      expect((await con(enElCelular).get("/api/me")).status).toBe(401);
     });
 
     it("no se puede cerrar la sesión de otra persona (404, nunca 403)", async () => {
@@ -315,7 +335,7 @@ describe("Perfil propio (T-040 a T-043)", () => {
         },
       });
 
-      const respuesta = await con(await entrar()).delete(`/me/sessions/${sesionAjena.id}`);
+      const respuesta = await con(await entrar()).delete(`/api/me/sessions/${sesionAjena.id}`);
 
       expect(respuesta.status).toBe(404);
 
@@ -327,11 +347,11 @@ describe("Perfil propio (T-040 a T-043)", () => {
       const token = await entrar();
       const otra = await entrar();
 
-      const lista = await con(token).get("/me/sessions");
+      const lista = await con(token).get("/api/me/sessions");
       const aCerrar = lista.body.find((s: { current: boolean }) => !s.current);
-      await con(token).delete(`/me/sessions/${aCerrar.id}`);
+      await con(token).delete(`/api/me/sessions/${aCerrar.id}`);
 
-      const despues = await con(token).get("/me/sessions");
+      const despues = await con(token).get("/api/me/sessions");
 
       expect(despues.body.map((s: { id: string }) => s.id)).not.toContain(aCerrar.id);
       expect(otra.length).toBeGreaterThan(10);

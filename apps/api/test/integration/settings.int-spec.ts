@@ -119,7 +119,7 @@ describe("Configuración (T-250 a T-253)", () => {
     it("lista TODAS las claves del catálogo, incluidas las que nadie fijó nunca", async () => {
       // Una pantalla que sólo muestre lo que alguien tocó es una pantalla donde no se puede
       // descubrir qué se puede configurar.
-      const respuesta = await con(tokenAdminDelClub).get("/settings");
+      const respuesta = await con(tokenAdminDelClub).get("/api/settings");
 
       expect(respuesta.status).toBe(200);
       expect(respuesta.body).toHaveLength(Object.keys(SETTING_CATALOG).length);
@@ -127,19 +127,19 @@ describe("Configuración (T-250 a T-253)", () => {
     });
 
     it("una clave que nadie fijó viene con el default del catálogo y su origen", async () => {
-      const respuesta = await con(tokenAdminDelClub).get(`/settings/${EDAD}`);
+      const respuesta = await con(tokenAdminDelClub).get(`/api/settings/${EDAD}`);
 
       expect(respuesta.body).toMatchObject({ key: EDAD, value: 18, source: "default", scope: null });
     });
 
     it("una clave inventada no existe", async () => {
-      expect((await con(tokenAdminDelClub).get("/settings/practice.decision_time")).status).toBe(404);
+      expect((await con(tokenAdminDelClub).get("/api/settings/practice.decision_time")).status).toBe(404);
     });
   });
 
   describe("fijar (T-251)", () => {
     it("fijar un valor lo devuelve como explícito del club", async () => {
-      const respuesta = await con(tokenAdminDelClub).put(`/settings/${EDAD}`).send({ value: 21 });
+      const respuesta = await con(tokenAdminDelClub).put(`/api/settings/${EDAD}`).send({ value: 21 });
 
       expect(respuesta.status).toBe(200);
       expect(respuesta.body).toMatchObject({ value: 21, source: "explicit", scope: "club" });
@@ -147,7 +147,7 @@ describe("Configuración (T-250 a T-253)", () => {
 
     it("rechaza un tipo equivocado al ESCRIBIR, no al leer", async () => {
       const respuesta = await con(tokenAdminDelClub)
-        .put(`/settings/${EDAD}`)
+        .put(`/api/settings/${EDAD}`)
         .send({ value: "dieciocho" });
 
       expect(respuesta.status).toBe(422);
@@ -155,7 +155,7 @@ describe("Configuración (T-250 a T-253)", () => {
 
     it("rechaza una clave que no está en el catálogo (R-020-09)", async () => {
       const respuesta = await con(tokenAdminDelClub)
-        .put("/settings/practice.decision_time")
+        .put("/api/settings/practice.decision_time")
         .send({ value: "18:00" });
 
       expect(respuesta.status).toBe(422);
@@ -164,14 +164,14 @@ describe("Configuración (T-250 a T-253)", () => {
     it("un club no puede fijar una clave de plataforma", async () => {
       // Si cada club pudiera cambiar el bloqueo por intentos fallidos, dejaría de ser una regla de
       // la plataforma — y las reglas de la plataforma existen porque no son negociables.
-      const respuesta = await con(tokenAdminDelClub).put(`/settings/${BLOQUEO}`).send({ value: 30 });
+      const respuesta = await con(tokenAdminDelClub).put(`/api/settings/${BLOQUEO}`).send({ value: 30 });
 
       expect(respuesta.status).toBe(422);
     });
 
     it("el superadministrador sí la fija, en su propia ruta", async () => {
       const respuesta = await con(tokenSuperadmin)
-        .put(`/platform/settings/${BLOQUEO}`)
+        .put(`/api/platform/settings/${BLOQUEO}`)
         .send({ value: 30 });
 
       expect(respuesta.status).toBe(200);
@@ -179,12 +179,12 @@ describe("Configuración (T-250 a T-253)", () => {
     });
 
     it("un jugador no fija nada", async () => {
-      expect((await con(tokenJugador).put(`/settings/${EDAD}`).send({ value: 30 })).status).toBe(403);
+      expect((await con(tokenJugador).put(`/api/settings/${EDAD}`).send({ value: 30 })).status).toBe(403);
     });
 
     it("un administrador de club no fija configuración de plataforma ni por la otra ruta", async () => {
       const respuesta = await con(tokenAdminDelClub)
-        .put(`/platform/settings/${BLOQUEO}`)
+        .put(`/api/platform/settings/${BLOQUEO}`)
         .send({ value: 45 });
 
       expect(respuesta.status).toBe(403);
@@ -193,9 +193,9 @@ describe("Configuración (T-250 a T-253)", () => {
 
   describe("herencia entre ámbitos (R-020-10)", () => {
     it("la organización hereda del club, y el club de la plataforma", async () => {
-      await con(tokenSuperadmin).put(`/platform/settings/${EDAD}`).send({ value: 21 });
+      await con(tokenSuperadmin).put(`/api/platform/settings/${EDAD}`).send({ value: 21 });
 
-      const enLaOrg = await con(tokenAdminDeOrg).get(`/organizations/${organizacionId}/settings`);
+      const enLaOrg = await con(tokenAdminDeOrg).get(`/api/organizations/${organizacionId}/settings`);
       const edadEnLaOrg = enLaOrg.body.find((s: { key: string }) => s.key === EDAD);
 
       // Hay un valor de club fijado antes en esta suite, así que gana ése y llega «heredado».
@@ -209,7 +209,7 @@ describe("Configuración (T-250 a T-253)", () => {
       // del club. Hoy **ninguna clave del catálogo es de ámbito de organización**, así que esta
       // ruta sólo puede rechazar; el primer módulo que agregue una la estrenará.
       const respuesta = await con(tokenAdminDeOrg)
-        .put(`/organizations/${organizacionId}/settings/${EDAD}`)
+        .put(`/api/organizations/${organizacionId}/settings/${EDAD}`)
         .send({ value: 14 });
 
       expect(respuesta.status).toBe(422);
@@ -230,7 +230,7 @@ describe("Configuración (T-250 a T-253)", () => {
       );
 
       const respuesta = await con(tokenAjeno)
-        .put(`/organizations/${organizacionId}/settings/${EDAD}`)
+        .put(`/api/organizations/${organizacionId}/settings/${EDAD}`)
         .send({ value: 14 });
 
       expect(respuesta.status).toBe(403);
@@ -240,16 +240,16 @@ describe("Configuración (T-250 a T-253)", () => {
   describe("historia (T-252)", () => {
     it("el valor anterior sigue consultable y el histórico viene del más reciente al más viejo", async () => {
       const clave = EDAD;
-      await con(tokenAdminDelClub).put(`/settings/${clave}`).send({
+      await con(tokenAdminDelClub).put(`/api/settings/${clave}`).send({
         value: 16,
         effectiveFrom: "2026-03-01T00:00:00.000Z",
       });
-      await con(tokenAdminDelClub).put(`/settings/${clave}`).send({
+      await con(tokenAdminDelClub).put(`/api/settings/${clave}`).send({
         value: 17,
         effectiveFrom: "2026-06-01T00:00:00.000Z",
       });
 
-      const historial = await con(tokenAdminDelClub).get(`/settings/${clave}/history`);
+      const historial = await con(tokenAdminDelClub).get(`/api/settings/${clave}/history`);
 
       expect(historial.status).toBe(200);
       expect(historial.body.length).toBeGreaterThanOrEqual(2);
@@ -260,19 +260,19 @@ describe("Configuración (T-250 a T-253)", () => {
     it("preguntar por una fecha pasada devuelve lo que regía entonces, no lo de hoy", async () => {
       // Es lo que permite explicar un cobro viejo sin reconstruir nada.
       const enAbril = await con(tokenAdminDelClub).get(
-        `/settings/${EDAD}?asOf=2026-04-15T00:00:00.000Z`,
+        `/api/settings/${EDAD}?asOf=2026-04-15T00:00:00.000Z`,
       );
 
       expect(enAbril.body.value).toBe(16);
     });
 
     it("un valor con vigencia futura todavía no rige", async () => {
-      await con(tokenAdminDelClub).put(`/settings/${EDAD}`).send({
+      await con(tokenAdminDelClub).put(`/api/settings/${EDAD}`).send({
         value: 99,
         effectiveFrom: "2099-01-01T00:00:00.000Z",
       });
 
-      const hoy = await con(tokenAdminDelClub).get(`/settings/${EDAD}`);
+      const hoy = await con(tokenAdminDelClub).get(`/api/settings/${EDAD}`);
 
       expect(hoy.body.value).not.toBe(99);
     });
@@ -284,7 +284,7 @@ describe("Configuración (T-250 a T-253)", () => {
         where: { entityId: EDAD, action: "setting.changed" },
       });
 
-      await con(tokenAdminDelClub).put(`/settings/${EDAD}`).send({ value: 19 });
+      await con(tokenAdminDelClub).put(`/api/settings/${EDAD}`).send({ value: 19 });
 
       const filas = await prisma.auditLog.findMany({
         where: { entityId: EDAD, action: "setting.changed" },
@@ -302,7 +302,7 @@ describe("Configuración (T-250 a T-253)", () => {
         where: { entityId: EDAD, action: "setting.changed" },
       });
 
-      await con(tokenAdminDelClub).put(`/settings/${EDAD}`).send({ value: "no es un número" });
+      await con(tokenAdminDelClub).put(`/api/settings/${EDAD}`).send({ value: "no es un número" });
 
       expect(
         await prisma.auditLog.count({ where: { entityId: EDAD, action: "setting.changed" } }),

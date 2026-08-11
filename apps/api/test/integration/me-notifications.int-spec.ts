@@ -27,7 +27,7 @@ describe("Preferencias de aviso (T-091)", () => {
 
   async function entrar(): Promise<string> {
     const respuesta = await request(app.getHttpServer())
-      .post("/auth/login")
+      .post("/api/auth/login")
       .set("Host", `${club.slug}.${BASE}`)
       .send({ email: correo, password: CONTRASENA });
     const cookies = (respuesta.headers["set-cookie"] as unknown as string[]) ?? [];
@@ -95,7 +95,7 @@ describe("Preferencias de aviso (T-091)", () => {
   it("devuelve el catálogo completo, no las filas guardadas", async () => {
     // Sin fila se recibe el aviso: una pantalla alimentada sólo con filas mostraría la lista vacía
     // la primera vez, que es justo cuando la persona entra a apagar algo.
-    const respuesta = await con(await entrar()).get("/me/notification-preferences");
+    const respuesta = await con(await entrar()).get("/api/me/notification-preferences");
 
     expect(respuesta.status).toBe(200);
     expect(NotificationPreferenceResponse.array().safeParse(respuesta.body).success).toBe(true);
@@ -106,7 +106,7 @@ describe("Preferencias de aviso (T-091)", () => {
   });
 
   it("marca como no apagables los avisos de seguridad y los que son el mecanismo", async () => {
-    const respuesta = await con(await entrar()).get("/me/notification-preferences");
+    const respuesta = await con(await entrar()).get("/api/me/notification-preferences");
 
     expect(respuesta.body.filter((fila: { canDisable: boolean }) => fila.canDisable)).toEqual([]);
   });
@@ -115,7 +115,7 @@ describe("Preferencias de aviso (T-091)", () => {
     // Devolver `400` obligaría a la interfaz a saber cuál es cuál para no romperse, y la respuesta
     // ya trae `canDisable` diciéndoselo. Lo que no se puede apagar simplemente no se apaga.
     const respuesta = await con(await entrar())
-      .patch("/me/notification-preferences")
+      .patch("/api/me/notification-preferences")
       .send({ preferences: [{ type: "identity.notify-password-changed", enabled: false }] });
 
     expect(respuesta.status).toBe(200);
@@ -131,7 +131,7 @@ describe("Preferencias de aviso (T-091)", () => {
     // una constante de identidad antes de que sus avisos se puedan silenciar es acoplamiento que
     // no compra nada: una fila para un aviso que nadie manda todavía es inerte.
     const respuesta = await con(await entrar())
-      .patch("/me/notification-preferences")
+      .patch("/api/me/notification-preferences")
       .send({ preferences: [{ type: "practice.reminder", enabled: false }] });
 
     expect(respuesta.status).toBe(200);
@@ -144,9 +144,9 @@ describe("Preferencias de aviso (T-091)", () => {
     const token = await entrar();
 
     await con(token)
-      .patch("/me/notification-preferences")
+      .patch("/api/me/notification-preferences")
       .send({ preferences: [{ type: "practice.reminder", enabled: false }] });
-    const despues = await con(token).get("/me/notification-preferences");
+    const despues = await con(token).get("/api/me/notification-preferences");
 
     expect(
       despues.body.find((fila: { type: string }) => fila.type === "practice.reminder").enabled,
@@ -155,7 +155,7 @@ describe("Preferencias de aviso (T-091)", () => {
 
   it("rechaza un cuerpo sin preferencias: pedir un cambio vacío es un error de quien llama", async () => {
     const respuesta = await con(await entrar())
-      .patch("/me/notification-preferences")
+      .patch("/api/me/notification-preferences")
       .send({ preferences: [] });
 
     expect(respuesta.status).toBe(400);
@@ -163,7 +163,7 @@ describe("Preferencias de aviso (T-091)", () => {
 
   it("rechaza un tipo mal formado: es lo único que impide que la tabla se llene de basura", async () => {
     const respuesta = await con(await entrar())
-      .patch("/me/notification-preferences")
+      .patch("/api/me/notification-preferences")
       .send({ preferences: [{ type: "SIN PUNTO NI FORMATO", enabled: false }] });
 
     expect(respuesta.status).toBe(400);
@@ -175,7 +175,7 @@ describe("Preferencias de aviso (T-091)", () => {
     const token = await entrar();
     const apagar = () =>
       con(token)
-        .patch("/me/notification-preferences")
+        .patch("/api/me/notification-preferences")
         .send({ preferences: [{ type: "practice.reminder", enabled: false }] });
 
     await apagar();
@@ -191,7 +191,7 @@ describe("Preferencias de aviso (T-091)", () => {
 
   it("sin sesión no se ven ni se cambian las preferencias de nadie", async () => {
     const sinCookie = request(app.getHttpServer())
-      .get("/me/notification-preferences")
+      .get("/api/me/notification-preferences")
       .set("Host", `${club.slug}.${BASE}`);
 
     expect((await sinCookie).status).toBe(401);

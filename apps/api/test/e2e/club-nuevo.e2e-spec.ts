@@ -101,7 +101,7 @@ describe("Un club nuevo queda operativo (T-260, HU-020-02)", () => {
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenSuperadmin));
 
     // 1. Alta del club.
-    const alta = await comoSuperadmin("post", "/platform/clubs").send({
+    const alta = await comoSuperadmin("post", "/api/platform/clubs").send({
       name: "Club Recién Nacido",
       slug: slugNuevo,
       timezone: "America/Bogota",
@@ -115,7 +115,7 @@ describe("Un club nuevo queda operativo (T-260, HU-020-02)", () => {
 
     // 2. El subdominio resuelve en el acto, sin esperar a que venza ninguna caché.
     const publico = await request(app.getHttpServer())
-      .get("/clubs/current/public")
+      .get("/api/clubs/current/public")
       .set("Host", `${slugNuevo}.${BASE}`);
 
     expect(publico.status).toBe(200);
@@ -142,25 +142,25 @@ describe("Un club nuevo queda operativo (T-260, HU-020-02)", () => {
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin));
 
     // 4. El club nace con sus categorías y su temporada: no hay que crearlas.
-    expect((await comoAdmin("get", "/membership-categories")).body).toHaveLength(5);
-    expect((await comoAdmin("get", "/seasons")).body).toHaveLength(1);
+    expect((await comoAdmin("get", "/api/membership-categories")).body).toHaveLength(5);
+    expect((await comoAdmin("get", "/api/seasons")).body).toHaveLength(1);
 
     // 5. Crea su organización.
-    const organizacion = await comoAdmin("post", "/organizations").send({
+    const organizacion = await comoAdmin("post", "/api/organizations").send({
       name: "Escuela del club nuevo",
       type: "school",
     });
     expect(organizacion.status).toBe(201);
 
     // 6. Ajusta una categoría y una regla de configuración.
-    const categorias = await comoAdmin("get", "/membership-categories");
+    const categorias = await comoAdmin("get", "/api/membership-categories");
     const socio = categorias.body.find((c: { code: string }) => c.code === "partner");
-    const ajuste = await comoAdmin("patch", `/membership-categories/${socio.id}`).send({
+    const ajuste = await comoAdmin("patch", `/api/membership-categories/${socio.id}`).send({
       monthlyFeeCents: 45000000,
     });
     expect(ajuste.body.monthlyFeeCents).toBe(45000000);
 
-    const configuracion = await comoAdmin("put", "/settings/identity.minor_profile_max_age").send({
+    const configuracion = await comoAdmin("put", "/api/settings/identity.minor_profile_max_age").send({
       value: 17,
     });
     expect(configuracion.body).toMatchObject({ value: 17, source: "explicit", scope: "club" });
@@ -176,7 +176,7 @@ describe("Un club nuevo queda operativo (T-260, HU-020-02)", () => {
 
     // 8. Y nada de esto se ve desde otro club.
     const otroSlug = etiqueta("vecino").toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 40);
-    await comoSuperadmin("post", "/platform/clubs").send({
+    await comoSuperadmin("post", "/api/platform/clubs").send({
       name: "Club Vecino",
       slug: otroSlug,
       timezone: "America/Bogota",
@@ -186,7 +186,7 @@ describe("Un club nuevo queda operativo (T-260, HU-020-02)", () => {
     });
 
     const orgsDesdeElVecino = await request(app.getHttpServer())
-      .get("/organizations")
+      .get("/api/organizations")
       .set("Host", `${otroSlug}.${BASE}`)
       .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin));
@@ -199,13 +199,13 @@ describe("Un club nuevo queda operativo (T-260, HU-020-02)", () => {
     const club = await prisma.club.findFirstOrThrow({ where: { slug: slugNuevo } });
 
     await request(app.getHttpServer())
-      .post(`/platform/clubs/${club.id}/suspend`)
+      .post(`/api/platform/clubs/${club.id}/suspend`)
       .set("Cookie", `${COOKIE_DE_SESION}=${tokenSuperadmin}`)
       .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenSuperadmin))
       .send({ reason: "Fin de la prueba" });
 
     const publico = await request(app.getHttpServer())
-      .get("/clubs/current/public")
+      .get("/api/clubs/current/public")
       .set("Host", `${slugNuevo}.${BASE}`);
 
     expect(publico.status).toBe(404);

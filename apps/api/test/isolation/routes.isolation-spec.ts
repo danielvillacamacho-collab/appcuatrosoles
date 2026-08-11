@@ -41,82 +41,82 @@ const BASE = "polo.test";
  * comprobación cualquiera con cuenta en un club podía abrir sesión en otro.
  */
 const CON_TEST_PROPIO = [
-  "POST /auth/login",
+  "POST /api/auth/login",
   // `auth-logout.int-spec` → «no toca las demás sesiones» y «no toca las sesiones de otra
   // persona». El aislamiento de estas dos rutas es por **cuenta**, no por club: cierran lo que es
   // de quien pide y nada más. El recorrido genérico de abajo, que prueba con recursos de otro
   // club, no diría nada sobre eso.
-  "POST /auth/logout",
-  "POST /auth/logout-all",
+  "POST /api/auth/logout",
+  "POST /api/auth/logout-all",
   // `me-password.int-spec` → «exige la contraseña actual aunque haya sesión válida» y «las demás
   // sesiones se cierran». Igual que las de arriba: su aislamiento es por **cuenta**, no por club.
-  "POST /me/password",
+  "POST /api/me/password",
   // `password-reset.int-spec` → «una cuenta de otro club no recibe nada desde este subdominio» y
   // «el enlace apunta al subdominio del club, no al Host de la solicitud». El aislamiento de estas
   // dos es doble: por club al pedir, y por token al usar.
-  "POST /auth/password/forgot",
-  "POST /auth/password/reset",
+  "POST /api/auth/password/forgot",
+  "POST /api/auth/password/reset",
   // `me.int-spec` → «NO expone campos administrativos», «no se puede cerrar la sesión de otra
-  // persona (404)». Todo `/me` es por definición de quien pide: su aislamiento es por cuenta.
-  "GET /me",
-  "PATCH /me",
-  "POST /me/email-change",
-  "POST /me/email-change/confirm",
-  "GET /me/sessions",
-  "DELETE /me/sessions/:id",
+  // persona (404)». Todo `/api/me` es por definición de quien pide: su aislamiento es por cuenta.
+  "GET /api/me",
+  "PATCH /api/me",
+  "POST /api/me/email-change",
+  "POST /api/me/email-change/confirm",
+  "GET /api/me/sessions",
+  "DELETE /api/me/sessions/:id",
   // `me-notifications.int-spec` → «sin sesión no se ven ni se cambian las preferencias de nadie».
   // Las preferencias cuelgan de la cuenta, no del club: la misma persona en dos clubes elige una
   // sola vez si quiere que le recuerden las prácticas.
-  "GET /me/notification-preferences",
-  "PATCH /me/notification-preferences",
+  "GET /api/me/notification-preferences",
+  "PATCH /api/me/notification-preferences",
   // `minors.int-spec` → «no muestra a los hijos de otro: el recorte lo hace el vínculo, no el rol»
   // y «un vínculo terminado deja de mostrarse». Aquí el aislamiento no es sólo por club: dos
   // acudientes del MISMO club no pueden verse los hijos.
-  "GET /me/dependents",
+  "GET /api/me/dependents",
   // `minors.int-spec` → «un acudiente de otro club no existe desde aquí: 404, nunca 403». El
   // recorrido genérico no sirve: la ruta necesita un cuerpo válido con una fecha de nacimiento
   // coherente para llegar siquiera al servicio.
-  "POST /minors",
+  "POST /api/minors",
   // `users.int-spec` cubre el aislamiento de todas éstas: «nunca lista usuarios de otro club»,
   // «un usuario de otro club responde 404 por acceso directo» y «un administrador de organización
   // sólo ve a la gente de la suya». El recorrido genérico no sirve aquí porque cada ruta necesita
   // un cuerpo propio y válido para llegar siquiera al servicio.
-  "GET /users",
-  "GET /users/export",
-  "GET /users/:id",
-  "POST /users",
-  "PATCH /users/:id",
-  "POST /users/:id/invite",
-  "POST /users/:id/suspend",
-  "POST /users/:id/reactivate",
-  "POST /users/:id/archive",
-  "POST /users/:id/restore",
-  "POST /auth/invitation/accept",
+  "GET /api/users",
+  "GET /api/users/export",
+  "GET /api/users/:id",
+  "POST /api/users",
+  "PATCH /api/users/:id",
+  "POST /api/users/:id/invite",
+  "POST /api/users/:id/suspend",
+  "POST /api/users/:id/reactivate",
+  "POST /api/users/:id/archive",
+  "POST /api/users/:id/restore",
+  "POST /api/auth/invitation/accept",
   // `users.int-spec` §roles → «un administrador de organización no otorga roles de club» y «el club
   // nunca viaja en el cuerpo». El aislamiento de estas dos es por ámbito del rol, no por recurso.
-  "POST /users/:id/roles",
-  "DELETE /users/:id/roles/:roleAssignmentId",
+  "POST /api/users/:id/roles",
+  "DELETE /api/users/:id/roles/:roleAssignmentId",
   // `family.int-spec` → «una persona de otro club responde 404» y «alguien que no es su acudiente
   // no acepta por el menor». El waiver vigente es por club y la aceptación es por persona.
-  "POST /guardianships",
-  "GET /guardianships/:dependentPersonId",
-  "GET /waivers/current",
-  "POST /waivers",
-  "POST /waivers/current/accept",
+  "POST /api/guardianships",
+  "GET /api/guardianships/:dependentPersonId",
+  "GET /api/waivers/current",
+  "POST /api/waivers",
+  "POST /api/waivers/current/accept",
   // `audit-log.int-spec` → «nunca muestra auditoría de otro club» y «un administrador de
   // organización sólo ve lo de su gente».
-  "GET /audit-log",
+  "GET /api/audit-log",
 ];
 
 /** Rutas que no operan dentro de un club y por lo tanto no tienen tenant que aislar. */
 const SIN_TENANT = [
-  "GET /health",
-  "GET /ready",
-  "POST /platform/clubs",
-  "POST /platform/clubs/:id/suspend",
-  "POST /platform/clubs/:id/reactivate",
-  "GET /platform/settings",
-  "PUT /platform/settings/:key",
+  "GET /api/health",
+  "GET /api/ready",
+  "POST /api/platform/clubs",
+  "POST /api/platform/clubs/:id/suspend",
+  "POST /api/platform/clubs/:id/reactivate",
+  "GET /api/platform/settings",
+  "PUT /api/platform/settings/:key",
 ];
 
 /**
@@ -129,25 +129,25 @@ const SIN_TENANT = [
  *   significa que su respuesta no puede contener nada del otro club.
  */
 const COBERTURA: { ruta: string; espera: "ajeno" | "vacio" | "propio" }[] = [
-  { ruta: "GET /clubs/current/public", espera: "propio" },
-  { ruta: "GET /clubs/current", espera: "propio" },
-  { ruta: "PATCH /clubs/current", espera: "propio" },
-  { ruta: "GET /organizations", espera: "vacio" },
-  { ruta: "POST /organizations", espera: "propio" },
-  { ruta: "PATCH /organizations/:id", espera: "ajeno" },
-  { ruta: "POST /organizations/:id/archive", espera: "ajeno" },
-  { ruta: "GET /seasons", espera: "vacio" },
-  { ruta: "POST /seasons", espera: "propio" },
-  { ruta: "POST /seasons/:id/close", espera: "ajeno" },
-  { ruta: "GET /membership-categories", espera: "vacio" },
-  { ruta: "POST /membership-categories", espera: "propio" },
-  { ruta: "PATCH /membership-categories/:id", espera: "ajeno" },
-  { ruta: "GET /settings", espera: "propio" },
-  { ruta: "GET /settings/:key", espera: "propio" },
-  { ruta: "GET /settings/:key/history", espera: "propio" },
-  { ruta: "PUT /settings/:key", espera: "propio" },
-  { ruta: "GET /organizations/:id/settings", espera: "ajeno" },
-  { ruta: "PUT /organizations/:id/settings/:key", espera: "ajeno" },
+  { ruta: "GET /api/clubs/current/public", espera: "propio" },
+  { ruta: "GET /api/clubs/current", espera: "propio" },
+  { ruta: "PATCH /api/clubs/current", espera: "propio" },
+  { ruta: "GET /api/organizations", espera: "vacio" },
+  { ruta: "POST /api/organizations", espera: "propio" },
+  { ruta: "PATCH /api/organizations/:id", espera: "ajeno" },
+  { ruta: "POST /api/organizations/:id/archive", espera: "ajeno" },
+  { ruta: "GET /api/seasons", espera: "vacio" },
+  { ruta: "POST /api/seasons", espera: "propio" },
+  { ruta: "POST /api/seasons/:id/close", espera: "ajeno" },
+  { ruta: "GET /api/membership-categories", espera: "vacio" },
+  { ruta: "POST /api/membership-categories", espera: "propio" },
+  { ruta: "PATCH /api/membership-categories/:id", espera: "ajeno" },
+  { ruta: "GET /api/settings", espera: "propio" },
+  { ruta: "GET /api/settings/:key", espera: "propio" },
+  { ruta: "GET /api/settings/:key/history", espera: "propio" },
+  { ruta: "PUT /api/settings/:key", espera: "propio" },
+  { ruta: "GET /api/organizations/:id/settings", espera: "ajeno" },
+  { ruta: "PUT /api/organizations/:id/settings/:key", espera: "ajeno" },
 ];
 
 const VERBOS: Record<number, string> = {
@@ -266,10 +266,10 @@ describe("Aislamiento de tenant por ruta (T-261, ADR-014 punto 3)", () => {
     for (const caso of COBERTURA) {
       const [verbo, plantilla] = caso.ruta.split(" ") as [string, string];
       const ruta = plantilla
-        .replace("/organizations/:id/settings", `/organizations/${organizacionAjena.id}/settings`)
-        .replace("/organizations/:id", `/organizations/${organizacionAjena.id}`)
-        .replace("/seasons/:id", `/seasons/${temporadaAjena.id}`)
-        .replace("/membership-categories/:id", `/membership-categories/${categoriaAjena.id}`)
+        .replace("/api/organizations/:id/settings", `/api/organizations/${organizacionAjena.id}/settings`)
+        .replace("/api/organizations/:id", `/api/organizations/${organizacionAjena.id}`)
+        .replace("/api/seasons/:id", `/api/seasons/${temporadaAjena.id}`)
+        .replace("/api/membership-categories/:id", `/api/membership-categories/${categoriaAjena.id}`)
         .replace(":key", "identity.minor_profile_max_age");
 
       const metodo = verbo.toLowerCase() as "get" | "post" | "put" | "patch";
@@ -320,6 +320,14 @@ describe("Aislamiento de tenant por ruta (T-261, ADR-014 punto 3)", () => {
 });
 
 /** Las rutas que la aplicación tiene montadas, en formato `VERBO /ruta`. */
+/**
+ * Las rutas tal como se piden desde afuera, **con el prefijo global**.
+ *
+ * La metadata de los controladores no lo incluye —`setGlobalPrefix` es del adaptador HTTP, no del
+ * decorador— así que hay que agregarlo aquí. Si no, este arné compararía `/users` contra una
+ * declaración de `/api/users` y pediría rutas que el servidor no sirve: un aviso de aislamiento
+ * que en realidad estaría probando un 404.
+ */
 function enumerarRutas(app: INestApplication): string[] {
   const discovery = app.get(DiscoveryService);
   const scanner = app.get(MetadataScanner);
@@ -346,7 +354,7 @@ function enumerarRutas(app: INestApplication): string[] {
       if (verbo === undefined || VERBOS[verbo] === undefined) continue;
 
       const cola = sufijo === undefined || sufijo === "/" ? "" : `/${sufijo}`;
-      rutas.push(`${VERBOS[verbo]} /${[prefijo, cola.slice(1)].filter(Boolean).join("/")}`);
+      rutas.push(`${VERBOS[verbo]} /${["api", prefijo, cola.slice(1)].filter(Boolean).join("/")}`);
     }
   }
 

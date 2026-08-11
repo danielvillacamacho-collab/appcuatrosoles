@@ -64,7 +64,7 @@ export class PasswordResetService {
         payload: {
           email: email.trim().toLowerCase(),
           fullName: cuenta.person.fullName,
-          link: `${baseUrl}/restablecer-contrasena?token=${token}`,
+          link: `${baseUrl}/reset-password?token=${token}`,
         },
       });
     });

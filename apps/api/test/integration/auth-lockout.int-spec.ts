@@ -56,7 +56,7 @@ describe("Bloqueo por intentos fallidos (T-032, docs/08 §9)", () => {
 
   function entrar(email: string, password: string): request.Test {
     return request(app.getHttpServer())
-      .post("/auth/login")
+      .post("/api/auth/login")
       .set("Host", `${club.slug}.${BASE}`)
       .send({ email, password });
   }

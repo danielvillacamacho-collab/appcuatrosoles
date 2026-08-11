@@ -63,7 +63,7 @@ describe("Temporadas (T-242, HU-020-06)", () => {
 
   function crear(token: string, cuerpo: Record<string, unknown>): request.Test {
     return request(app.getHttpServer())
-      .post("/seasons")
+      .post("/api/seasons")
       .set("Host", `${club.slug}.${BASE}`)
       .set("Cookie", `${COOKIE_DE_SESION}=${token}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(token))
@@ -172,7 +172,7 @@ describe("Temporadas (T-242, HU-020-06)", () => {
     });
 
     const cerrada = await request(app.getHttpServer())
-      .post(`/seasons/${creada.body.id}/close`)
+      .post(`/api/seasons/${creada.body.id}/close`)
       .set("Host", `${club.slug}.${BASE}`)
       .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin));
@@ -181,7 +181,7 @@ describe("Temporadas (T-242, HU-020-06)", () => {
     expect(cerrada.body.status).toBe("closed");
 
     const otraVez = await request(app.getHttpServer())
-      .post(`/seasons/${creada.body.id}/close`)
+      .post(`/api/seasons/${creada.body.id}/close`)
       .set("Host", `${club.slug}.${BASE}`)
       .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin));
@@ -203,7 +203,7 @@ describe("Temporadas (T-242, HU-020-06)", () => {
     });
 
     const enElOtro = await request(app.getHttpServer())
-      .post("/seasons")
+      .post("/api/seasons")
       .set("Host", `${otro.slug}.${BASE}`)
       .set("Cookie", `${COOKIE_DE_SESION}=${tokenDelOtro}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenDelOtro))
@@ -219,7 +219,7 @@ describe("Temporadas (T-242, HU-020-06)", () => {
     ).toBe(403);
 
     const lista = await request(app.getHttpServer())
-      .get("/seasons")
+      .get("/api/seasons")
       .set("Host", `${club.slug}.${BASE}`)
       .set("Cookie", `${COOKIE_DE_SESION}=${tokenJugador}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenJugador));

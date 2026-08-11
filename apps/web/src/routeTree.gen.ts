@@ -13,7 +13,13 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AcceptInvitationRouteImport } from './routes/accept-invitation'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedMeConfirmEmailRouteImport } from './routes/_authenticated/me/confirm-email'
+import { Route as AuthenticatedMeDependentsRouteImport } from './routes/_authenticated/me/dependents'
+import { Route as AuthenticatedMeNotificationsRouteImport } from './routes/_authenticated/me/notifications'
+import { Route as AuthenticatedMeProfileRouteImport } from './routes/_authenticated/me/profile'
+import { Route as AuthenticatedMeSessionsRouteImport } from './routes/_authenticated/me/sessions'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -34,9 +40,42 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedMeConfirmEmailRoute =
+  AuthenticatedMeConfirmEmailRouteImport.update({
+    id: '/me/confirm-email',
+    path: '/me/confirm-email',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedMeDependentsRoute =
+  AuthenticatedMeDependentsRouteImport.update({
+    id: '/me/dependents',
+    path: '/me/dependents',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedMeNotificationsRoute =
+  AuthenticatedMeNotificationsRouteImport.update({
+    id: '/me/notifications',
+    path: '/me/notifications',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedMeProfileRoute = AuthenticatedMeProfileRouteImport.update({
+  id: '/me/profile',
+  path: '/me/profile',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedMeSessionsRoute = AuthenticatedMeSessionsRouteImport.update({
+  id: '/me/sessions',
+  path: '/me/sessions',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 
@@ -45,12 +84,24 @@ export interface FileRoutesByFullPath {
   '/accept-invitation': typeof AcceptInvitationRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/me/confirm-email': typeof AuthenticatedMeConfirmEmailRoute
+  '/me/dependents': typeof AuthenticatedMeDependentsRoute
+  '/me/notifications': typeof AuthenticatedMeNotificationsRoute
+  '/me/profile': typeof AuthenticatedMeProfileRoute
+  '/me/sessions': typeof AuthenticatedMeSessionsRoute
 }
 export interface FileRoutesByTo {
   '/accept-invitation': typeof AcceptInvitationRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/': typeof AuthenticatedIndexRoute
+  '/me/confirm-email': typeof AuthenticatedMeConfirmEmailRoute
+  '/me/dependents': typeof AuthenticatedMeDependentsRoute
+  '/me/notifications': typeof AuthenticatedMeNotificationsRoute
+  '/me/profile': typeof AuthenticatedMeProfileRoute
+  '/me/sessions': typeof AuthenticatedMeSessionsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -58,20 +109,52 @@ export interface FileRoutesById {
   '/accept-invitation': typeof AcceptInvitationRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/me/confirm-email': typeof AuthenticatedMeConfirmEmailRoute
+  '/_authenticated/me/dependents': typeof AuthenticatedMeDependentsRoute
+  '/_authenticated/me/notifications': typeof AuthenticatedMeNotificationsRoute
+  '/_authenticated/me/profile': typeof AuthenticatedMeProfileRoute
+  '/_authenticated/me/sessions': typeof AuthenticatedMeSessionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/accept-invitation' | '/forgot-password' | '/login'
+  fullPaths:
+    | '/'
+    | '/accept-invitation'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
+    | '/me/confirm-email'
+    | '/me/dependents'
+    | '/me/notifications'
+    | '/me/profile'
+    | '/me/sessions'
   fileRoutesByTo: FileRoutesByTo
-  to: '/accept-invitation' | '/forgot-password' | '/login' | '/'
+  to:
+    | '/accept-invitation'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
+    | '/'
+    | '/me/confirm-email'
+    | '/me/dependents'
+    | '/me/notifications'
+    | '/me/profile'
+    | '/me/sessions'
   id:
     | '__root__'
     | '/_authenticated'
     | '/accept-invitation'
     | '/forgot-password'
     | '/login'
+    | '/reset-password'
     | '/_authenticated/'
+    | '/_authenticated/me/confirm-email'
+    | '/_authenticated/me/dependents'
+    | '/_authenticated/me/notifications'
+    | '/_authenticated/me/profile'
+    | '/_authenticated/me/sessions'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -79,6 +162,7 @@ export interface RootRouteChildren {
   AcceptInvitationRoute: typeof AcceptInvitationRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -111,6 +195,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/': {
       id: '/_authenticated/'
       path: '/'
@@ -118,15 +209,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/me/confirm-email': {
+      id: '/_authenticated/me/confirm-email'
+      path: '/me/confirm-email'
+      fullPath: '/me/confirm-email'
+      preLoaderRoute: typeof AuthenticatedMeConfirmEmailRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/me/dependents': {
+      id: '/_authenticated/me/dependents'
+      path: '/me/dependents'
+      fullPath: '/me/dependents'
+      preLoaderRoute: typeof AuthenticatedMeDependentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/me/notifications': {
+      id: '/_authenticated/me/notifications'
+      path: '/me/notifications'
+      fullPath: '/me/notifications'
+      preLoaderRoute: typeof AuthenticatedMeNotificationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/me/profile': {
+      id: '/_authenticated/me/profile'
+      path: '/me/profile'
+      fullPath: '/me/profile'
+      preLoaderRoute: typeof AuthenticatedMeProfileRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/me/sessions': {
+      id: '/_authenticated/me/sessions'
+      path: '/me/sessions'
+      fullPath: '/me/sessions'
+      preLoaderRoute: typeof AuthenticatedMeSessionsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
 interface AuthenticatedRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedMeConfirmEmailRoute: typeof AuthenticatedMeConfirmEmailRoute
+  AuthenticatedMeDependentsRoute: typeof AuthenticatedMeDependentsRoute
+  AuthenticatedMeNotificationsRoute: typeof AuthenticatedMeNotificationsRoute
+  AuthenticatedMeProfileRoute: typeof AuthenticatedMeProfileRoute
+  AuthenticatedMeSessionsRoute: typeof AuthenticatedMeSessionsRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedMeConfirmEmailRoute: AuthenticatedMeConfirmEmailRoute,
+  AuthenticatedMeDependentsRoute: AuthenticatedMeDependentsRoute,
+  AuthenticatedMeNotificationsRoute: AuthenticatedMeNotificationsRoute,
+  AuthenticatedMeProfileRoute: AuthenticatedMeProfileRoute,
+  AuthenticatedMeSessionsRoute: AuthenticatedMeSessionsRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -138,6 +274,7 @@ const rootRouteChildren: RootRouteChildren = {
   AcceptInvitationRoute: AcceptInvitationRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

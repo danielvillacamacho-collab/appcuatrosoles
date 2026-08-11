@@ -167,7 +167,7 @@ export class UsersService {
         payload: {
           email: correo,
           fullName: datos.fullName,
-          link: `${baseUrl}/aceptar-invitacion?token=${token}`,
+          link: `${baseUrl}/accept-invitation?token=${token}`,
         },
       });
 
@@ -213,7 +213,7 @@ export class UsersService {
         payload: {
           email: cuenta.email,
           fullName: cuenta.person.fullName,
-          link: `${baseUrl}/aceptar-invitacion?token=${token}`,
+          link: `${baseUrl}/accept-invitation?token=${token}`,
         },
       });
     });
@@ -612,6 +612,10 @@ export class UsersService {
     return cuenta;
   }
 
+  // Las rutas del enlace están en inglés porque son **rutas de la aplicación web**, y `docs/04` §3
+  // fija esa convención (`login.tsx`, no `ingresar.tsx`). Lo que la persona lee en el correo sigue
+  // en español; lo que va en la barra de direcciones es código. Estuvieron en español hasta que la
+  // pantalla existió y el enlace no llevaba a ninguna parte.
   private async ventanaDeInvitacion(): Promise<number> {
     const resuelto = await this.settings.leer(
       { scope: "platform", clubId: null, organizationId: null },

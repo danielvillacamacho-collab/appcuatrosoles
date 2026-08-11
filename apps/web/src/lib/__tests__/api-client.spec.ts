@@ -44,7 +44,7 @@ describe("api · lo que tiene que pasar en TODA petición", () => {
   it("manda las cookies: sin eso, toda la aplicación estaría anónima", async () => {
     // La sesión es una cookie `httpOnly` que JavaScript no puede leer ni adjuntar a mano. Sin
     // `credentials: "include"` el API responde 401 y nada en el código lo explica.
-    await api("/me");
+    await api("/api/me");
 
     expect(llamada(espia).init.credentials).toBe("include");
   });
@@ -58,7 +58,7 @@ describe("api · lo que tiene que pasar en TODA petición", () => {
   });
 
   it("no lo manda en una lectura: un GET no cambia nada", async () => {
-    await api("/me");
+    await api("/api/me");
 
     expect(llamada(espia).headers.get(CABECERA_CSRF)).toBeNull();
   });
@@ -68,13 +68,13 @@ describe("api · lo que tiene que pasar en TODA petición", () => {
     // peor que no mandarla: se rechazaría por inválida en vez de dejarse pasar.
     document.cookie = "polo_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 
-    await api("/auth/login", { method: "POST", body: { email: "a@b.co" } });
+    await api("/api/auth/login", { method: "POST", body: { email: "a@b.co" } });
 
     expect(llamada(espia).headers.has(CABECERA_CSRF)).toBe(false);
   });
 
   it("serializa el cuerpo como JSON y lo anuncia", async () => {
-    await api("/users", { method: "POST", body: { fullName: "María" } });
+    await api("/api/users", { method: "POST", body: { fullName: "María" } });
 
     const { init, headers } = llamada(espia);
 
@@ -83,7 +83,7 @@ describe("api · lo que tiene que pasar en TODA petición", () => {
   });
 
   it("una petición sin cuerpo no anuncia un tipo de contenido que no existe", async () => {
-    await api("/auth/logout", { method: "POST" });
+    await api("/api/auth/logout", { method: "POST" });
 
     const { init, headers } = llamada(espia);
 
@@ -100,7 +100,7 @@ describe("api · lo que devuelve", () => {
   it("devuelve el cuerpo ya parseado", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(respuesta(200, { fullName: "María" })));
 
-    await expect(api<{ fullName: string }>("/me")).resolves.toEqual({ fullName: "María" });
+    await expect(api<{ fullName: string }>("/api/me")).resolves.toEqual({ fullName: "María" });
   });
 
   it("un 204 no revienta al intentar parsear un cuerpo vacío", async () => {
@@ -108,7 +108,7 @@ describe("api · lo que devuelve", () => {
     // un cuerpo vacío falla con un error de sintaxis que no dice nada sobre lo que pasó.
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(respuesta(204)));
 
-    await expect(api("/auth/logout", { method: "POST" })).resolves.toBeUndefined();
+    await expect(api("/api/auth/logout", { method: "POST" })).resolves.toBeUndefined();
   });
 });
 
@@ -122,7 +122,7 @@ describe("api · los errores, traducidos en el borde", () => {
     // el mismo problema en dos lugares.
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(respuesta(409, errorDelApi("email_en_uso"))));
 
-    await expect(api("/users", { method: "POST", body: {} })).rejects.toMatchObject({
+    await expect(api("/api/users", { method: "POST", body: {} })).rejects.toMatchObject({
       name: "ApiError",
       status: 409,
       data: { code: "email_en_uso", requestId: "abc-123" },
@@ -132,7 +132,7 @@ describe("api · los errores, traducidos en el borde", () => {
   it("distingue el 401 del 422: son dos cosas distintas para quien mira la pantalla", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(respuesta(401, errorDelApi("UNAUTHENTICATED"))));
 
-    const fallo = await api("/me").catch((error: unknown) => error);
+    const fallo = await api("/api/me").catch((error: unknown) => error);
 
     expect(fallo).toBeInstanceOf(ApiError);
     expect((fallo as ApiError).status).toBe(401);
@@ -143,7 +143,7 @@ describe("api · los errores, traducidos en el borde", () => {
     // tener que distinguir ese caso.
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("<html>502</html>", { status: 502 })));
 
-    await expect(api("/me")).rejects.toMatchObject({
+    await expect(api("/api/me")).rejects.toMatchObject({
       name: "ApiError",
       status: 502,
       data: { code: "RESPUESTA_INESPERADA" },
@@ -154,7 +154,7 @@ describe("api · los errores, traducidos en el borde", () => {
     // Lo que hay que decirle a la persona es distinto, y reintentar sólo tiene sentido en uno.
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
 
-    await expect(api("/me")).rejects.toBeInstanceOf(NetworkError);
+    await expect(api("/api/me")).rejects.toBeInstanceOf(NetworkError);
   });
 
   it("cancelar una consulta no es un fallo: se deja pasar tal cual", async () => {
@@ -164,6 +164,6 @@ describe("api · los errores, traducidos en el borde", () => {
     const abortada = new DOMException("The operation was aborted.", "AbortError");
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(abortada));
 
-    await expect(api("/me")).rejects.toBe(abortada);
+    await expect(api("/api/me")).rejects.toBe(abortada);
   });
 });

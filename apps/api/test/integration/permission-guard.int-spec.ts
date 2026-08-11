@@ -132,7 +132,7 @@ describe("PermissionGuard (T-022b, docs/03 §6)", () => {
   }
 
   function crear(token: string | null, club: string | null): request.Test {
-    let peticion = request(app.getHttpServer()).post("/usuarios");
+    let peticion = request(app.getHttpServer()).post("/api/usuarios");
 
     if (token !== null) peticion = peticion.set("Cookie", `${COOKIE_DE_SESION}=${token}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(token));
@@ -178,7 +178,7 @@ describe("PermissionGuard (T-022b, docs/03 §6)", () => {
       const token = await crearActorCon([{ role: "player", scope: "club", scopeId: "club-x" }]);
 
       const respuesta = await request(app.getHttpServer())
-        .get("/usuarios")
+        .get("/api/usuarios")
         .set("Cookie", `${COOKIE_DE_SESION}=${token}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(token))
         .set("x-club-de-prueba", "club-x");
@@ -246,7 +246,7 @@ describe("PermissionGuard (T-022b, docs/03 §6)", () => {
 
     function actuarSobre(organizacionId: string, token: string, club: string): request.Test {
       return request(app.getHttpServer())
-        .post(`/organizaciones/${organizacionId}/algo`)
+        .post(`/api/organizaciones/${organizacionId}/algo`)
         .set("Cookie", `${COOKIE_DE_SESION}=${token}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(token))
         .set("x-club-de-prueba", club);

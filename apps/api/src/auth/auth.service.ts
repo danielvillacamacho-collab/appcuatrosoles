@@ -69,6 +69,7 @@ export class AuthService {
     contrasena: string,
     rememberMe: boolean,
     clubId: string,
+    userAgent?: string | undefined,
   ): Promise<SesionCreada> {
     const cuenta = await this.prisma.userAccount.findUnique({
       where: { email: email.trim().toLowerCase() },
@@ -143,6 +144,11 @@ export class AuthService {
           tokenHash: hashDeTokenDeSesion(token),
           expiresAt: expiraEn,
           rememberMe,
+          // Se guarda tal cual, recortado. Es lo único que permite a alguien reconocer —o no
+          // reconocer— un dispositivo en su lista de sesiones (T-043); sin esto, esa pantalla
+          // muestra un guion por cada fila y no sirve para lo que existe. Interpretarlo aquí
+          // («Chrome en un iPhone») sería adivinar con una tabla que envejece sola.
+          userAgent: recortar(userAgent),
         },
       }),
       this.prisma.userAccount.update({
@@ -400,4 +406,16 @@ function perteneceAlClub(
     (rol) =>
       rol.scope === "platform" || (rol.scope === "club" && rol.scopeId === clubId),
   );
+}
+
+/**
+ * El `User-Agent`, acotado a lo que cabe en una fila de la pantalla de dispositivos.
+ *
+ * El límite no es de la base —la columna es `text`— sino contra una cabecera absurdamente larga:
+ * es un dato que llega del cliente y nada obliga a que sea razonable.
+ */
+function recortar(userAgent: string | undefined): string | null {
+  const limpio = userAgent?.trim() ?? "";
+
+  return limpio === "" ? null : limpio.slice(0, 300);
 }

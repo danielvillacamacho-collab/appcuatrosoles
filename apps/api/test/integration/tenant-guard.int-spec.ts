@@ -91,14 +91,14 @@ describe("TenantGuard (T-221 · cierra T-020 de specs/010)", () => {
 
   describe("resuelve el club por su subdominio", () => {
     it("un host conocido pasa", async () => {
-      const respuesta = await pedir("/quien-soy", `${clubA.slug}.${BASE}`);
+      const respuesta = await pedir("/api/quien-soy", `${clubA.slug}.${BASE}`);
 
       expect(respuesta.status).toBe(200);
       expect(respuesta.body).toEqual({ ok: true });
     });
 
     it("funciona con el puerto en el host, que es como llega en desarrollo", async () => {
-      expect((await pedir("/quien-soy", `${clubA.slug}.${BASE}:5173`)).status).toBe(200);
+      expect((await pedir("/api/quien-soy", `${clubA.slug}.${BASE}:5173`)).status).toBe(200);
     });
   });
 
@@ -114,7 +114,7 @@ describe("TenantGuard (T-221 · cierra T-020 de specs/010)", () => {
 
     for (const caso of casos) {
       it(`${caso.nombre} → 404`, async () => {
-        const respuesta = await pedir("/quien-soy", caso.host({ suspendidoSlug: suspendido.slug }));
+        const respuesta = await pedir("/api/quien-soy", caso.host({ suspendidoSlug: suspendido.slug }));
 
         expect(respuesta.status).toBe(404);
         expect(respuesta.body.error.code).toBe("NOT_FOUND");
@@ -128,7 +128,7 @@ describe("TenantGuard (T-221 · cierra T-020 de specs/010)", () => {
       const cuerpos: string[] = [];
 
       for (const caso of casos) {
-        const { body } = await pedir("/quien-soy", caso.host({ suspendidoSlug: suspendido.slug }));
+        const { body } = await pedir("/api/quien-soy", caso.host({ suspendidoSlug: suspendido.slug }));
         const resto: Record<string, unknown> = { ...body.error };
         delete resto.requestId;
 
@@ -140,7 +140,7 @@ describe("TenantGuard (T-221 · cierra T-020 de specs/010)", () => {
 
     it("sin cabecera Host tampoco resuelve", async () => {
       // HTTP/1.1 la exige, pero un cliente puede omitirla; el guard no debe romperse ni conceder.
-      const respuesta = await pedir("/quien-soy", "");
+      const respuesta = await pedir("/api/quien-soy", "");
 
       expect(respuesta.status).toBe(404);
     });
@@ -158,7 +158,7 @@ describe("TenantGuard (T-221 · cierra T-020 de specs/010)", () => {
       .spyOn(prisma.session, "findUnique")
       .mockImplementation(original as typeof prisma.session.findUnique);
 
-    const respuesta = await pedir("/protegido", `inventado.${BASE}`).set(
+    const respuesta = await pedir("/api/protegido", `inventado.${BASE}`).set(
       "Cookie",
       "polo_session=un-token-cualquiera",
     );
@@ -167,7 +167,7 @@ describe("TenantGuard (T-221 · cierra T-020 de specs/010)", () => {
     expect(espia).not.toHaveBeenCalled();
 
     // Y con un host válido sí llega al guard de sesión, que es quien responde 401.
-    const conHostValido = await pedir("/protegido", `${clubA.slug}.${BASE}`).set(
+    const conHostValido = await pedir("/api/protegido", `${clubA.slug}.${BASE}`).set(
       "Cookie",
       "polo_session=un-token-cualquiera",
     );
@@ -181,15 +181,15 @@ describe("TenantGuard (T-221 · cierra T-020 de specs/010)", () => {
   it("dos clubes simultáneos no se cruzan (P-05)", async () => {
     // El test que exige la tarea. Dos hosts distintos, en la misma aplicación y con la misma
     // caché, tienen que resolver a clubes distintos — y ninguno al del otro.
-    const respuestaA = await pedir("/quien-soy", `${clubA.slug}.${BASE}`);
-    const respuestaB = await pedir("/quien-soy", `${clubB.slug}.${BASE}`);
+    const respuestaA = await pedir("/api/quien-soy", `${clubA.slug}.${BASE}`);
+    const respuestaB = await pedir("/api/quien-soy", `${clubB.slug}.${BASE}`);
 
     expect(respuestaA.status).toBe(200);
     expect(respuestaB.status).toBe(200);
     expect(clubA.id).not.toBe(clubB.id);
 
     // Y el club de uno no resuelve desde el subdominio del otro: un host sólo lleva a su club.
-    const cruzado = await pedir("/quien-soy", `${clubA.slug}-x.${BASE}`);
+    const cruzado = await pedir("/api/quien-soy", `${clubA.slug}-x.${BASE}`);
     expect(cruzado.status).toBe(404);
   });
 
@@ -197,11 +197,11 @@ describe("TenantGuard (T-221 · cierra T-020 de specs/010)", () => {
     const club = await crearClub("se-suspende");
     directorio.invalidate();
 
-    expect((await pedir("/quien-soy", `${club.slug}.${BASE}`)).status).toBe(200);
+    expect((await pedir("/api/quien-soy", `${club.slug}.${BASE}`)).status).toBe(200);
 
     await prisma.club.update({ where: { id: club.id }, data: { status: "suspended" } });
     directorio.invalidate();
 
-    expect((await pedir("/quien-soy", `${club.slug}.${BASE}`)).status).toBe(404);
+    expect((await pedir("/api/quien-soy", `${club.slug}.${BASE}`)).status).toBe(404);
   });
 });

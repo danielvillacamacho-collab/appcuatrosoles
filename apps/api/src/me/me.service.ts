@@ -191,7 +191,7 @@ export class MeService {
         payload: {
           email: correo,
           fullName: cuenta.person.fullName,
-          link: `${baseUrl}/confirmar-correo?token=${token}`,
+          link: `${baseUrl}/me/confirm-email?token=${token}`,
         },
       });
     });

@@ -150,7 +150,7 @@ describe("Gestión de usuarios (sección F)", () => {
     it("crea la cuenta invitada y encola su invitación", async () => {
       const datos = datosDeUsuario({ membershipCategoryId: categoriaId, phone: "+57 300 111 2222" });
 
-      const respuesta = await con(tokenAdmin).post("/users").send(datos);
+      const respuesta = await con(tokenAdmin).post("/api/users").send(datos);
 
       expect(respuesta.status).toBe(201);
       expect(UserResponse.safeParse(respuesta.body).success).toBe(true);
@@ -169,7 +169,7 @@ describe("Gestión de usuarios (sección F)", () => {
     describe("la variante ligera: invitar con sólo el correo (HU-010-02)", () => {
       async function invitarSoloConCorreo(): Promise<{ id: string; email: string }> {
         const email = `${etiqueta("ligera")}@ejemplo.test`;
-        const creado = await con(tokenAdmin).post("/users").send({ email, roles: ["player"] });
+        const creado = await con(tokenAdmin).post("/api/users").send({ email, roles: ["player"] });
 
         expect(creado.status).toBe(201);
 
@@ -188,7 +188,7 @@ describe("Gestión de usuarios (sección F)", () => {
 
       function aceptar(cuerpo: Record<string, unknown>): request.Test {
         return request(app.getHttpServer())
-          .post("/auth/invitation/accept")
+          .post("/api/auth/invitation/accept")
           .set("Host", `${club.slug}.${BASE}`)
           .send(cuerpo);
       }
@@ -197,7 +197,7 @@ describe("Gestión de usuarios (sección F)", () => {
         // Una lista de usuarios con filas en blanco es peor que una con nombres feos: el
         // administrador no sabe a quién invitó.
         const { id, email } = await invitarSoloConCorreo();
-        const visto = await con(tokenAdmin).get(`/users/${id}`);
+        const visto = await con(tokenAdmin).get(`/api/users/${id}`);
 
         expect(visto.body.fullName).toBe(email.replace(/@.*$/u, ""));
       });
@@ -215,14 +215,14 @@ describe("Gestión de usuarios (sección F)", () => {
 
         expect(aceptada.status).toBe(204);
 
-        const visto = await con(tokenAdmin).get(`/users/${id}`);
+        const visto = await con(tokenAdmin).get(`/api/users/${id}`);
         expect(visto.body.fullName).toBe("María Fernanda Pérez");
         expect(visto.body.phone).toBe("+57 300 999 8888");
       });
 
       it("pero no se renombra a quien el club ya nombró: el enlace no es para eso", async () => {
         const datos = datosDeUsuario({ fullName: "Nombre puesto por el club" });
-        const creado = await con(tokenAdmin).post("/users").send(datos);
+        const creado = await con(tokenAdmin).post("/api/users").send(datos);
 
         await aceptar({
           token: await tokenDelCorreoA(datos.email),
@@ -231,7 +231,7 @@ describe("Gestión de usuarios (sección F)", () => {
           fullName: "El nombre que yo quiera",
         });
 
-        const visto = await con(tokenAdmin).get(`/users/${creado.body.id}`);
+        const visto = await con(tokenAdmin).get(`/api/users/${creado.body.id}`);
         expect(visto.body.fullName).toBe("Nombre puesto por el club");
       });
     });
@@ -239,7 +239,7 @@ describe("Gestión de usuarios (sección F)", () => {
     it("dice cuándo se envió la invitación: sin eso, se reenvía a ciegas", async () => {
       // HU-010-01, criterio 3. Un administrador no puede distinguir una invitación de ayer de una
       // de hace tres semanas si sólo ve «invited».
-      const creado = await con(tokenAdmin).post("/users").send(datosDeUsuario());
+      const creado = await con(tokenAdmin).post("/api/users").send(datosDeUsuario());
 
       expect(creado.body.invitationSentAt).not.toBeNull();
       expect(Number.isNaN(Date.parse(creado.body.invitationSentAt))).toBe(false);
@@ -251,7 +251,7 @@ describe("Gestión de usuarios (sección F)", () => {
       });
 
       // Una invitación ya usada no dice nada sobre la que está esperando: no hay ninguna.
-      const despues = await con(tokenAdmin).get(`/users/${creado.body.id}`);
+      const despues = await con(tokenAdmin).get(`/api/users/${creado.body.id}`);
       expect(despues.body.invitationSentAt).toBeNull();
     });
 
@@ -274,7 +274,7 @@ describe("Gestión de usuarios (sección F)", () => {
         });
 
         const creado = await con(tokenAdmin)
-          .post("/users")
+          .post("/api/users")
           .send(datosDeUsuario({ personId: invitadoExterno.id, fullName: "Nombre que se ignora" }));
 
         expect(creado.status).toBe(201);
@@ -295,7 +295,7 @@ describe("Gestión de usuarios (sección F)", () => {
           data: { clubId: club.id, fullName: "Menor que cumplió años", isMinor: true },
         });
 
-        await con(tokenAdmin).post("/users").send(datosDeUsuario({ personId: menor.id }));
+        await con(tokenAdmin).post("/api/users").send(datosDeUsuario({ personId: menor.id }));
 
         const despues = await prisma.person.findUniqueOrThrow({ where: { id: menor.id } });
         expect(despues.isMinor).toBe(false);
@@ -303,10 +303,10 @@ describe("Gestión de usuarios (sección F)", () => {
 
       it("una persona que ya tiene cuenta no recibe una segunda", async () => {
         // Serían dos formas de entrar a lo mismo, y ninguna sabría de la otra.
-        const primera = await con(tokenAdmin).post("/users").send(datosDeUsuario());
+        const primera = await con(tokenAdmin).post("/api/users").send(datosDeUsuario());
 
         const segunda = await con(tokenAdmin)
-          .post("/users")
+          .post("/api/users")
           .send(datosDeUsuario({ personId: primera.body.personId }));
 
         expect(segunda.status).toBe(409);
@@ -322,7 +322,7 @@ describe("Gestión de usuarios (sección F)", () => {
         });
 
         const respuesta = await con(tokenAdmin)
-          .post("/users")
+          .post("/api/users")
           .send(datosDeUsuario({ personId: personaAjena.id }));
 
         expect(respuesta.status).toBe(404);
@@ -331,16 +331,16 @@ describe("Gestión de usuarios (sección F)", () => {
 
     it("rechaza un correo duplicado (HU-010-01, segundo criterio)", async () => {
       const datos = datosDeUsuario();
-      await con(tokenAdmin).post("/users").send(datos);
+      await con(tokenAdmin).post("/api/users").send(datos);
 
-      const repetido = await con(tokenAdmin).post("/users").send(datosDeUsuario({ email: datos.email }));
+      const repetido = await con(tokenAdmin).post("/api/users").send(datosDeUsuario({ email: datos.email }));
 
       expect(repetido.status).toBe(409);
     });
 
     it("con la invitación se define la contraseña y la cuenta queda activa", async () => {
       const datos = datosDeUsuario();
-      const creado = await con(tokenAdmin).post("/users").send(datos);
+      const creado = await con(tokenAdmin).post("/api/users").send(datos);
 
       const mensaje = await prisma.outboxMessage.findFirstOrThrow({
         where: { payload: { path: ["email"], equals: datos.email } },
@@ -349,7 +349,7 @@ describe("Gestión de usuarios (sección F)", () => {
       const token = ((mensaje.payload as { link?: string }).link ?? "").split("token=")[1] ?? "";
 
       const aceptada = await request(app.getHttpServer())
-        .post("/auth/invitation/accept")
+        .post("/api/auth/invitation/accept")
         .set("Host", `${club.slug}.${BASE}`)
         .send({
           token,
@@ -366,7 +366,7 @@ describe("Gestión de usuarios (sección F)", () => {
 
       // Y con eso ya puede entrar.
       const login = await request(app.getHttpServer())
-        .post("/auth/login")
+        .post("/api/auth/login")
         .set("Host", `${club.slug}.${BASE}`)
         .send({ email: datos.email, password: "mi-primera-clave-9" });
       expect(login.status).toBe(200);
@@ -376,7 +376,7 @@ describe("Gestión de usuarios (sección F)", () => {
       // Si el primero se filtró —un correo reenviado, un buzón compartido— reenviar tiene que
       // cerrarlo, no sumar un segundo enlace válido.
       const datos = datosDeUsuario();
-      const creado = await con(tokenAdmin).post("/users").send(datos);
+      const creado = await con(tokenAdmin).post("/api/users").send(datos);
       const primerMensaje = await prisma.outboxMessage.findFirstOrThrow({
         where: { payload: { path: ["email"], equals: datos.email } },
         orderBy: { createdAt: "desc" },
@@ -384,10 +384,10 @@ describe("Gestión de usuarios (sección F)", () => {
       const primerToken =
         ((primerMensaje.payload as { link?: string }).link ?? "").split("token=")[1] ?? "";
 
-      await con(tokenAdmin).post(`/users/${creado.body.id}/invite`);
+      await con(tokenAdmin).post(`/api/users/${creado.body.id}/invite`);
 
       const conElViejo = await request(app.getHttpServer())
-        .post("/auth/invitation/accept")
+        .post("/api/auth/invitation/accept")
         .set("Host", `${club.slug}.${BASE}`)
         .send({ token: primerToken, newPassword: "no-deberia-1", newPasswordConfirmation: "no-deberia-1" });
 
@@ -398,10 +398,10 @@ describe("Gestión de usuarios (sección F)", () => {
       const { token } = await crearActor(club.id, "organization_admin", "organization", organizacionId);
 
       const conRolDeClub = await con(token)
-        .post("/users")
+        .post("/api/users")
         .send(datosDeUsuario({ roles: ["club_admin"] }));
       const conRolDeSuOrganizacion = await con(token)
-        .post("/users")
+        .post("/api/users")
         .send(datosDeUsuario({ roles: ["instructor"], organizationId: organizacionId }));
 
       expect(conRolDeClub.status).toBe(403);
@@ -409,17 +409,17 @@ describe("Gestión de usuarios (sección F)", () => {
     });
 
     it("un jugador no crea usuarios", async () => {
-      expect((await con(tokenJugador).post("/users").send(datosDeUsuario())).status).toBe(403);
+      expect((await con(tokenJugador).post("/api/users").send(datosDeUsuario())).status).toBe(403);
     });
   });
 
   describe("listar y ver (T-054, T-055)", () => {
     it("filtra por estado, rol y texto", async () => {
       const datos = datosDeUsuario({ fullName: "Buscable Singular" });
-      await con(tokenAdmin).post("/users").send(datos);
+      await con(tokenAdmin).post("/api/users").send(datos);
 
-      const porTexto = await con(tokenAdmin).get("/users?q=Buscable");
-      const porEstado = await con(tokenAdmin).get("/users?status=invited");
+      const porTexto = await con(tokenAdmin).get("/api/users?q=Buscable");
+      const porEstado = await con(tokenAdmin).get("/api/users?status=invited");
 
       expect(porTexto.body.some((u: { fullName: string }) => u.fullName === "Buscable Singular")).toBe(true);
       expect(porEstado.body.every((u: { status: string }) => u.status === "invited")).toBe(true);
@@ -438,7 +438,7 @@ describe("Gestión de usuarios (sección F)", () => {
         },
       });
 
-      const lista = await con(tokenAdmin).get("/users");
+      const lista = await con(tokenAdmin).get("/api/users");
 
       expect(lista.body.some((u: { fullName: string }) => u.fullName === "Ajena Invisible")).toBe(false);
     });
@@ -446,11 +446,11 @@ describe("Gestión de usuarios (sección F)", () => {
     it("un administrador de organización sólo ve a la gente de la suya (HU-010-08)", async () => {
       const { token } = await crearActor(club.id, "organization_admin", "organization", organizacionId);
       const deLaOrganizacion = await con(tokenAdmin)
-        .post("/users")
+        .post("/api/users")
         .send(datosDeUsuario({ roles: ["instructor"], organizationId: organizacionId }));
-      const delClub = await con(tokenAdmin).post("/users").send(datosDeUsuario());
+      const delClub = await con(tokenAdmin).post("/api/users").send(datosDeUsuario());
 
-      const lista = await con(token).get("/users");
+      const lista = await con(token).get("/api/users");
       const ids = lista.body.map((u: { id: string }) => u.id);
 
       expect(ids).toContain(deLaOrganizacion.body.id);
@@ -470,14 +470,14 @@ describe("Gestión de usuarios (sección F)", () => {
         },
       });
 
-      expect((await con(tokenAdmin).get(`/users/${cuentaAjena.id}`)).status).toBe(404);
+      expect((await con(tokenAdmin).get(`/api/users/${cuentaAjena.id}`)).status).toBe(404);
     });
 
     it("cambiar la categoría el MISMO día corrige la fila, no apila una segunda", async () => {
       // La base lo impone —`effective_to > effective_from`— y tiene sentido: una asignación que
       // empezó hoy nunca estuvo vigente un día completo, así que no hay historia que conservar.
       const creado = await con(tokenAdmin)
-        .post("/users")
+        .post("/api/users")
         .send(datosDeUsuario({ membershipCategoryId: categoriaId }));
       const otraCategoria = await prisma.membershipCategory.create({
         data: {
@@ -490,7 +490,7 @@ describe("Gestión de usuarios (sección F)", () => {
       });
 
       const editado = await con(tokenAdmin)
-        .patch(`/users/${creado.body.id}`)
+        .patch(`/api/users/${creado.body.id}`)
         .send({ membershipCategoryId: otraCategoria.id });
 
       expect(editado.body.membershipCategory.id).toBe(otraCategoria.id);
@@ -503,7 +503,7 @@ describe("Gestión de usuarios (sección F)", () => {
 
     it("cambiarla otro día SÍ deja historia: el club debe poder decir con qué categoría jugaba en marzo", async () => {
       const creado = await con(tokenAdmin)
-        .post("/users")
+        .post("/api/users")
         .send(datosDeUsuario({ membershipCategoryId: categoriaId }));
       const otraCategoria = await prisma.membershipCategory.create({
         data: {
@@ -522,7 +522,7 @@ describe("Gestión de usuarios (sección F)", () => {
       });
 
       await con(tokenAdmin)
-        .patch(`/users/${creado.body.id}`)
+        .patch(`/api/users/${creado.body.id}`)
         .send({ membershipCategoryId: otraCategoria.id });
 
       const historial = await prisma.membershipAssignment.findMany({
@@ -539,7 +539,7 @@ describe("Gestión de usuarios (sección F)", () => {
   describe("suspender, archivar y la auto-protección (T-056 a T-058)", () => {
     it("suspender revoca las sesiones activas en el acto", async () => {
       const datos = datosDeUsuario();
-      const creado = await con(tokenAdmin).post("/users").send(datos);
+      const creado = await con(tokenAdmin).post("/api/users").send(datos);
       const sesion = await prisma.session.create({
         data: {
           userAccountId: creado.body.id as string,
@@ -548,7 +548,7 @@ describe("Gestión de usuarios (sección F)", () => {
         },
       });
 
-      const suspendido = await con(tokenAdmin).post(`/users/${creado.body.id}/suspend`);
+      const suspendido = await con(tokenAdmin).post(`/api/users/${creado.body.id}/suspend`);
 
       expect(suspendido.status).toBe(200);
       expect(suspendido.body.status).toBe("suspended");
@@ -558,22 +558,22 @@ describe("Gestión de usuarios (sección F)", () => {
     });
 
     it("archivar y restaurar conservan la historia", async () => {
-      const creado = await con(tokenAdmin).post("/users").send(datosDeUsuario());
+      const creado = await con(tokenAdmin).post("/api/users").send(datosDeUsuario());
 
-      expect((await con(tokenAdmin).post(`/users/${creado.body.id}/archive`)).body.status).toBe("archived");
-      expect((await con(tokenAdmin).post(`/users/${creado.body.id}/restore`)).body.status).toBe("active");
+      expect((await con(tokenAdmin).post(`/api/users/${creado.body.id}/archive`)).body.status).toBe("archived");
+      expect((await con(tokenAdmin).post(`/api/users/${creado.body.id}/restore`)).body.status).toBe("active");
       expect(await prisma.userAccount.count({ where: { id: creado.body.id as string } })).toBe(1);
     });
 
     it("nadie se suspende ni se archiva a sí mismo (R-010-05)", async () => {
       // Es lo que evita que el único administrador de un club se deje afuera por un clic.
-      expect((await con(tokenAdmin).post(`/users/${cuentaAdminId}/suspend`)).status).toBe(403);
-      expect((await con(tokenAdmin).post(`/users/${cuentaAdminId}/archive`)).status).toBe(403);
+      expect((await con(tokenAdmin).post(`/api/users/${cuentaAdminId}/suspend`)).status).toBe(403);
+      expect((await con(tokenAdmin).post(`/api/users/${cuentaAdminId}/archive`)).status).toBe(403);
     });
 
     it("cada acción deja exactamente una fila de auditoría", async () => {
-      const creado = await con(tokenAdmin).post("/users").send(datosDeUsuario());
-      await con(tokenAdmin).post(`/users/${creado.body.id}/suspend`);
+      const creado = await con(tokenAdmin).post("/api/users").send(datosDeUsuario());
+      await con(tokenAdmin).post(`/api/users/${creado.body.id}/suspend`);
 
       const filas = await prisma.auditLog.findMany({ where: { entityId: creado.body.id as string } });
       const acciones = filas.map((fila) => fila.action);
@@ -585,10 +585,10 @@ describe("Gestión de usuarios (sección F)", () => {
 
   describe("roles (sección G: T-060 a T-062)", () => {
     it("otorgar un rol lo deja vigente y auditado (T-060, R-010-11)", async () => {
-      const creado = await con(tokenAdmin).post("/users").send(datosDeUsuario());
+      const creado = await con(tokenAdmin).post("/api/users").send(datosDeUsuario());
 
       const respuesta = await con(tokenAdmin)
-        .post(`/users/${creado.body.id}/roles`)
+        .post(`/api/users/${creado.body.id}/roles`)
         .send({ role: "commissioner", scope: "club" });
 
       expect(respuesta.status).toBe(201);
@@ -625,27 +625,27 @@ describe("Gestión de usuarios (sección F)", () => {
       });
 
       const otorgado = await con(tokenAdmin)
-        .post(`/users/${cuenta.id}/roles`)
+        .post(`/api/users/${cuenta.id}/roles`)
         .send({ role: "club_admin", scope: "club" });
-      expect((await con(token).get("/users")).status).toBe(200);
+      expect((await con(token).get("/api/users")).status).toBe(200);
 
       const asignacion = otorgado.body.roles.find((r: { role: string }) => r.role === "club_admin");
-      await con(tokenAdmin).delete(`/users/${cuenta.id}/roles/${asignacion.id}`);
+      await con(tokenAdmin).delete(`/api/users/${cuenta.id}/roles/${asignacion.id}`);
 
-      expect((await con(token).get("/users")).status).toBe(403);
+      expect((await con(token).get("/api/users")).status).toBe(403);
     });
 
     it("un administrador de organización no otorga roles de club (T-062, R-010-04)", async () => {
       const { token } = await crearActor(club.id, "organization_admin", "organization", organizacionId);
       const creado = await con(tokenAdmin)
-        .post("/users")
+        .post("/api/users")
         .send(datosDeUsuario({ roles: ["instructor"], organizationId: organizacionId }));
 
       const deClub = await con(token)
-        .post(`/users/${creado.body.id}/roles`)
+        .post(`/api/users/${creado.body.id}/roles`)
         .send({ role: "club_admin", scope: "club" });
       const deSuOrganizacion = await con(token)
-        .post(`/users/${creado.body.id}/roles`)
+        .post(`/api/users/${creado.body.id}/roles`)
         .send({ role: "groom", scope: "organization", organizationId: organizacionId });
 
       expect(deClub.status).toBe(403);
@@ -653,10 +653,10 @@ describe("Gestión de usuarios (sección F)", () => {
     });
 
     it("nadie se retira roles a sí mismo (R-010-05)", async () => {
-      const yo = await con(tokenAdmin).get(`/users/${cuentaAdminId}`);
+      const yo = await con(tokenAdmin).get(`/api/users/${cuentaAdminId}`);
       const suRol = yo.body.roles[0];
 
-      const respuesta = await con(tokenAdmin).delete(`/users/${cuentaAdminId}/roles/${suRol.id}`);
+      const respuesta = await con(tokenAdmin).delete(`/api/users/${cuentaAdminId}/roles/${suRol.id}`);
 
       expect(respuesta.status).toBe(403);
     });
@@ -664,10 +664,10 @@ describe("Gestión de usuarios (sección F)", () => {
     it("el club nunca viaja en el cuerpo: mandarlo no cambia nada (R-020-01)", async () => {
       // El ámbito de club es siempre el del subdominio. Un `clubId` en el cuerpo se descarta al
       // validar el contrato, así que no hay forma de otorgar un rol en el club de al lado.
-      const creado = await con(tokenAdmin).post("/users").send(datosDeUsuario());
+      const creado = await con(tokenAdmin).post("/api/users").send(datosDeUsuario());
 
       const respuesta = await con(tokenAdmin)
-        .post(`/users/${creado.body.id}/roles`)
+        .post(`/api/users/${creado.body.id}/roles`)
         .send({ role: "commissioner", scope: "club", clubId: otroClub.id, scopeId: otroClub.id });
 
       expect(respuesta.status).toBe(201);
@@ -677,10 +677,10 @@ describe("Gestión de usuarios (sección F)", () => {
     });
 
     it("un rol de organización sin decir cuál se rechaza por contrato", async () => {
-      const creado = await con(tokenAdmin).post("/users").send(datosDeUsuario());
+      const creado = await con(tokenAdmin).post("/api/users").send(datosDeUsuario());
 
       const respuesta = await con(tokenAdmin)
-        .post(`/users/${creado.body.id}/roles`)
+        .post(`/api/users/${creado.body.id}/roles`)
         .send({ role: "instructor", scope: "organization" });
 
       expect(respuesta.status).toBe(400);
@@ -689,7 +689,7 @@ describe("Gestión de usuarios (sección F)", () => {
 
   describe("exportar (T-059)", () => {
     it("devuelve CSV con el mismo filtro que el listado", async () => {
-      const respuesta = await con(tokenAdmin).get("/users/export?status=invited");
+      const respuesta = await con(tokenAdmin).get("/api/users/export?status=invited");
 
       expect(respuesta.status).toBe(200);
       expect(respuesta.headers["content-type"]).toContain("text/csv");
@@ -699,15 +699,15 @@ describe("Gestión de usuarios (sección F)", () => {
     });
 
     it("escapa comillas y comas: un nombre con coma no parte la fila", async () => {
-      await con(tokenAdmin).post("/users").send(datosDeUsuario({ fullName: 'Pérez, "Pepe"' }));
+      await con(tokenAdmin).post("/api/users").send(datosDeUsuario({ fullName: 'Pérez, "Pepe"' }));
 
-      const respuesta = await con(tokenAdmin).get("/users/export");
+      const respuesta = await con(tokenAdmin).get("/api/users/export");
 
       expect(respuesta.text).toContain('"Pérez, ""Pepe"""');
     });
 
     it("un jugador no exporta nada", async () => {
-      expect((await con(tokenJugador).get("/users/export")).status).toBe(403);
+      expect((await con(tokenJugador).get("/api/users/export")).status).toBe(403);
     });
   });
 });

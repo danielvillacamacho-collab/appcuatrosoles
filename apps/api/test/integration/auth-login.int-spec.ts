@@ -25,7 +25,7 @@ describe("Inicio de sesión (T-030, HU-010-04)", () => {
 
   function entrar(cuerpo: Record<string, unknown>): request.Test {
     return request(app.getHttpServer())
-      .post("/auth/login")
+      .post("/api/auth/login")
       .set("Host", `${club.slug}.${BASE}`)
       .send(cuerpo);
   }
@@ -136,7 +136,7 @@ describe("Inicio de sesión (T-030, HU-010-04)", () => {
       const token = sesion.slice(`${COOKIE_DE_SESION}=`.length).split(";")[0] ?? "";
 
       const perfil = await request(app.getHttpServer())
-        .get("/clubs/current")
+        .get("/api/clubs/current")
         .set("Host", `${club.slug}.${BASE}`)
         .set("Cookie", `${COOKIE_DE_SESION}=${token}`);
 
@@ -339,7 +339,7 @@ describe("Inicio de sesión (T-030, HU-010-04)", () => {
       // `TenantGuard` corre antes. Sin eso, probar correos desde un subdominio inventado sería una
       // forma de averiguar quién tiene cuenta en la plataforma.
       const respuesta = await request(app.getHttpServer())
-        .post("/auth/login")
+        .post("/api/auth/login")
         .set("Host", `inventado.${BASE}`)
         .send({ email: correo, password: CONTRASENA });
 
@@ -357,7 +357,7 @@ describe("Inicio de sesión (T-030, HU-010-04)", () => {
       app.get(ClubDirectory).invalidate();
 
       const respuesta = await request(app.getHttpServer())
-        .post("/auth/login")
+        .post("/api/auth/login")
         .set("Host", `${otroClub.slug}.${BASE}`)
         .send({ email: correo, password: CONTRASENA });
 
@@ -385,7 +385,7 @@ describe("Inicio de sesión (T-030, HU-010-04)", () => {
       });
 
       const respuesta = await request(app.getHttpServer())
-        .post("/auth/login")
+        .post("/api/auth/login")
         .set("Host", `${otroClub.slug}.${BASE}`)
         .send({ email: correo, password: CONTRASENA });
 

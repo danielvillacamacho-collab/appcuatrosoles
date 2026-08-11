@@ -63,7 +63,7 @@ describe("Categorías de membresía (T-243, HU-020-07)", () => {
 
   function crear(token: string, cuerpo: Record<string, unknown>): request.Test {
     return request(app.getHttpServer())
-      .post("/membership-categories")
+      .post("/api/membership-categories")
       .set("Host", `${club.slug}.${BASE}`)
       .set("Cookie", `${COOKIE_DE_SESION}=${token}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(token))
@@ -149,7 +149,7 @@ describe("Categorías de membresía (T-243, HU-020-07)", () => {
     });
 
     const actualizada = await request(app.getHttpServer())
-      .patch(`/membership-categories/${creada.body.id}`)
+      .patch(`/api/membership-categories/${creada.body.id}`)
       .set("Host", `${club.slug}.${BASE}`)
       .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin))
@@ -169,7 +169,7 @@ describe("Categorías de membresía (T-243, HU-020-07)", () => {
     });
 
     const desactivada = await request(app.getHttpServer())
-      .patch(`/membership-categories/${creada.body.id}`)
+      .patch(`/api/membership-categories/${creada.body.id}`)
       .set("Host", `${club.slug}.${BASE}`)
       .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin))
@@ -187,7 +187,7 @@ describe("Categorías de membresía (T-243, HU-020-07)", () => {
     });
 
     const respuesta = await request(app.getHttpServer())
-      .patch(`/membership-categories/${ajena.id}`)
+      .patch(`/api/membership-categories/${ajena.id}`)
       .set("Host", `${club.slug}.${BASE}`)
       .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin))
@@ -200,7 +200,7 @@ describe("Categorías de membresía (T-243, HU-020-07)", () => {
     expect((await crear(tokenJugador, { code: "x", name: "X", monthlyFeeCents: 0 })).status).toBe(403);
 
     const lista = await request(app.getHttpServer())
-      .get("/membership-categories")
+      .get("/api/membership-categories")
       .set("Host", `${club.slug}.${BASE}`)
       .set("Cookie", `${COOKIE_DE_SESION}=${tokenJugador}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenJugador));

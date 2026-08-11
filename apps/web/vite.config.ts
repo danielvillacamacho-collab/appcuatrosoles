@@ -16,14 +16,10 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
-    // El API vive en el mismo origen que la aplicación en producción (`plan.md` §9.3): la cookie
-    // de sesión y la resolución de tenant por subdominio dependen de eso. En desarrollo lo imita
-    // este proxy, para que no haya un `VITE_API_URL` que sólo exista aquí y esconda el problema.
-    proxy: Object.fromEntries(
-      ["/auth", "/me", "/users", "/minors", "/guardianships", "/waivers", "/clubs", "/organizations", "/seasons", "/membership-categories", "/settings", "/audit-log", "/platform", "/health"].map(
-        (ruta) => [ruta, { target: "http://localhost:3000", changeOrigin: false }],
-      ),
-    ),
+    // Una sola entrada, porque todo el API cuelga de `/api` (ver `configure-app.ts`). Antes había
+    // una por recurso, y `/me` capturaba también la ruta `/me/profile` de esta aplicación: la
+    // pantalla del perfil devolvía el JSON del API en vez de existir.
+    proxy: { "/api": { target: "http://localhost:3000", changeOrigin: false } },
   },
   build: {
     outDir: "dist",

@@ -35,7 +35,7 @@ async function llenarYEntrar(correo = "maria@lospinos.test", clave = "mi-clave-l
 
 describe("Pantalla de ingreso (T-124, HU-010-04)", () => {
   beforeEach(() => {
-    vi.stubGlobal("fetch", vi.fn(fetchSimulado({ "/clubs/current/public": CLUB })));
+    vi.stubGlobal("fetch", vi.fn(fetchSimulado({ "/api/clubs/current/public": CLUB })));
   });
 
   afterEach(() => {
@@ -67,9 +67,9 @@ describe("Pantalla de ingreso · entrar", () => {
   it("manda el correo y la contraseña, y lleva al panel", async () => {
     const espia = vi.fn(
       fetchSimulado({
-        "/clubs/current/public": CLUB,
-        "POST /auth/login": { estado: 200, cuerpo: { userAccountId: "u1", personId: "p1", fullName: "María Fernanda", email: "maria@lospinos.test" } },
-        "/me": YO,
+        "/api/clubs/current/public": CLUB,
+        "POST /api/auth/login": { estado: 200, cuerpo: { userAccountId: "u1", personId: "p1", fullName: "María Fernanda", email: "maria@lospinos.test" } },
+        "/api/me": YO,
       }),
     );
     vi.stubGlobal("fetch", espia);
@@ -81,7 +81,7 @@ describe("Pantalla de ingreso · entrar", () => {
       expect(screen.getByText(/María Fernanda/u)).toBeDefined();
     });
 
-    const login = espia.mock.calls.find(([url]) => url === "/auth/login");
+    const login = espia.mock.calls.find(([url]) => url === "/api/auth/login");
     expect(JSON.parse((login?.[1] as RequestInit).body as string)).toEqual({
       email: "maria@lospinos.test",
       password: "mi-clave-larga-9",
@@ -94,8 +94,8 @@ describe("Pantalla de ingreso · entrar", () => {
       "fetch",
       vi.fn(
         fetchSimulado({
-          "/clubs/current/public": CLUB,
-          "POST /auth/login": { estado: 401, cuerpo: errorDeApi("CREDENTIALS_INVALID") },
+          "/api/clubs/current/public": CLUB,
+          "POST /api/auth/login": { estado: 401, cuerpo: errorDeApi("CREDENTIALS_INVALID") },
         }),
       ),
     );
@@ -116,8 +116,8 @@ describe("Pantalla de ingreso · entrar", () => {
       "fetch",
       vi.fn(
         fetchSimulado({
-          "/clubs/current/public": CLUB,
-          "POST /auth/login": { estado: 401, cuerpo: errorDeApi("ACCOUNT_SUSPENDED") },
+          "/api/clubs/current/public": CLUB,
+          "POST /api/auth/login": { estado: 401, cuerpo: errorDeApi("ACCOUNT_SUSPENDED") },
         }),
       ),
     );
@@ -129,25 +129,25 @@ describe("Pantalla de ingreso · entrar", () => {
   });
 
   it("no valida contra el servidor lo que puede validar sola: un correo mal escrito ni sale", async () => {
-    const espia = vi.fn(fetchSimulado({ "/clubs/current/public": CLUB }));
+    const espia = vi.fn(fetchSimulado({ "/api/clubs/current/public": CLUB }));
     vi.stubGlobal("fetch", espia);
 
     montar("/login");
     await llenarYEntrar("esto-no-es-un-correo", "mi-clave-larga-9");
 
     expect(await screen.findByText(copy.ingreso.correoInvalido)).toBeDefined();
-    expect(espia.mock.calls.some(([url]) => url === "/auth/login")).toBe(false);
+    expect(espia.mock.calls.some(([url]) => url === "/api/auth/login")).toBe(false);
   });
 
   it("quedarse sin red dice que revise la conexión, no que la contraseña esté mal", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn((url: string) => {
-        if (url === "/auth/login") {
+        if (url === "/api/auth/login") {
           return Promise.reject(new TypeError("Failed to fetch"));
         }
 
-        return fetchSimulado({ "/clubs/current/public": CLUB })(url);
+        return fetchSimulado({ "/api/clubs/current/public": CLUB })(url);
       }),
     );
 

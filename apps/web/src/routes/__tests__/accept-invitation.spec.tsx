@@ -13,8 +13,8 @@ describe("Aceptar la invitación (T-126, HU-010-02)", () => {
   beforeEach(() => {
     espia = vi.fn(
       fetchSimulado({
-        "/clubs/current/public": CLUB,
-        "POST /auth/invitation/accept": { estado: 204 },
+        "/api/clubs/current/public": CLUB,
+        "POST /api/auth/invitation/accept": { estado: 204 },
       }),
     );
     vi.stubGlobal("fetch", espia);
@@ -45,7 +45,7 @@ describe("Aceptar la invitación (T-126, HU-010-02)", () => {
       expect(screen.getByLabelText(copy.ingreso.recordarme)).toBeDefined();
     });
 
-    const enviado = espia.mock.calls.find(([url]) => url === "/auth/invitation/accept");
+    const enviado = espia.mock.calls.find(([url]) => url === "/api/auth/invitation/accept");
     expect(JSON.parse((enviado?.[1] as RequestInit).body as string)).toMatchObject({
       token: "un-token-del-correo",
       newPassword: "mi-clave-nueva-7",
@@ -65,7 +65,7 @@ describe("Aceptar la invitación (T-126, HU-010-02)", () => {
     await persona.click(screen.getByRole("button", { name: copy.invitacion.guardar }));
 
     await screen.findAllByText(copy.errores.PASSWORD_POLICY);
-    expect(espia.mock.calls.some(([url]) => url === "/auth/invitation/accept")).toBe(false);
+    expect(espia.mock.calls.some(([url]) => url === "/api/auth/invitation/accept")).toBe(false);
   });
 
   it("dos contraseñas distintas se avisan al instante, sin viajar al servidor", async () => {
@@ -77,7 +77,7 @@ describe("Aceptar la invitación (T-126, HU-010-02)", () => {
     await persona.click(screen.getByRole("button", { name: copy.invitacion.guardar }));
 
     expect(await screen.findByText(copy.invitacion.noCoinciden)).toBeDefined();
-    expect(espia.mock.calls.some(([url]) => url === "/auth/invitation/accept")).toBe(false);
+    expect(espia.mock.calls.some(([url]) => url === "/api/auth/invitation/accept")).toBe(false);
   });
 
   it("lo que se escribe no se borra solo mientras se llena el formulario", async () => {
@@ -98,8 +98,8 @@ describe("Aceptar la invitación (T-126, HU-010-02)", () => {
       "fetch",
       vi.fn(
         fetchSimulado({
-          "/clubs/current/public": CLUB,
-          "POST /auth/invitation/accept": {
+          "/api/clubs/current/public": CLUB,
+          "POST /api/auth/invitation/accept": {
             estado: 422,
             cuerpo: { error: { code: "INVITATION_LINK_INVALID", message: "x", requestId: "a" } },
           },

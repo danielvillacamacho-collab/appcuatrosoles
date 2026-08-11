@@ -26,17 +26,21 @@ const CABECERA_CSRF = "x-csrf-token";
 const VERBOS_MUTANTES = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 /**
- * De dónde cuelga el API.
+ * De dónde cuelga el API: **`/api` del mismo origen**.
  *
- * Vacío por defecto —rutas relativas— porque en producción el API y la aplicación viven en el
- * **mismo origen**: el club entra por `losPinos.polo.app` y ahí está todo. Es lo que hace que la
- * cookie de sesión funcione sin `SameSite=None`, y lo que hace que el tenant se resuelva por el
- * `Host` sin que el cliente mande nunca un `clubId` (`ADR-013`, P-05).
+ * Mismo origen porque el club entra por `lospinos.polo.app` y ahí está todo: es lo que hace que la
+ * cookie de sesión funcione sin `SameSite=None`, y que el tenant se resuelva por el `Host` sin que
+ * el cliente mande nunca un `clubId` (`ADR-013`, P-05).
  *
- * En desarrollo, Vite hace de proxy hacia el puerto del API. Si algún día hiciera falta un origen
- * distinto, se cambia aquí y en la política de CORS del API, no en cada llamada.
+ * Y bajo `/api` porque, compartiendo origen, las rutas del servidor y las de esta aplicación
+ * comparten espacio de nombres: sin prefijo, `/me/profile` del navegador cae en el controlador
+ * `/me` del API y la pantalla nunca llega a existir. Es la topología que `docs/07` §4 ya daba por
+ * hecha (`reverse_proxy /api/*`).
+ *
+ * En desarrollo lo sirve el proxy de Vite. `VITE_API_URL` existe para apuntar a otro origen si
+ * alguna vez hiciera falta; cambiarlo obliga además a tocar CORS en el API.
  */
-const BASE = import.meta.env.VITE_API_URL ?? "";
+const BASE = import.meta.env.VITE_API_URL ?? "/api";
 
 export interface ApiErrorData {
   code: string;

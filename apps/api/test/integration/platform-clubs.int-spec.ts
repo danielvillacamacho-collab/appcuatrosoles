@@ -66,7 +66,7 @@ describe("Alta y suspensión de clubes (T-230, T-231)", () => {
 
   function crearClub(token: string, cuerpo: Record<string, unknown>): request.Test {
     return request(app.getHttpServer())
-      .post("/platform/clubs")
+      .post("/api/platform/clubs")
       .set("Cookie", `${COOKIE_DE_SESION}=${token}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(token))
       .send(cuerpo);
@@ -197,7 +197,7 @@ describe("Alta y suspensión de clubes (T-230, T-231)", () => {
 
     it("sin sesión, tampoco", async () => {
       const respuesta = await request(app.getHttpServer())
-        .post("/platform/clubs")
+        .post("/api/platform/clubs")
         .send(datosDeClub());
 
       expect(respuesta.status).toBe(401);
@@ -233,7 +233,7 @@ describe("Alta y suspensión de clubes (T-230, T-231)", () => {
 
     function suspender(clubId: string): request.Test {
       return request(app.getHttpServer())
-        .post(`/platform/clubs/${clubId}/suspend`)
+        .post(`/api/platform/clubs/${clubId}/suspend`)
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenSuperadmin}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenSuperadmin))
         .send({ reason: "Terminó el contrato" });
@@ -269,7 +269,7 @@ describe("Alta y suspensión de clubes (T-230, T-231)", () => {
       expect(suspendido.suspendedAt).not.toBeNull();
 
       await request(app.getHttpServer())
-        .post(`/platform/clubs/${clubId}/reactivate`)
+        .post(`/api/platform/clubs/${clubId}/reactivate`)
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenSuperadmin}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenSuperadmin))
         .send({});

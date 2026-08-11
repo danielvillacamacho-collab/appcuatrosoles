@@ -26,14 +26,14 @@ describe("Restablecimiento de contraseña (T-035, T-036)", () => {
 
   function pedir(email: string): request.Test {
     return request(app.getHttpServer())
-      .post("/auth/password/forgot")
+      .post("/api/auth/password/forgot")
       .set("Host", `${club.slug}.${BASE}`)
       .send({ email });
   }
 
   function restablecer(cuerpo: Record<string, unknown>): request.Test {
     return request(app.getHttpServer())
-      .post("/auth/password/reset")
+      .post("/api/auth/password/reset")
       .set("Host", `${club.slug}.${BASE}`)
       .send(cuerpo);
   }
@@ -120,7 +120,7 @@ describe("Restablecimiento de contraseña (T-035, T-036)", () => {
       // Un `Host` falsificado convertiría el correo en un enlace al sitio del atacante con el token
       // de la víctima adentro.
       await request(app.getHttpServer())
-        .post("/auth/password/forgot")
+        .post("/api/auth/password/forgot")
         .set("Host", `${club.slug}.${BASE}`)
         .set("X-Forwarded-Host", "sitio-del-atacante.com")
         .send({ email: correo });
@@ -214,7 +214,7 @@ describe("Restablecimiento de contraseña (T-035, T-036)", () => {
     it("revoca TODAS las sesiones: si alguien entró con credenciales robadas, queda afuera", async () => {
       const entrar = async (password: string): Promise<string> => {
         const respuesta = await request(app.getHttpServer())
-          .post("/auth/login")
+          .post("/api/auth/login")
           .set("Host", `${club.slug}.${BASE}`)
           .send({ email: correo, password });
         const cookies = (respuesta.headers["set-cookie"] as unknown as string[]) ?? [];
@@ -240,7 +240,7 @@ describe("Restablecimiento de contraseña (T-035, T-036)", () => {
       });
 
       const conLaSesionVieja = await request(app.getHttpServer())
-        .get("/clubs/current")
+        .get("/api/clubs/current")
         .set("Host", `${club.slug}.${BASE}`)
         .set("Cookie", `${COOKIE_DE_SESION}=${sesionViva}`);
 

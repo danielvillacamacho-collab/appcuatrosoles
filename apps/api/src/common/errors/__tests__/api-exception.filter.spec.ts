@@ -86,7 +86,7 @@ describe("ApiExceptionFilter (docs/03 §2)", () => {
   });
 
   it("un error de negocio viaja con su código de contrato, su mensaje y sus detalles", async () => {
-    const respuesta = await request(app.getHttpServer()).get("/pruebas/negocio");
+    const respuesta = await request(app.getHttpServer()).get("/api/pruebas/negocio");
 
     expect(respuesta.status).toBe(409);
     expect(respuesta.body.error).toMatchObject({
@@ -98,7 +98,7 @@ describe("ApiExceptionFilter (docs/03 §2)", () => {
 
   it("toda respuesta de error cumple el esquema de contrato, no sólo el tipo", async () => {
     // docs/03 §4: que compile no basta; se valida la respuesta real contra el esquema real.
-    const rutas = ["/pruebas/negocio", "/pruebas/sin-sesion", "/pruebas/esquema", "/pruebas/roto", "/no-existe"];
+    const rutas = ["/api/pruebas/negocio", "/api/pruebas/sin-sesion", "/api/pruebas/esquema", "/api/pruebas/roto", "/api/no-existe"];
 
     for (const ruta of rutas) {
       const respuesta = await request(app.getHttpServer()).get(ruta);
@@ -108,7 +108,7 @@ describe("ApiExceptionFilter (docs/03 §2)", () => {
   });
 
   it("un error inesperado no filtra jamás el mensaje interno", async () => {
-    const respuesta = await request(app.getHttpServer()).get("/pruebas/roto");
+    const respuesta = await request(app.getHttpServer()).get("/api/pruebas/roto");
 
     expect(respuesta.status).toBe(500);
     expect(respuesta.body.error.code).toBe("INTERNAL_ERROR");
@@ -117,7 +117,7 @@ describe("ApiExceptionFilter (docs/03 §2)", () => {
   });
 
   it("una excepción de NestJS conserva su estado pero no su mensaje en inglés", async () => {
-    const respuesta = await request(app.getHttpServer()).get("/pruebas/sin-sesion");
+    const respuesta = await request(app.getHttpServer()).get("/api/pruebas/sin-sesion");
 
     expect(respuesta.status).toBe(401);
     expect(respuesta.body.error).toMatchObject({
@@ -133,7 +133,7 @@ describe("ApiExceptionFilter (docs/03 §2)", () => {
   });
 
   it("una ruta inexistente responde 404 en español, sin describir la infraestructura", async () => {
-    const respuesta = await request(app.getHttpServer()).get("/no-existe");
+    const respuesta = await request(app.getHttpServer()).get("/api/no-existe");
 
     expect(respuesta.status).toBe(404);
     expect(respuesta.body.error.code).toBe("NOT_FOUND");
@@ -141,7 +141,7 @@ describe("ApiExceptionFilter (docs/03 §2)", () => {
   });
 
   it("un estado fuera del catálogo conserva su código HTTP y responde genérico, nunca undefined", async () => {
-    const respuesta = await request(app.getHttpServer()).get("/pruebas/estado-raro");
+    const respuesta = await request(app.getHttpServer()).get("/api/pruebas/estado-raro");
 
     expect(respuesta.status).toBe(418);
     expect(respuesta.body.error.code).toBe("INTERNAL_ERROR");
@@ -153,7 +153,7 @@ describe("ApiExceptionFilter (docs/03 §2)", () => {
     // Conservar el código y descartar el mensaje son dos decisiones distintas. El mensaje de
     // NestJS viene en inglés y describe la infraestructura; `slug_en_uso` es lo que necesita el
     // frontend para decir «ese subdominio ya está tomado» en vez de «datos inválidos».
-    const respuesta = await request(app.getHttpServer()).get("/pruebas/codigo-propio");
+    const respuesta = await request(app.getHttpServer()).get("/api/pruebas/codigo-propio");
 
     expect(respuesta.status).toBe(409);
     expect(respuesta.body.error.code).toBe("slug_en_uso");
@@ -163,7 +163,7 @@ describe("ApiExceptionFilter (docs/03 §2)", () => {
   it("un cuerpo sin `code`, o con uno vacío, cae en el código genérico del estado", async () => {
     // Es un contrato con quien lanza, no una casualidad: cualquier otra forma de cuerpo tiene que
     // seguir produciendo una respuesta válida.
-    for (const ruta of ["/pruebas/cuerpo-sin-codigo", "/pruebas/codigo-vacio"]) {
+    for (const ruta of ["/api/pruebas/cuerpo-sin-codigo", "/api/pruebas/codigo-vacio"]) {
       const respuesta = await request(app.getHttpServer()).get(ruta);
 
       expect(respuesta.status).toBe(409);
@@ -172,13 +172,13 @@ describe("ApiExceptionFilter (docs/03 §2)", () => {
   });
 
   it("ninguna respuesta anuncia con qué está construido el servidor", async () => {
-    const respuesta = await request(app.getHttpServer()).get("/pruebas/negocio");
+    const respuesta = await request(app.getHttpServer()).get("/api/pruebas/negocio");
 
     expect(respuesta.headers["x-powered-by"]).toBeUndefined();
   });
 
   it("un payload que no cumple su esquema responde 400 diciendo qué campos", async () => {
-    const respuesta = await request(app.getHttpServer()).get("/pruebas/esquema");
+    const respuesta = await request(app.getHttpServer()).get("/api/pruebas/esquema");
 
     expect(respuesta.status).toBe(400);
     expect(respuesta.body.error.code).toBe("VALIDATION_FAILED");
@@ -201,22 +201,22 @@ describe("requestId (docs/03 §2)", () => {
   });
 
   it("el identificador del cuerpo es el mismo de la cabecera — si no, no sirve para buscar", async () => {
-    const respuesta = await request(app.getHttpServer()).get("/pruebas/roto");
+    const respuesta = await request(app.getHttpServer()).get("/api/pruebas/roto");
 
     expect(respuesta.body.error.requestId).toBe(respuesta.headers["x-request-id"]);
     expect(respuesta.body.error.requestId).toMatch(/^req_/);
   });
 
   it("cada solicitud trae uno distinto", async () => {
-    const primera = await request(app.getHttpServer()).get("/pruebas/roto");
-    const segunda = await request(app.getHttpServer()).get("/pruebas/roto");
+    const primera = await request(app.getHttpServer()).get("/api/pruebas/roto");
+    const segunda = await request(app.getHttpServer()).get("/api/pruebas/roto");
 
     expect(primera.body.error.requestId).not.toBe(segunda.body.error.requestId);
   });
 
   it("no se reutiliza el que manda el cliente: escribiría en nuestros logs", async () => {
     const respuesta = await request(app.getHttpServer())
-      .get("/pruebas/roto")
+      .get("/api/pruebas/roto")
       // Sin salto de línea: Node rechaza esa cabecera antes de que salga, así que la inyección de
       // log directa ya está cubierta por la plataforma. Lo que este test protege es lo otro: que
       // un cliente no pueda repetir el mismo identificador en miles de solicitudes y volver
@@ -241,6 +241,7 @@ describe("configurarApp", () => {
     const montados: string[] = [];
     const appFalsa = {
       getHttpAdapter: () => ({ getInstance: () => ({}) }),
+      setGlobalPrefix: (prefijo: string) => montados.push(`prefijo:${prefijo}`),
       use: (middleware: { name: string }) => montados.push(middleware.name),
       useGlobalFilters: () => montados.push("filtro"),
     } as unknown as INestApplication;
@@ -251,6 +252,9 @@ describe("configurarApp", () => {
     // `cookieParser`, porque necesita leer la cookie de sesión; y el filtro va al final, para que
     // el rechazo de cualquiera de ellos salga con la forma de error de siempre.
     expect(montados).toEqual([
+      // Todo el API cuelga de `/api`: la aplicación web comparte origen y sin prefijo sus rutas
+      // chocarían con las del servidor (ver la nota de `configure-app.ts`).
+      "prefijo:api",
       "requestIdMiddleware",
       "cookieParser",
       "csrfMiddleware",
@@ -261,6 +265,7 @@ describe("configurarApp", () => {
   it("tampoco si el adaptador no expone servidor alguno", () => {
     const appFalsa = {
       getHttpAdapter: () => ({ getInstance: () => null }),
+      setGlobalPrefix: () => undefined,
       use: () => undefined,
       useGlobalFilters: () => undefined,
     } as unknown as INestApplication;

@@ -68,7 +68,7 @@ describe("Identidad de punta a punta (sección K)", () => {
   }
 
   async function entrar(email: string, password: string): Promise<string> {
-    const respuesta = await anonimo("post", "/auth/login").send({ email, password });
+    const respuesta = await anonimo("post", "/api/auth/login").send({ email, password });
 
     expect(respuesta.status, `no pudo entrar ${email}`).toBe(200);
     expect(LoginResponse.safeParse(respuesta.body).success).toBe(true);
@@ -142,14 +142,14 @@ describe("Identidad de punta a punta (sección K)", () => {
       const correoNuevo = `${etiqueta("invitado")}@ejemplo.test`;
 
       const creado = await con(admin)
-        .post("/users")
+        .post("/api/users")
         .send({ fullName: "Jugador invitado", email: correoNuevo, roles: ["player"] });
 
       expect(creado.status).toBe(201);
       expect(creado.body.status).toBe("invited");
 
       const token = await tokenDelUltimoCorreoA(correoNuevo);
-      const aceptada = await anonimo("post", "/auth/invitation/accept").send({
+      const aceptada = await anonimo("post", "/api/auth/invitation/accept").send({
         token,
         newPassword: "mi-primera-clave-8",
         newPasswordConfirmation: "mi-primera-clave-8",
@@ -158,7 +158,7 @@ describe("Identidad de punta a punta (sección K)", () => {
       expect(aceptada.status).toBe(204);
 
       const sesion = await entrar(correoNuevo, "mi-primera-clave-8");
-      const panel = await con(sesion).get("/me");
+      const panel = await con(sesion).get("/api/me");
 
       expect(panel.status).toBe(200);
       expect(MeResponse.safeParse(panel.body).success).toBe(true);
@@ -171,7 +171,7 @@ describe("Identidad de punta a punta (sección K)", () => {
       const correoNuevo = `${etiqueta("unavez")}@ejemplo.test`;
 
       await con(admin)
-        .post("/users")
+        .post("/api/users")
         .send({ fullName: "Invitado de un solo uso", email: correoNuevo, roles: ["player"] });
 
       const token = await tokenDelUltimoCorreoA(correoNuevo);
@@ -181,8 +181,8 @@ describe("Identidad de punta a punta (sección K)", () => {
         newPasswordConfirmation: "otra-clave-larga-9",
       };
 
-      expect((await anonimo("post", "/auth/invitation/accept").send(cuerpo)).status).toBe(204);
-      expect((await anonimo("post", "/auth/invitation/accept").send(cuerpo)).status).toBe(422);
+      expect((await anonimo("post", "/api/auth/invitation/accept").send(cuerpo)).status).toBe(204);
+      expect((await anonimo("post", "/api/auth/invitation/accept").send(cuerpo)).status).toBe(422);
     });
   });
 
@@ -195,11 +195,11 @@ describe("Identidad de punta a punta (sección K)", () => {
       const correoNuevo = `${etiqueta("olvido")}@ejemplo.test`;
 
       await con(admin)
-        .post("/users")
+        .post("/api/users")
         .send({ fullName: "Quien olvida", email: correoNuevo, roles: ["player"] });
 
       const invitacion = await tokenDelUltimoCorreoA(correoNuevo);
-      await anonimo("post", "/auth/invitation/accept").send({
+      await anonimo("post", "/api/auth/invitation/accept").send({
         token: invitacion,
         newPassword: "la-que-voy-a-olvidar-1",
         newPasswordConfirmation: "la-que-voy-a-olvidar-1",
@@ -208,29 +208,29 @@ describe("Identidad de punta a punta (sección K)", () => {
       const celular = await entrar(correoNuevo, "la-que-voy-a-olvidar-1");
       const computador = await entrar(correoNuevo, "la-que-voy-a-olvidar-1");
 
-      expect((await con(celular).get("/me")).status).toBe(200);
+      expect((await con(celular).get("/api/me")).status).toBe(200);
 
-      expect((await anonimo("post", "/auth/password/forgot").send({ email: correoNuevo })).status).toBe(202);
+      expect((await anonimo("post", "/api/auth/password/forgot").send({ email: correoNuevo })).status).toBe(202);
 
       const reset = await tokenDelUltimoCorreoA(correoNuevo);
-      const cambiada = await anonimo("post", "/auth/password/reset").send({
+      const cambiada = await anonimo("post", "/api/auth/password/reset").send({
         token: reset,
         newPassword: "la-nueva-de-verdad-2",
         newPasswordConfirmation: "la-nueva-de-verdad-2",
       });
 
       expect(cambiada.status).toBe(204);
-      expect((await con(celular).get("/me")).status).toBe(401);
-      expect((await con(computador).get("/me")).status).toBe(401);
+      expect((await con(celular).get("/api/me")).status).toBe(401);
+      expect((await con(computador).get("/api/me")).status).toBe(401);
 
       // Y con la nueva sí entra: restablecer no puede dejar a nadie fuera de su propia cuenta.
       const despues = await entrar(correoNuevo, "la-nueva-de-verdad-2");
-      expect((await con(despues).get("/me")).status).toBe(200);
+      expect((await con(despues).get("/api/me")).status).toBe(200);
     });
 
     it("pedir el enlace para un correo que no existe responde igual que para uno que sí", async () => {
       // P-12: si la respuesta cambiara, esta ruta sería un buscador de cuentas del club.
-      const inexistente = await anonimo("post", "/auth/password/forgot").send({
+      const inexistente = await anonimo("post", "/api/auth/password/forgot").send({
         email: `${etiqueta("fantasma")}@ejemplo.test`,
       });
 
@@ -244,17 +244,17 @@ describe("Identidad de punta a punta (sección K)", () => {
       const correoAcudiente = `${etiqueta("acudiente")}@ejemplo.test`;
 
       const cuenta = await con(admin)
-        .post("/users")
+        .post("/api/users")
         .send({ fullName: "Madre de familia", email: correoAcudiente, roles: ["player"] });
 
       const invitacion = await tokenDelUltimoCorreoA(correoAcudiente);
-      await anonimo("post", "/auth/invitation/accept").send({
+      await anonimo("post", "/api/auth/invitation/accept").send({
         token: invitacion,
         newPassword: "la-clave-de-la-mama-3",
         newPasswordConfirmation: "la-clave-de-la-mama-3",
       });
 
-      const menor = await con(admin).post("/minors").send({
+      const menor = await con(admin).post("/api/minors").send({
         fullName: "Hijo que juega",
         birthdate: "2015-05-05",
         guardianPersonId: cuenta.body.personId,
@@ -263,7 +263,7 @@ describe("Identidad de punta a punta (sección K)", () => {
       expect(menor.status).toBe(201);
 
       const sesion = await entrar(correoAcudiente, "la-clave-de-la-mama-3");
-      const aCargo = await con(sesion).get("/me/dependents");
+      const aCargo = await con(sesion).get("/api/me/dependents");
 
       expect(aCargo.status).toBe(200);
       expect(aCargo.body).toHaveLength(1);
@@ -280,17 +280,17 @@ describe("Identidad de punta a punta (sección K)", () => {
       // El waiver del menor lo firma su acudiente, y la lista lo refleja de inmediato: es lo que
       // le dice al club si ese niño puede entrar a la cancha (R-010-12).
       await con(admin)
-        .post("/waivers")
+        .post("/api/waivers")
         .send({ body: "Exención de responsabilidad del club, versión del recorrido." });
 
-      expect((await con(sesion).get("/me/dependents")).body[0].waiverAccepted).toBe(false);
+      expect((await con(sesion).get("/api/me/dependents")).body[0].waiverAccepted).toBe(false);
 
       const firmada = await con(sesion)
-        .post("/waivers/current/accept")
+        .post("/api/waivers/current/accept")
         .send({ personId: menor.body.personId });
 
       expect(firmada.status).toBe(204);
-      expect((await con(sesion).get("/me/dependents")).body[0].waiverAccepted).toBe(true);
+      expect((await con(sesion).get("/api/me/dependents")).body[0].waiverAccepted).toBe(true);
     });
 
     it("el menor no tiene con qué entrar, y su acudiente no ve a los hijos de nadie más", async () => {
@@ -298,24 +298,24 @@ describe("Identidad de punta a punta (sección K)", () => {
       const otroCorreo = `${etiqueta("otropadre")}@ejemplo.test`;
 
       const otro = await con(admin)
-        .post("/users")
+        .post("/api/users")
         .send({ fullName: "Otro padre", email: otroCorreo, roles: ["player"] });
 
       const invitacion = await tokenDelUltimoCorreoA(otroCorreo);
-      await anonimo("post", "/auth/invitation/accept").send({
+      await anonimo("post", "/api/auth/invitation/accept").send({
         token: invitacion,
         newPassword: "la-clave-del-otro-4",
         newPasswordConfirmation: "la-clave-del-otro-4",
       });
 
-      const suyo = await con(admin).post("/minors").send({
+      const suyo = await con(admin).post("/api/minors").send({
         fullName: "Hija del otro",
         birthdate: "2016-06-06",
         guardianPersonId: otro.body.personId,
       });
 
       const sesion = await entrar(otroCorreo, "la-clave-del-otro-4");
-      const aCargo = await con(sesion).get("/me/dependents");
+      const aCargo = await con(sesion).get("/api/me/dependents");
 
       expect(aCargo.body.map((fila: { personId: string }) => fila.personId)).toEqual([
         suyo.body.personId,

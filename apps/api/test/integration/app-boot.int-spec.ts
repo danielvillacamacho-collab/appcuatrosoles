@@ -35,7 +35,7 @@ describe("Arranque de la aplicación", () => {
   });
 
   it("levanta con todos sus módulos y responde /health", async () => {
-    const respuesta = await request(app.getHttpServer()).get("/health");
+    const respuesta = await request(app.getHttpServer()).get("/api/health");
 
     expect(respuesta.status).toBe(200);
     expect(respuesta.body).toEqual({ status: "ok" });

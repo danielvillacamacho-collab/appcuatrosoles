@@ -100,7 +100,7 @@ describe("Datos del club (T-240)", () => {
   describe("la ruta pública (HU-020-09)", () => {
     it("responde sin sesión, con el nombre del club del subdominio", async () => {
       const respuesta = await request(app.getHttpServer())
-        .get("/clubs/current/public")
+        .get("/api/clubs/current/public")
         .set("Host", host(club.slug));
 
       expect(respuesta.status).toBe(200);
@@ -111,7 +111,7 @@ describe("Datos del club (T-240)", () => {
       // Es la única respuesta del sistema que se sirve sin sesión: todo campo que se agregue aquí
       // es información que cualquiera puede leer apuntando al subdominio.
       const respuesta = await request(app.getHttpServer())
-        .get("/clubs/current/public")
+        .get("/api/clubs/current/public")
         .set("Host", host(club.slug));
 
       expect(Object.keys(respuesta.body).sort()).toEqual(["name", "timezone"]);
@@ -119,10 +119,10 @@ describe("Datos del club (T-240)", () => {
 
     it("no revela nada de otro club: cada subdominio ve el suyo", async () => {
       const propio = await request(app.getHttpServer())
-        .get("/clubs/current/public")
+        .get("/api/clubs/current/public")
         .set("Host", host(club.slug));
       const ajeno = await request(app.getHttpServer())
-        .get("/clubs/current/public")
+        .get("/api/clubs/current/public")
         .set("Host", host(otroClub.slug));
 
       expect(propio.body.name).not.toBe(ajeno.body.name);
@@ -130,7 +130,7 @@ describe("Datos del club (T-240)", () => {
 
     it("desde un subdominio desconocido responde 404, no la lista de clubes", async () => {
       const respuesta = await request(app.getHttpServer())
-        .get("/clubs/current/public")
+        .get("/api/clubs/current/public")
         .set("Host", `inventado.${BASE}`);
 
       expect(respuesta.status).toBe(404);
@@ -140,7 +140,7 @@ describe("Datos del club (T-240)", () => {
   describe("el detalle y la edición", () => {
     it("con sesión devuelve el detalle completo del club", async () => {
       const respuesta = await request(app.getHttpServer())
-        .get("/clubs/current")
+        .get("/api/clubs/current")
         .set("Host", host(club.slug))
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenJugador}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenJugador));
@@ -152,7 +152,7 @@ describe("Datos del club (T-240)", () => {
 
     it("sin sesión, el detalle no se sirve", async () => {
       const respuesta = await request(app.getHttpServer())
-        .get("/clubs/current")
+        .get("/api/clubs/current")
         .set("Host", host(club.slug));
 
       expect(respuesta.status).toBe(401);
@@ -160,7 +160,7 @@ describe("Datos del club (T-240)", () => {
 
     it("un administrador cambia el nombre y la zona horaria", async () => {
       const respuesta = await request(app.getHttpServer())
-        .patch("/clubs/current")
+        .patch("/api/clubs/current")
         .set("Host", host(club.slug))
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin))
@@ -175,14 +175,14 @@ describe("Datos del club (T-240)", () => {
 
     it("el cambio se ve en el acto en la pantalla de ingreso", async () => {
       await request(app.getHttpServer())
-        .patch("/clubs/current")
+        .patch("/api/clubs/current")
         .set("Host", host(club.slug))
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin))
         .send({ name: "Nombre Nuevo" });
 
       const publico = await request(app.getHttpServer())
-        .get("/clubs/current/public")
+        .get("/api/clubs/current/public")
         .set("Host", host(club.slug));
 
       expect(publico.body.name).toBe("Nombre Nuevo");
@@ -190,7 +190,7 @@ describe("Datos del club (T-240)", () => {
 
     it("un jugador no edita el club", async () => {
       const respuesta = await request(app.getHttpServer())
-        .patch("/clubs/current")
+        .patch("/api/clubs/current")
         .set("Host", host(club.slug))
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenJugador}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenJugador))
@@ -202,7 +202,7 @@ describe("Datos del club (T-240)", () => {
     it("el administrador de un club no edita otro, aunque use su cookie en ese subdominio", async () => {
       // La cookie es válida; el club del subdominio es otro. El permiso se evalúa contra ESE club.
       const respuesta = await request(app.getHttpServer())
-        .patch("/clubs/current")
+        .patch("/api/clubs/current")
         .set("Host", host(otroClub.slug))
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin))
@@ -213,7 +213,7 @@ describe("Datos del club (T-240)", () => {
 
     it("rechaza una zona horaria inexistente", async () => {
       const respuesta = await request(app.getHttpServer())
-        .patch("/clubs/current")
+        .patch("/api/clubs/current")
         .set("Host", host(club.slug))
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin))
@@ -226,7 +226,7 @@ describe("Datos del club (T-240)", () => {
       // Cambiar el subdominio rompe enlaces y sesiones, así que es una operación de plataforma y
       // no una edición de perfil (R-020-03). El campo se descarta al validar el contrato.
       const respuesta = await request(app.getHttpServer())
-        .patch("/clubs/current")
+        .patch("/api/clubs/current")
         .set("Host", host(club.slug))
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin))
@@ -242,7 +242,7 @@ describe("Datos del club (T-240)", () => {
       });
 
       await request(app.getHttpServer())
-        .patch("/clubs/current")
+        .patch("/api/clubs/current")
         .set("Host", host(club.slug))
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin))

@@ -163,7 +163,7 @@ describe("AuditInterceptor (T-023, docs/03 §9, R-010-11)", () => {
   it("una mutación marcada genera exactamente una fila — ni cero ni dos (criterio de T-023)", async () => {
     const id = etiqueta("entidad-creada");
     const respuesta = await request(app.getHttpServer())
-      .post("/cosas")
+      .post("/api/cosas")
       .set("x-actor-de-prueba", actorId)
       .send({ id, nombre: "Petisero nuevo" });
 
@@ -178,7 +178,7 @@ describe("AuditInterceptor (T-023, docs/03 §9, R-010-11)", () => {
   it("el requestId de la fila es el mismo que recibió el cliente — es el hilo entre reclamo y rastro", async () => {
     const id = etiqueta("entidad-con-request");
     const respuesta = await request(app.getHttpServer())
-      .post("/cosas")
+      .post("/api/cosas")
       .set("x-actor-de-prueba", actorId)
       .send({ id, nombre: "Otro" });
 
@@ -193,7 +193,7 @@ describe("AuditInterceptor (T-023, docs/03 §9, R-010-11)", () => {
     // superusuario de la base. Un secreto que se cuele queda ahí para siempre.
     const id = etiqueta("entidad-con-secreto");
     await request(app.getHttpServer())
-      .post("/cosas")
+      .post("/api/cosas")
       .set("x-actor-de-prueba", actorId)
       .send({ id, nombre: "Con secreto" });
 
@@ -208,7 +208,7 @@ describe("AuditInterceptor (T-023, docs/03 §9, R-010-11)", () => {
     const id = etiqueta("entidad-editada");
 
     await request(app.getHttpServer())
-      .post(`/cosas/${id}/suspender`)
+      .post(`/api/cosas/${id}/suspender`)
       .set("x-actor-de-prueba", actorId);
 
     const filas = await filasDe(id);
@@ -222,7 +222,7 @@ describe("AuditInterceptor (T-023, docs/03 §9, R-010-11)", () => {
     const id = etiqueta("entidad-fallida");
 
     const respuesta = await request(app.getHttpServer())
-      .post(`/cosas/${id}/fallar`)
+      .post(`/api/cosas/${id}/fallar`)
       .set("x-actor-de-prueba", actorId);
 
     expect(respuesta.status).toBe(400);
@@ -232,14 +232,14 @@ describe("AuditInterceptor (T-023, docs/03 §9, R-010-11)", () => {
   it("una ruta sin @Auditable() no escribe nada", async () => {
     const antes = await prisma.auditLog.count();
 
-    await request(app.getHttpServer()).post("/cosas/sin-marcar").set("x-actor-de-prueba", actorId);
+    await request(app.getHttpServer()).post("/api/cosas/sin-marcar").set("x-actor-de-prueba", actorId);
 
     expect(await prisma.auditLog.count()).toBe(antes);
   });
 
   it("sin sesión, la fila queda con actor nulo: «el sistema», no «no sabemos quién»", async () => {
     const id = etiqueta("entidad-sin-actor");
-    await request(app.getHttpServer()).post("/cosas").send({ id, nombre: "Sin actor" });
+    await request(app.getHttpServer()).post("/api/cosas").send({ id, nombre: "Sin actor" });
 
     const filas = await filasDe(id);
 
@@ -251,7 +251,7 @@ describe("AuditInterceptor (T-023, docs/03 §9, R-010-11)", () => {
     const id = etiqueta("entidad-inmutable");
 
     await request(app.getHttpServer())
-      .post(`/cosas/${id}/suspender`)
+      .post(`/api/cosas/${id}/suspender`)
       .set("x-actor-de-prueba", actorId);
 
     await expect(

@@ -109,10 +109,10 @@ describe("Registro de auditoría (T-080, T-081)", () => {
 
   it("lista lo que pasó, con quién y cuándo", async () => {
     await con(tokenAdmin)
-      .post("/users")
+      .post("/api/users")
       .send({ fullName: "Auditado", email: `${etiqueta("aud")}@ejemplo.test`, roles: ["player"] });
 
-    const respuesta = await con(tokenAdmin).get("/audit-log");
+    const respuesta = await con(tokenAdmin).get("/api/audit-log");
 
     expect(respuesta.status).toBe(200);
     expect(respuesta.body.every((f: unknown) => AuditEntryResponse.safeParse(f).success)).toBe(true);
@@ -121,11 +121,11 @@ describe("Registro de auditoría (T-080, T-081)", () => {
 
   it("filtra por acción y por entidad", async () => {
     const creado = await con(tokenAdmin)
-      .post("/users")
+      .post("/api/users")
       .send({ fullName: "Filtrable", email: `${etiqueta("filtro")}@ejemplo.test`, roles: ["player"] });
 
-    const porEntidad = await con(tokenAdmin).get(`/audit-log?entityId=${creado.body.id}`);
-    const porAccion = await con(tokenAdmin).get("/audit-log?action=user.created");
+    const porEntidad = await con(tokenAdmin).get(`/api/audit-log?entityId=${creado.body.id}`);
+    const porAccion = await con(tokenAdmin).get("/api/audit-log?action=user.created");
 
     expect(porEntidad.body.every((f: { entityId: string }) => f.entityId === creado.body.id)).toBe(true);
     expect(porAccion.body.every((f: { action: string }) => f.action === "user.created")).toBe(true);
@@ -144,7 +144,7 @@ describe("Registro de auditoría (T-080, T-081)", () => {
       },
     });
 
-    const respuesta = await con(tokenAdmin).get("/audit-log");
+    const respuesta = await con(tokenAdmin).get("/api/audit-log");
 
     expect(respuesta.body.map((f: { id: string }) => f.id)).not.toContain(ajena.id);
   });
@@ -154,19 +154,19 @@ describe("Registro de auditoría (T-080, T-081)", () => {
     // entidad— así que el recorte se hace por la gente: lo que hicieron los suyos y lo que se hizo
     // sobre los suyos.
     const tokenDeLaOrganizacion = await crearActor("organization_admin", "organization", organizacionId);
-    const deLaOrganizacion = await con(tokenAdmin).post("/users").send({
+    const deLaOrganizacion = await con(tokenAdmin).post("/api/users").send({
       fullName: "De la escuela",
       email: `${etiqueta("escuela")}@ejemplo.test`,
       roles: ["instructor"],
       organizationId: organizacionId,
     });
-    const delClub = await con(tokenAdmin).post("/users").send({
+    const delClub = await con(tokenAdmin).post("/api/users").send({
       fullName: "Del club",
       email: `${etiqueta("club")}@ejemplo.test`,
       roles: ["player"],
     });
 
-    const respuesta = await con(tokenDeLaOrganizacion).get("/audit-log");
+    const respuesta = await con(tokenDeLaOrganizacion).get("/api/audit-log");
     const entidades = respuesta.body.map((f: { entityId: string }) => f.entityId);
 
     expect(entidades).toContain(deLaOrganizacion.body.id);
@@ -174,38 +174,38 @@ describe("Registro de auditoría (T-080, T-081)", () => {
   });
 
   it("un jugador no ve el registro de auditoría", async () => {
-    expect((await con(tokenJugador).get("/audit-log")).status).toBe(403);
+    expect((await con(tokenJugador).get("/api/audit-log")).status).toBe(403);
   });
 
   it("no existe ninguna ruta para escribir ni borrar auditoría", async () => {
     // `audit_log` es append-only por triggers (T-004) y sólo la escribe el interceptor (T-023).
     // Una ruta de escritura sería la forma de convertir el registro en algo que alguien maquilla.
-    const escribir = await con(tokenAdmin).post("/audit-log").send({ action: "inventada" });
+    const escribir = await con(tokenAdmin).post("/api/audit-log").send({ action: "inventada" });
 
     expect(escribir.status).toBe(404);
   });
 
   describe("cada acción de R-010-11 deja exactamente una fila (T-081)", () => {
     it("crear, suspender, archivar, otorgar y retirar rol: una fila cada una, ni cero ni dos", async () => {
-      const creado = await con(tokenAdmin).post("/users").send({
+      const creado = await con(tokenAdmin).post("/api/users").send({
         fullName: "Recorrido completo",
         email: `${etiqueta("completo")}@ejemplo.test`,
         roles: ["player"],
       });
       const id = creado.body.id as string;
 
-      const rol = await con(tokenAdmin).post(`/users/${id}/roles`).send({
+      const rol = await con(tokenAdmin).post(`/api/users/${id}/roles`).send({
         role: "commissioner",
         scope: "club",
       });
       const asignacion = rol.body.roles.find((r: { role: string }) => r.role === "commissioner");
 
-      await con(tokenAdmin).patch(`/users/${id}`).send({ fullName: "Recorrido editado" });
-      await con(tokenAdmin).post(`/users/${id}/suspend`);
-      await con(tokenAdmin).post(`/users/${id}/reactivate`);
-      await con(tokenAdmin).post(`/users/${id}/archive`);
+      await con(tokenAdmin).patch(`/api/users/${id}`).send({ fullName: "Recorrido editado" });
+      await con(tokenAdmin).post(`/api/users/${id}/suspend`);
+      await con(tokenAdmin).post(`/api/users/${id}/reactivate`);
+      await con(tokenAdmin).post(`/api/users/${id}/archive`);
       await request(app.getHttpServer())
-        .delete(`/users/${id}/roles/${asignacion.id}`)
+        .delete(`/api/users/${id}/roles/${asignacion.id}`)
         .set("Host", `${club.slug}.${BASE}`)
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin));
@@ -224,7 +224,7 @@ describe("Registro de auditoría (T-080, T-081)", () => {
     it("una acción rechazada no deja rastro: no hubo cambio que auditar", async () => {
       const antes = await prisma.auditLog.count({ where: { action: "user.created" } });
 
-      await con(tokenJugador).post("/users").send({
+      await con(tokenJugador).post("/api/users").send({
         fullName: "No autorizado",
         email: `${etiqueta("no")}@ejemplo.test`,
         roles: ["player"],

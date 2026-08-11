@@ -62,7 +62,7 @@ describe("Protección CSRF (T-025, docs/06 §1)", () => {
 
   function editarElClub() {
     return request(app.getHttpServer())
-      .patch("/clubs/current")
+      .patch("/api/clubs/current")
       .set("Host", `${club.slug}.${BASE}`);
   }
 
@@ -150,7 +150,7 @@ describe("Protección CSRF (T-025, docs/06 §1)", () => {
   describe("lo que la protección NO toca", () => {
     it("una lectura no necesita token: un GET no cambia nada", async () => {
       const respuesta = await request(app.getHttpServer())
-        .get("/clubs/current")
+        .get("/api/clubs/current")
         .set("Host", `${club.slug}.${BASE}`)
         .set("Cookie", `${COOKIE_DE_SESION}=${token}`);
 

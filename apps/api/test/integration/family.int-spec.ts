@@ -118,7 +118,7 @@ describe("Familias, membresía y waivers (sección H)", () => {
     it("crea el vínculo y marca al pagador principal", async () => {
       const menor = await crearMenor();
 
-      const respuesta = await con(tokenAdmin).post("/guardianships").send({
+      const respuesta = await con(tokenAdmin).post("/api/guardianships").send({
         guardianPersonId: personaAdminId,
         dependentPersonId: menor,
         isPrimaryPayer: true,
@@ -137,13 +137,13 @@ describe("Familias, membresía y waivers (sección H)", () => {
         data: { clubId: club.id, fullName: "Segundo acudiente" },
       });
 
-      await con(tokenAdmin).post("/guardianships").send({
+      await con(tokenAdmin).post("/api/guardianships").send({
         guardianPersonId: personaAdminId,
         dependentPersonId: menor,
         isPrimaryPayer: true,
         startsOn: "2026-01-01",
       });
-      const segundo = await con(tokenAdmin).post("/guardianships").send({
+      const segundo = await con(tokenAdmin).post("/api/guardianships").send({
         guardianPersonId: segundoAcudiente.id,
         dependentPersonId: menor,
         isPrimaryPayer: true,
@@ -159,7 +159,7 @@ describe("Familias, membresía y waivers (sección H)", () => {
     });
 
     it("nadie es acudiente de sí mismo", async () => {
-      const respuesta = await con(tokenAdmin).post("/guardianships").send({
+      const respuesta = await con(tokenAdmin).post("/api/guardianships").send({
         guardianPersonId: personaAdminId,
         dependentPersonId: personaAdminId,
         startsOn: "2026-01-01",
@@ -175,7 +175,7 @@ describe("Familias, membresía y waivers (sección H)", () => {
         data: { clubId: otroClub.id, fullName: "Ajena" },
       });
 
-      const respuesta = await con(tokenAdmin).post("/guardianships").send({
+      const respuesta = await con(tokenAdmin).post("/api/guardianships").send({
         guardianPersonId: personaAdminId,
         dependentPersonId: ajena.id,
         startsOn: "2026-01-01",
@@ -209,40 +209,40 @@ describe("Familias, membresía y waivers (sección H)", () => {
 
   describe("waivers (T-073 a T-075)", () => {
     it("publicar crea la versión siguiente y queda vigente", async () => {
-      const primera = await con(tokenAdmin).post("/waivers").send({ body: "Texto de la versión" });
+      const primera = await con(tokenAdmin).post("/api/waivers").send({ body: "Texto de la versión" });
 
       expect(primera.status).toBe(201);
       expect(primera.body.version).toBeGreaterThanOrEqual(1);
 
-      const vigente = await con(tokenJugador).get("/waivers/current");
+      const vigente = await con(tokenJugador).get("/api/waivers/current");
       expect(vigente.body.id).toBe(primera.body.id);
     });
 
     it("un jugador no publica waivers", async () => {
-      expect((await con(tokenJugador).post("/waivers").send({ body: "no" })).status).toBe(403);
+      expect((await con(tokenJugador).post("/api/waivers").send({ body: "no" })).status).toBe(403);
     });
 
     it("aceptar deja a la persona cubierta, y publicar una versión nueva la descubre (R-010-12)", async () => {
       const servicio = app.get(WaiversService);
 
-      await con(tokenAdmin).post("/waivers").send({ body: "Versión que se acepta" });
-      await con(tokenJugador).post("/waivers/current/accept").send({});
+      await con(tokenAdmin).post("/api/waivers").send({ body: "Versión que se acepta" });
+      await con(tokenJugador).post("/api/waivers/current/accept").send({});
 
       expect(await servicio.tieneWaiverVigente(club.id, personaJugadorId)).toBe(true);
 
-      await con(tokenAdmin).post("/waivers").send({ body: "Versión nueva del club" });
+      await con(tokenAdmin).post("/api/waivers").send({ body: "Versión nueva del club" });
 
       // La aceptación anterior era de otra versión: se vuelve a pedir (HU-010-11, segundo criterio).
       expect(await servicio.tieneWaiverVigente(club.id, personaJugadorId)).toBe(false);
     });
 
     it("aceptar dos veces la misma versión no falla ni duplica", async () => {
-      await con(tokenAdmin).post("/waivers").send({ body: "Doble clic" });
+      await con(tokenAdmin).post("/api/waivers").send({ body: "Doble clic" });
 
-      expect((await con(tokenJugador).post("/waivers/current/accept").send({})).status).toBe(204);
-      expect((await con(tokenJugador).post("/waivers/current/accept").send({})).status).toBe(204);
+      expect((await con(tokenJugador).post("/api/waivers/current/accept").send({})).status).toBe(204);
+      expect((await con(tokenJugador).post("/api/waivers/current/accept").send({})).status).toBe(204);
 
-      const vigente = await con(tokenJugador).get("/waivers/current");
+      const vigente = await con(tokenJugador).get("/api/waivers/current");
       const aceptaciones = await prisma.waiverAcceptance.count({
         where: { personId: personaJugadorId, waiverVersionId: vigente.body.id as string },
       });
@@ -250,9 +250,9 @@ describe("Familias, membresía y waivers (sección H)", () => {
     });
 
     it("un acudiente acepta por su menor; alguien más, no (T-074)", async () => {
-      await con(tokenAdmin).post("/waivers").send({ body: "Para el menor" });
+      await con(tokenAdmin).post("/api/waivers").send({ body: "Para el menor" });
       const menor = await crearMenor();
-      await con(tokenAdmin).post("/guardianships").send({
+      await con(tokenAdmin).post("/api/guardianships").send({
         guardianPersonId: personaAdminId,
         dependentPersonId: menor,
         isPrimaryPayer: true,
@@ -260,10 +260,10 @@ describe("Familias, membresía y waivers (sección H)", () => {
       });
 
       const porElAcudiente = await con(tokenAdmin)
-        .post("/waivers/current/accept")
+        .post("/api/waivers/current/accept")
         .send({ personId: menor });
       const porUnExtraño = await con(tokenJugador)
-        .post("/waivers/current/accept")
+        .post("/api/waivers/current/accept")
         .send({ personId: menor });
 
       expect(porElAcudiente.status).toBe(204);

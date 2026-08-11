@@ -17,6 +17,16 @@ import { requestIdMiddleware } from "./common/http/request-id.js";
  * lanzado por el primer guard tenga identificador que reportar.
  */
 export function configurarApp(app: INestApplication): INestApplication {
+  // **Todo el API cuelga de `/api`**, y no es cosmético: la aplicación web se sirve desde el mismo
+  // origen —lo exige la cookie de sesión, que es del subdominio del club (`ADR-013`)— así que sus
+  // rutas y las del API comparten espacio de nombres. Sin prefijo, `/me/profile` del navegador cae
+  // en el controlador `/me` del servidor y la pantalla nunca llega a existir. Es exactamente lo
+  // que pasó al escribir T-130.
+  //
+  // La topología de `docs/07` §4 ya lo daba por hecho (`reverse_proxy /api/*`, salud en
+  // `/api/health`); lo que faltaba era que el API lo cumpliera.
+  app.setGlobalPrefix("api");
+
   // Express anuncia `X-Powered-By` en cada respuesta. No es una vulnerabilidad por sí misma, pero
   // le regala a quien escanea la lista exacta de tecnologías que buscar en un boletín de CVE, y
   // apagarlo cuesta una línea. Se hace aquí, junto al resto del montaje, y no en un `helmet`

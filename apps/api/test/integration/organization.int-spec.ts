@@ -102,7 +102,7 @@ describe("Organizaciones del club (T-241, HU-020-05)", () => {
   });
 
   it("el administrador del club crea una organización", async () => {
-    const respuesta = await pedir("post", "/organizations", tokenAdminDelClub).send({
+    const respuesta = await pedir("post", "/api/organizations", tokenAdminDelClub).send({
       name: `Escuela ${etiqueta("e")}`,
       type: "school",
     });
@@ -114,9 +114,9 @@ describe("Organizaciones del club (T-241, HU-020-05)", () => {
 
   it("no admite dos organizaciones con el mismo nombre en el club", async () => {
     const nombre = `Repetida ${etiqueta("r")}`;
-    await pedir("post", "/organizations", tokenAdminDelClub).send({ name: nombre, type: "team" });
+    await pedir("post", "/api/organizations", tokenAdminDelClub).send({ name: nombre, type: "team" });
 
-    const segunda = await pedir("post", "/organizations", tokenAdminDelClub).send({
+    const segunda = await pedir("post", "/api/organizations", tokenAdminDelClub).send({
       name: nombre,
       type: "team",
     });
@@ -128,11 +128,11 @@ describe("Organizaciones del club (T-241, HU-020-05)", () => {
     const nombre = `Escuela compartida ${etiqueta("s")}`;
     const tokenDelOtro = await crearActor(otroClub.id, "club_admin", "club", otroClub.id);
 
-    const aqui = await pedir("post", "/organizations", tokenAdminDelClub).send({
+    const aqui = await pedir("post", "/api/organizations", tokenAdminDelClub).send({
       name: nombre,
       type: "school",
     });
-    const alla = await pedir("post", "/organizations", tokenDelOtro, otroClub.slug).send({
+    const alla = await pedir("post", "/api/organizations", tokenDelOtro, otroClub.slug).send({
       name: nombre,
       type: "school",
     });
@@ -143,25 +143,25 @@ describe("Organizaciones del club (T-241, HU-020-05)", () => {
 
   it("listar sólo devuelve las del club del subdominio", async () => {
     const tokenDelOtro = await crearActor(otroClub.id, "club_admin", "club", otroClub.id);
-    const propia = await pedir("post", "/organizations", tokenAdminDelClub).send({
+    const propia = await pedir("post", "/api/organizations", tokenAdminDelClub).send({
       name: `Sólo aquí ${etiqueta("p")}`,
       type: "service",
     });
 
-    const listaAjena = await pedir("get", "/organizations", tokenDelOtro, otroClub.slug);
+    const listaAjena = await pedir("get", "/api/organizations", tokenDelOtro, otroClub.slug);
 
     expect(listaAjena.body.map((org: { id: string }) => org.id)).not.toContain(propia.body.id);
   });
 
   it("archivar conserva la organización y su historia, no la borra (R-020-07)", async () => {
-    const creada = await pedir("post", "/organizations", tokenAdminDelClub).send({
+    const creada = await pedir("post", "/api/organizations", tokenAdminDelClub).send({
       name: `Se archiva ${etiqueta("a")}`,
       type: "team",
     });
 
     const archivada = await pedir(
       "post",
-      `/organizations/${creada.body.id}/archive`,
+      `/api/organizations/${creada.body.id}/archive`,
       tokenAdminDelClub,
     );
 
@@ -177,7 +177,7 @@ describe("Organizaciones del club (T-241, HU-020-05)", () => {
         data: { clubId: otroClub.id, name: `Ajena ${etiqueta("x")}`, type: "school" },
       });
 
-      const respuesta = await pedir("patch", `/organizations/${ajena.id}`, tokenAdminDelClub).send({
+      const respuesta = await pedir("patch", `/api/organizations/${ajena.id}`, tokenAdminDelClub).send({
         name: "Intento",
       });
 
@@ -190,7 +190,7 @@ describe("Organizaciones del club (T-241, HU-020-05)", () => {
       });
       const token = await crearActor(club.id, "organization_admin", "organization", propia.id);
 
-      const respuesta = await pedir("patch", `/organizations/${propia.id}`, token).send({
+      const respuesta = await pedir("patch", `/api/organizations/${propia.id}`, token).send({
         name: `Renombrada ${etiqueta("n")}`,
       });
 
@@ -208,23 +208,23 @@ describe("Organizaciones del club (T-241, HU-020-05)", () => {
       });
       const token = await crearActor(club.id, "organization_admin", "organization", suya.id);
 
-      expect((await pedir("patch", `/organizations/${vecina.id}`, token).send({ name: "x" })).status).toBe(403);
+      expect((await pedir("patch", `/api/organizations/${vecina.id}`, token).send({ name: "x" })).status).toBe(403);
       expect(
-        (await pedir("post", "/organizations", token).send({ name: "Nueva", type: "team" })).status,
+        (await pedir("post", "/api/organizations", token).send({ name: "Nueva", type: "team" })).status,
       ).toBe(403);
     });
 
     it("un jugador no crea ni edita organizaciones, pero sí puede listarlas", async () => {
       expect(
-        (await pedir("post", "/organizations", tokenJugador).send({ name: "X", type: "team" }))
+        (await pedir("post", "/api/organizations", tokenJugador).send({ name: "X", type: "team" }))
           .status,
       ).toBe(403);
-      expect((await pedir("get", "/organizations", tokenJugador)).status).toBe(200);
+      expect((await pedir("get", "/api/organizations", tokenJugador)).status).toBe(200);
     });
 
     it("sin sesión no se lista nada", async () => {
       const respuesta = await request(app.getHttpServer())
-        .get("/organizations")
+        .get("/api/organizations")
         .set("Host", `${club.slug}.${BASE}`);
 
       expect(respuesta.status).toBe(401);

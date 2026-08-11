@@ -77,7 +77,7 @@ describe("Perfiles de menores sin cuenta (T-076, HU-010-10)", () => {
   }
 
   function crearMenor(cuerpo: Record<string, unknown>): request.Test {
-    return con(tokenAdmin).post("/minors").send(cuerpo);
+    return con(tokenAdmin).post("/api/minors").send(cuerpo);
   }
 
   beforeAll(async () => {
@@ -208,7 +208,7 @@ describe("Perfiles de menores sin cuenta (T-076, HU-010-10)", () => {
 
     it("un jugador cualquiera no da de alta gente en el club", async () => {
       const respuesta = await con(tokenAcudiente)
-        .post("/minors")
+        .post("/api/minors")
         .send({ fullName: "No debería", birthdate: "2015-01-01", guardianPersonId: personaAcudienteId });
 
       expect(respuesta.status).toBe(403);
@@ -242,7 +242,7 @@ describe("Perfiles de menores sin cuenta (T-076, HU-010-10)", () => {
   describe("los perfiles a cargo (`GET /me/dependents`)", () => {
     it("el acudiente ve a los suyos y sabe si le van a cobrar", async () => {
       // Es la pregunta que trae a alguien a esta pantalla: «¿a mí me van a cobrar lo de este niño?»
-      const respuesta = await con(tokenAcudiente).get("/me/dependents");
+      const respuesta = await con(tokenAcudiente).get("/api/me/dependents");
 
       expect(respuesta.status).toBe(200);
       expect(DependentResponse.array().safeParse(respuesta.body).success).toBe(true);
@@ -253,7 +253,7 @@ describe("Perfiles de menores sin cuenta (T-076, HU-010-10)", () => {
     });
 
     it("quien no es acudiente de nadie ve una lista vacía, no un error", async () => {
-      const respuesta = await con(tokenOtroAcudiente).get("/me/dependents");
+      const respuesta = await con(tokenOtroAcudiente).get("/api/me/dependents");
 
       expect(respuesta.status).toBe(200);
       expect(respuesta.body).toEqual([]);
@@ -266,7 +266,7 @@ describe("Perfiles de menores sin cuenta (T-076, HU-010-10)", () => {
         guardianPersonId: personaAcudienteId,
       });
 
-      const ajenos = await con(tokenOtroAcudiente).get("/me/dependents");
+      const ajenos = await con(tokenOtroAcudiente).get("/api/me/dependents");
 
       expect(ajenos.body.map((fila: { personId: string }) => fila.personId)).not.toContain(
         mio.body.personId,
@@ -291,7 +291,7 @@ describe("Perfiles de menores sin cuenta (T-076, HU-010-10)", () => {
         },
       });
 
-      const despues = await con(tokenOtroAcudiente).get("/me/dependents");
+      const despues = await con(tokenOtroAcudiente).get("/api/me/dependents");
 
       expect(despues.body.map((fila: { personId: string }) => fila.personId)).not.toContain(
         menor.body.personId,
@@ -305,14 +305,14 @@ describe("Perfiles de menores sin cuenta (T-076, HU-010-10)", () => {
         guardianPersonId: personaAcudienteId,
       });
 
-      await con(tokenAdmin).post("/guardianships").send({
+      await con(tokenAdmin).post("/api/guardianships").send({
         guardianPersonId: personaOtroAcudienteId,
         dependentPersonId: menor.body.personId,
         isPrimaryPayer: false,
         startsOn: "2026-08-11",
       });
 
-      const suyos = await con(tokenOtroAcudiente).get("/me/dependents");
+      const suyos = await con(tokenOtroAcudiente).get("/api/me/dependents");
       const fila = suyos.body.find(
         (candidata: { personId: string }) => candidata.personId === menor.body.personId,
       );
@@ -322,7 +322,7 @@ describe("Perfiles de menores sin cuenta (T-076, HU-010-10)", () => {
 
     it("sin sesión no hay perfiles a cargo", async () => {
       const respuesta = await request(app.getHttpServer())
-        .get("/me/dependents")
+        .get("/api/me/dependents")
         .set("Host", `${club.slug}.${BASE}`);
 
       expect(respuesta.status).toBe(401);

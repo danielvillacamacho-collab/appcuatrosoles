@@ -14,6 +14,13 @@ export const copy = {
   comun: {
     cargando: "Cargando…",
     salir: "Cerrar sesión",
+    volverAlPanel: "← Volver al panel",
+    guardar: "Guardar",
+    guardando: "Guardando…",
+    guardado: "Guardado.",
+    cancelar: "Cancelar",
+    reintentar: "Reintentar",
+    noSePudoCargar: "No pudimos cargar esta información.",
   },
 
   /**
@@ -32,6 +39,79 @@ export const copy = {
     groom: "Petisero",
     treasurer: "Tesorero",
   } as Record<string, string>,
+
+  perfil: {
+    titulo: "Mi perfil",
+    descripcion: "Lo que puedes cambiar tú, y lo que administra el club.",
+    // La distinción visual entre editable y sólo lectura es requisito de `docs/04`: sin ella, la
+    // persona intenta corregir su categoría de membresía y no entiende por qué no puede.
+    editable: "Puedes cambiarlo",
+    soloLectura: "Lo administra el club",
+    nombre: "Nombre",
+    telefono: "Teléfono",
+    telefonoInvalido: "Ese teléfono es demasiado largo.",
+    categoria: "Categoría de membresía",
+    sinCategoria: "Sin categoría asignada",
+    roles: "Roles",
+    correoDeAcceso: "Correo de acceso",
+    cambiarCorreo: "Cambiar mi correo de acceso",
+    correoNuevo: "Correo nuevo",
+    contrasenaActual: "Tu contraseña actual",
+    contrasenaActualAyuda: "Se pide porque cambiar el correo es cambiar la llave de la cuenta.",
+    enviarConfirmacion: "Enviar confirmación",
+    pendiente: "Pendiente de confirmar:",
+    pendienteAyuda:
+      "Te enviamos un correo a esa dirección. Tu correo actual sigue funcionando hasta que la confirmes.",
+  },
+
+  confirmarCorreo: {
+    titulo: "Confirmar tu correo nuevo",
+    sinToken: "Este enlace está incompleto. Ábrelo desde el correo que te enviamos.",
+    confirmando: "Confirmando…",
+    listo: "Listo, tu correo de acceso quedó actualizado. Úsalo la próxima vez que ingreses.",
+  },
+
+  dispositivos: {
+    titulo: "Mis dispositivos",
+    descripcion: "Dónde está abierta tu sesión. Si ves algo que no reconoces, ciérralo.",
+    esta: "Esta sesión",
+    desde: "Abierta el",
+    ultimaVez: "Última actividad",
+    vence: "Vence el",
+    recordada: "Sesión recordada en este dispositivo",
+    cerrar: "Cerrar",
+    cerrarTodas: "Cerrar todas las sesiones",
+    // Cerrar todas incluye la de aquí: media desconexión no tranquiliza a quien cree que le
+    // robaron la cuenta.
+    cerrarTodasAyuda: "Incluye esta sesión: vas a tener que ingresar de nuevo.",
+    sinOtras: "No tienes otras sesiones abiertas.",
+  },
+
+  avisos: {
+    titulo: "Mis avisos",
+    descripcion: "Elige qué correos quieres recibir del club.",
+    inevitable: "No se puede desactivar",
+    // Se muestran en gris con su motivo, no se esconden: esconderlos haría creer que el sistema
+    // no los manda.
+    inevitableAyuda: "Es un aviso de seguridad o el mecanismo mismo para entrar a tu cuenta.",
+    tipos: {
+      "identity.send-invitation": "Invitación para entrar a la plataforma",
+      "identity.send-password-reset": "Enlace para restablecer tu contraseña",
+      "identity.notify-password-changed": "Aviso de que tu contraseña cambió",
+      "identity.notify-account-status-changed": "Aviso de que el estado de tu cuenta cambió",
+    } as Record<string, string>,
+  },
+
+  dependientes: {
+    titulo: "Perfiles a cargo",
+    descripcion: "Los menores que administras en el club.",
+    sinNinguno: "No tienes perfiles a cargo.",
+    pagas: "Los cobros de este perfil llegan a tu estado de cuenta",
+    noPagas: "Los cobros de este perfil los recibe el otro acudiente",
+    waiverFirmado: "Exención firmada",
+    waiverPendiente: "Falta firmar la exención",
+    nacimiento: "Fecha de nacimiento",
+  },
 
   panel: {
     saludo: "Hola",
@@ -62,6 +142,22 @@ export const copy = {
     // describen el esquema («Invalid email»), no lo que la persona tiene que hacer.
     correoInvalido: "Escribe un correo válido, como maria@ejemplo.com.",
     contrasenaRequerida: "Escribe tu contraseña.",
+  },
+
+  restablecer: {
+    titulo: "Nueva contraseña",
+    subtitulo: "Elige una contraseña nueva para tu cuenta.",
+    sinToken:
+      "Este enlace está incompleto. Ábrelo desde el correo, o pide uno nuevo desde «Olvidé mi contraseña».",
+    contrasena: "Contraseña nueva",
+    confirmacion: "Repite la contraseña",
+    guardar: "Guardar contraseña",
+    guardando: "Guardando…",
+    // Se avisa que las demás sesiones se cerraron (R-010-09). Si no se dijera, quien tenía el
+    // celular abierto pensaría que la plataforma se rompió cuando le pida entrar de nuevo.
+    listo:
+      "Listo, tu contraseña quedó cambiada. Por seguridad cerramos todas las sesiones abiertas, incluidas las de otros dispositivos: entra de nuevo con la contraseña nueva.",
+    irAIngresar: "Ir a ingresar",
   },
 
   invitacion: {

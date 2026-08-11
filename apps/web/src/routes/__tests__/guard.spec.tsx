@@ -26,11 +26,11 @@ describe("Guard de sesión (T-125)", () => {
   });
 
   it("sin sesión manda a la pantalla de ingreso, sin mostrar nada de lo privado", async () => {
-    // El `401` de `/me` es la respuesta, no un fallo: significa «no hay sesión». Pintar el panel
+    // El `401` de `/api/me` es la respuesta, no un fallo: significa «no hay sesión». Pintar el panel
     // «optimistamente» y esconderlo después es el parpadeo que deja ver lo que no se debía ver.
     vi.stubGlobal(
       "fetch",
-      vi.fn(fetchSimulado({ "/me": { estado: 401, cuerpo: { error: { code: "UNAUTHENTICATED", message: "", requestId: "" } } }, "/clubs/current/public": CLUB })),
+      vi.fn(fetchSimulado({ "/api/me": { estado: 401, cuerpo: { error: { code: "UNAUTHENTICATED", message: "", requestId: "" } } }, "/api/clubs/current/public": CLUB })),
     );
 
     montar("/");
@@ -40,19 +40,19 @@ describe("Guard de sesión (T-125)", () => {
   });
 
   it("con sesión deja pasar y pinta el panel", async () => {
-    vi.stubGlobal("fetch", vi.fn(fetchSimulado({ "/me": YO, "/clubs/current/public": CLUB })));
+    vi.stubGlobal("fetch", vi.fn(fetchSimulado({ "/api/me": YO, "/api/clubs/current/public": CLUB })));
 
     montar("/");
 
     expect(await screen.findByRole("heading", { name: /María Fernanda/u })).toBeDefined();
   });
 
-  it("si `/me` falla por algo que no es la sesión, lo dice en vez de mandar a ingresar", async () => {
+  it("si `/api/me` falla por algo que no es la sesión, lo dice en vez de mandar a ingresar", async () => {
     // Un `500` no significa «no tienes sesión». Tratarlo como tal sacaría a alguien de su cuenta
     // por una falla del servidor, y volvería a sacarlo cada vez que reintentara entrar.
     vi.stubGlobal(
       "fetch",
-      vi.fn(fetchSimulado({ "/me": { estado: 500, cuerpo: { error: { code: "INTERNAL_ERROR", message: "", requestId: "x" } } }, "/clubs/current/public": CLUB })),
+      vi.fn(fetchSimulado({ "/api/me": { estado: 500, cuerpo: { error: { code: "INTERNAL_ERROR", message: "", requestId: "x" } } }, "/api/clubs/current/public": CLUB })),
     );
 
     montar("/");
@@ -67,7 +67,7 @@ describe("Panel propio (T-127, HU-010-04)", () => {
   });
 
   it("contesta quién soy, qué puedo hacer y a qué pertenezco", async () => {
-    vi.stubGlobal("fetch", vi.fn(fetchSimulado({ "/me": YO, "/clubs/current/public": CLUB })));
+    vi.stubGlobal("fetch", vi.fn(fetchSimulado({ "/api/me": YO, "/api/clubs/current/public": CLUB })));
 
     montar("/");
 
@@ -83,7 +83,7 @@ describe("Panel propio (T-127, HU-010-04)", () => {
     // Le pasa a quien acaba de aceptar la invitación y el club no le asignó nada todavía. Un
     // espacio en blanco ahí parece un error de la plataforma.
     const sinRoles = { estado: 200, cuerpo: { ...YO.cuerpo, roles: [], membershipCategory: null } };
-    vi.stubGlobal("fetch", vi.fn(fetchSimulado({ "/me": sinRoles, "/clubs/current/public": CLUB })));
+    vi.stubGlobal("fetch", vi.fn(fetchSimulado({ "/api/me": sinRoles, "/api/clubs/current/public": CLUB })));
 
     montar("/");
 
@@ -97,9 +97,9 @@ describe("Panel propio (T-127, HU-010-04)", () => {
       "fetch",
       vi.fn(
         fetchSimulado({
-          "/me": YO,
-          "/clubs/current/public": CLUB,
-          "POST /auth/logout": { estado: 204 },
+          "/api/me": YO,
+          "/api/clubs/current/public": CLUB,
+          "POST /api/auth/logout": { estado: 204 },
         }),
       ),
     );
