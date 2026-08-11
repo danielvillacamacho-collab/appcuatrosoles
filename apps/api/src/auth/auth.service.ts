@@ -1,7 +1,12 @@
 import { Inject, Injectable, HttpStatus } from "@nestjs/common";
 import { ApiException } from "../common/errors/api-error.js";
 import type { LoginResponse } from "@polo/contracts";
-import { resolveLoginOutcome, type AccountStatus, type Clock } from "@polo/domain";
+import {
+  resolveLoginOutcome,
+  type AccountStatus,
+  type Clock,
+  type LoginRejection,
+} from "@polo/domain";
 import type { UserAccountStatus } from "@prisma/client";
 import { CLOCK } from "../common/clock/clock.module.js";
 import { PrismaService } from "../common/prisma/prisma.service.js";
@@ -116,13 +121,11 @@ export class AuthService {
     }
 
     if (cuenta === null || !veredicto.allowed) {
-      // Una sola excepción para todos los motivos, con su propio código y su propio mensaje. El
-      // genérico del catálogo («Debes iniciar sesión para continuar») es correcto para una ruta
-      // que exige sesión y desconcertante para quien acaba de escribir su contraseña.
-      //
-      // El motivo real —`invitation_pending`, `suspended`…— lo distinguirá T-033, y sólo con quien
-      // ya demostró conocer su contraseña.
-      throw credencialesInvalidas();
+      // El genérico del catálogo («Debes iniciar sesión para continuar») es correcto para una ruta
+      // que exige sesión y desconcertante para quien acaba de escribir su contraseña, así que el
+      // login tiene el suyo (T-031). Y cuando la contraseña **sí** era correcta, se dice el motivo
+      // real (T-033): a esa altura quien pregunta es el titular de la cuenta.
+      throw rechazoDeLogin(veredicto.allowed ? "credentials_invalid" : veredicto.rejection);
     }
 
     const token = crearTokenDeSesion();
@@ -203,17 +206,49 @@ export class AuthService {
 }
 
 /**
- * El único rechazo que se le puede mostrar a alguien que no demostró conocer la contraseña
- * (R-010-07, P-12). **Idéntico** para correo inexistente y para contraseña incorrecta: cualquier
- * diferencia —el mensaje, el código, el estado, una cabecera— convierte el login en un detector de
- * correos registrados.
+ * El mensaje de cada motivo de rechazo (T-033, HU-010-04, PRD Parte II §5).
+ *
+ * **La distinción sólo llega a quien acertó la contraseña**, y eso no es una restricción técnica
+ * sino la regla: `resolveLoginOutcome` (T-010) devuelve `credentials_invalid` para todo lo demás,
+ * así que el resto de los motivos ni siquiera se pueden alcanzar sin conocerla. El PRD pide «un
+ * mensaje acorde al estado» y P-12 prohíbe revelar la existencia de una cuenta; el orden del
+ * dominio es lo que hace compatibles las dos cosas.
+ *
+ * Cada texto dice **qué hacer**, no sólo qué pasó: alguien que no puede entrar necesita saber a
+ * quién escribirle, no un diagnóstico.
+ */
+const RECHAZOS: Record<LoginRejection, { code: string; message: string }> = {
+  credentials_invalid: {
+    code: "CREDENTIALS_INVALID",
+    message: "Correo o contraseña incorrectos.",
+  },
+  invitation_pending: {
+    code: "INVITATION_PENDING",
+    message:
+      "Tu cuenta todavía no está activada. Revisa el correo de invitación que te enviamos para definir tu contraseña.",
+  },
+  suspended: {
+    code: "ACCOUNT_SUSPENDED",
+    message: "Tu cuenta está suspendida. Comunícate con la administración del club.",
+  },
+  archived: {
+    code: "ACCOUNT_ARCHIVED",
+    message: "Tu cuenta está archivada. Comunícate con la administración del club.",
+  },
+};
+
+function rechazoDeLogin(motivo: LoginRejection): ApiException {
+  const { code, message } = RECHAZOS[motivo];
+
+  return new ApiException(code, HttpStatus.UNAUTHORIZED, message);
+}
+
+/**
+ * El rechazo que se le muestra a alguien que **no** demostró conocer la contraseña (R-010-07,
+ * P-12). Idéntico para correo inexistente y para contraseña incorrecta.
  */
 function credencialesInvalidas(): ApiException {
-  return new ApiException(
-    "CREDENTIALS_INVALID",
-    HttpStatus.UNAUTHORIZED,
-    "Correo o contraseña incorrectos.",
-  );
+  return rechazoDeLogin("credentials_invalid");
 }
 
 /**

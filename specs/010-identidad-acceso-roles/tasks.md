@@ -158,8 +158,13 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > los minutos salen de `setting`, no de constantes, y hay un test que baja el umbral a 2 y
   > comprueba que el comportamiento cambia sin desplegar nada. Con esto P-04 deja de cumplirse
   > sólo en el diseño.
-- [ ] **T-033** Rechazo de login por estado `invited`/`suspended`/`archived` con mensaje
-  específico por estado (no el genérico de credenciales).
+- [x] **T-033** Rechazo de login por estado `invited`/`suspended`/`archived` con mensaje
+  específico por estado (no el genérico de credenciales). ✅ 2026-08-11 — 3 tests, ver
+  `verification.md` §T-033.
+  > El motivo **sólo llega a quien acertó la contraseña**: con la contraseña equivocada, una cuenta
+  > suspendida responde exactamente lo mismo que un correo inexistente. Es lo que hace compatibles
+  > el PRD («un mensaje acorde al estado») y P-12, y lo hace posible el orden que `resolveLoginOutcome`
+  > fijó en T-010.
 - [ ] **T-034** `POST /auth/logout` y `POST /auth/logout-all`. Test: sesión cerrada no sirve
   ni con "atrás" del navegador (repetir la misma request con la cookie vieja → `401`).
 - [ ] **T-035** `POST /auth/password/forgot`: mismo mensaje exista o no la cuenta (R-010-07);

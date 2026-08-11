@@ -289,18 +289,42 @@ describe("Inicio de sesión (T-030, HU-010-04)", () => {
       expect(inexistente.headers["set-cookie"]).toBeUndefined();
     });
 
-    it("una cuenta invitada no entra ni con la contraseña correcta", async () => {
+    it("una cuenta invitada no entra, y se le dice qué hacer (T-033)", async () => {
       const invitada = await crearCuenta("invited");
 
-      expect((await entrar({ email: invitada, password: CONTRASENA })).status).toBe(401);
+      const respuesta = await entrar({ email: invitada, password: CONTRASENA });
+
+      expect(respuesta.status).toBe(401);
+      expect(respuesta.body.error.code).toBe("INVITATION_PENDING");
+      expect(respuesta.body.error.message).toContain("invitación");
     });
 
-    it("una cuenta suspendida tampoco, y una archivada tampoco", async () => {
+    it("una suspendida y una archivada reciben cada una su motivo (T-033)", async () => {
       const suspendida = await crearCuenta("suspended");
       const archivada = await crearCuenta("archived");
 
-      expect((await entrar({ email: suspendida, password: CONTRASENA })).status).toBe(401);
-      expect((await entrar({ email: archivada, password: CONTRASENA })).status).toBe(401);
+      expect((await entrar({ email: suspendida, password: CONTRASENA })).body.error.code).toBe(
+        "ACCOUNT_SUSPENDED",
+      );
+      expect((await entrar({ email: archivada, password: CONTRASENA })).body.error.code).toBe(
+        "ACCOUNT_ARCHIVED",
+      );
+    });
+
+    it("pero el motivo SÓLO llega a quien acertó la contraseña (T-033 + P-12)", async () => {
+      // Es la regla que hace compatibles el PRD —«un mensaje acorde al estado»— con la prohibición
+      // de revelar la existencia de una cuenta. Con la contraseña equivocada, una cuenta suspendida
+      // responde exactamente lo mismo que un correo que no existe.
+      const suspendida = await crearCuenta("suspended");
+
+      const conContrasenaMala = await entrar({ email: suspendida, password: "no-es-esa" });
+      const inexistente = await entrar({
+        email: `${etiqueta("nadie")}@ejemplo.test`,
+        password: "no-es-esa",
+      });
+
+      expect(conContrasenaMala.body.error.code).toBe("CREDENTIALS_INVALID");
+      expect(conContrasenaMala.body.error.message).toBe(inexistente.body.error.message);
     });
 
     it("un intento fallido no abre ninguna sesión", async () => {

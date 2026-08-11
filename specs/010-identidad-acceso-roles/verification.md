@@ -1301,3 +1301,37 @@ archivo con cuentas propias.
 - **No hay límite de tasa por IP** (`docs/03` §3, `429`). El bloqueo protege una cuenta concreta;
   no protege contra alguien que prueba una contraseña común contra mil correos distintos, que es el
   ataque simétrico y más habitual. Necesita su propia tarea.
+
+---
+
+## T-033 — El motivo real, para quien tiene derecho a saberlo
+
+**Fecha:** 2026-08-11 · 3 tests (23 en el archivo de login)
+
+Una cuenta invitada, suspendida o archivada recibe **su** motivo —`INVITATION_PENDING`,
+`ACCOUNT_SUSPENDED`, `ACCOUNT_ARCHIVED`— en vez del genérico de credenciales.
+
+### La regla que hace compatibles el PRD y P-12
+
+El PRD (Parte II §5) pide «un mensaje acorde al estado». P-12 prohíbe revelar si un correo tiene
+cuenta. Las dos cosas conviven porque **el motivo sólo se alcanza acertando la contraseña**: con
+una contraseña equivocada, una cuenta suspendida responde exactamente lo mismo que un correo que no
+existe. Tiene su test, que compara los dos cuerpos.
+
+Eso no fue una decisión de esta tarea: lo fijó `resolveLoginOutcome` en **T-010**, meses antes de
+que existiera el endpoint, y por eso aquí no hubo nada que negociar. Es el ejemplo más claro de por
+qué la regla vive en el dominio y no en el controlador — si el orden hubiera estado suelto en el
+servicio, cualquier reordenación bien intencionada habría abierto la enumeración de cuentas.
+
+### Los textos dicen qué hacer, no sólo qué pasó
+
+«Revisa el correo de invitación que te enviamos para definir tu contraseña», «Comunícate con la
+administración del club». Alguien que no puede entrar necesita saber a quién escribirle; un
+diagnóstico sin salida es una pared con nombre.
+
+### Pendiente declarado
+
+- El texto de la cuenta invitada menciona un correo de invitación que **todavía no se envía**
+  (T-050/T-090). Es el mensaje correcto para el sistema terminado, y hoy manda a revisar un correo
+  que no llegó. Se deja así a conciencia —cambiarlo por un texto provisional significaría acordarse
+  de volver— pero conviene tenerlo en cuenta si alguien prueba con usuarios reales antes de T-050.
