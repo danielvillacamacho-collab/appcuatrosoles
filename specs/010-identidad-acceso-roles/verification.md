@@ -936,3 +936,80 @@ ejercerlo—, que es el error opuesto y también silencioso.
   `specs/020` (configuración). Cada una nombra el suyo al llegar.
 - El catálogo no cubre `/me`: editar el propio perfil no pasa por permiso sino por ser el dueño de
   la sesión (T-040 en adelante).
+
+---
+
+## T-022b — `@RequirePermission`, `PermissionGuard` y el arranque que se niega
+
+**Fecha:** 2026-08-10 · 16 tests (6 de arranque + 10 de integración) · cobertura del API al 85,8 %
+
+### El criterio de la tarea no era «responde 403»
+
+Era: **una ruta mutante sin permiso declarado impide arrancar la aplicación** (`ADR-014` punto 4,
+P-13). La diferencia importa. Una ruta mutante sin `@RequirePermission()` no se ve rota: responde
+`200`, pasa sus tests y queda abierta a cualquiera con sesión — un jugador borrando usuarios. Este
+proyecto no tiene un segundo par de ojos revisando diffs (`docs/09` D-04), así que el único control
+que no depende de que alguien se acuerde es el que rompe el despliegue.
+
+`PermissionsDeclaredService` recorre al arrancar todos los controladores registrados y reporta
+**la lista completa** de rutas ofensoras, no la primera: con tres rutas mal, el objetivo es
+arreglar las tres de una vez y no descubrirlas de a una por despliegue. Los `GET` quedan fuera —
+leer no cambia nada, y exigirles permiso obligaría a inventar uno por cada listado.
+
+El decorador acepta el tipo `Permission` de `packages/domain`, así que **un permiso inventado no
+compila**: sin eso, un `@RequirePermission("user.crear")` con una errata pasaría la revisión y
+dejaría la ruta exigiendo algo que nadie tiene.
+
+### El guard falla cerrado, y distingue «no puedes» de «no sé»
+
+| Situación | Respuesta |
+|---|---|
+| Rol con autoridad en ese club | pasa |
+| Sesión válida sin autoridad (jugador, comisario) | `403` |
+| Administrador de **otro** club | `403` |
+| Administrador de organización sobre ámbito de club (R-010-04) | `403` |
+| Rol **revocado** | `403` |
+| Sin sesión | `401`, sin llegar a mirar permisos |
+| Sin tenant resuelto | **error interno**, no `403` |
+
+El último es la decisión menos obvia y la que más se agradece a las 3 a.m.: un `403` diría «no
+tienes permiso» cuando lo que ocurre es que el servidor no sabe en qué club está parado. Son
+problemas distintos y confundirlos manda a depurar al lado equivocado. Que el guard **no adivine**
+el tenant es el punto: un guard de autorización que ante la duda deja pasar no es un guard.
+
+El caso del rol revocado vale por sí solo: la consulta filtra `revokedAt: null`, así que retirar un
+rol tiene efecto en la siguiente petición, sin esperar a que expire ninguna sesión (T-061).
+
+### La dependencia con T-020, declarada en el código
+
+`PermissionGuard` lee el club de `req.tenant`, que llenará `TenantGuard` (T-020, hoy bloqueada por
+la tabla `club` del módulo 020). El contrato se declaró ahora, en `permission.guard.ts`, en vez de
+improvisarlo después: así la dependencia se ve en el código en lugar de vivir en la cabeza de
+alguien. El test la simula con un middleware que **vive en `test/`** y toma el club de una cabecera
+— un club que llega en una cabecera del cliente es justo lo que P-05 prohíbe, y por eso no está en
+`src/`.
+
+### Un gate de cobertura que había que arreglar sin bajarlo
+
+Los guards sólo los ejercen los tests de **integración**, que corren en otra configuración de
+Vitest. La cobertura del API medida sólo sobre la suite unitaria cayó a **40 %**, por debajo del
+umbral de 50 % — y el camino fácil (bajar el umbral, o escribir tests con Prisma simulado para
+levantar el número) está prohibido por la regla 12 de `CLAUDE.md`, y además probaría el simulacro
+en vez del guard.
+
+`test:cov` ahora corre las dos suites con `--reporter=blob` y las combina con `--merge-reports`
+antes de evaluar el umbral: **85,8 %** sobre 53 tests. Los pasos intermedios corren con los
+umbrales en cero porque el umbral real se aplica al total; no se bajó ningún gate, se corrigió qué
+se estaba midiendo.
+
+### Pendientes declarados
+
+- **Las rutas de ámbito de organización todavía no se pueden autorizar**: el guard evalúa siempre
+  contra el club del tenant. Resolver «qué organización es el objetivo» exige mirar el cuerpo o la
+  ruta de cada endpoint, y ese resolvedor entra con el primero que lo necesite (T-052, T-054) — no
+  antes de tener un caso real que lo defina. Hasta entonces un `organization_admin` no pasa ningún
+  permiso, que es el lado seguro del error.
+- **El guard no se aplica solo.** Se pone con `@UseGuards(SessionGuard, PermissionGuard)`. Lo que
+  el arranque garantiza es que la ruta **declare** su permiso, no que tenga el guard montado.
+  Cuando exista el primer controlador de negocio conviene registrarlos como `APP_GUARD` globales
+  con una excepción explícita para las rutas públicas, y ahí la garantía pasa a ser completa.

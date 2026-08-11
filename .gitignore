@@ -14,3 +14,6 @@ prisma/*.db
 *.tsbuildinfo
 .vscode/*
 !.vscode/extensions.json
+
+# Informes intermedios de cobertura (se combinan unit + integración en test:cov)
+.vitest-reports/

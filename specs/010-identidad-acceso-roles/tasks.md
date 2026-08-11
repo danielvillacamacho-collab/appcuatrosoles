@@ -108,13 +108,13 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > andamiaje que la tarea destapó (Vitest sin metadata de decoradores, y los paquetes del
   > workspace apuntando a `src/*.ts` en vez de a `dist`), y (3) el guard. Los siete rechazos
   > posibles responden un `401` idéntico byte a byte.
-- [ ] **T-022** `@RequirePermission()` + `PermissionGuard`: falla el arranque de la app si una
+- [x] **T-022** `@RequirePermission()` + `PermissionGuard`: falla el arranque de la app si una
   ruta mutante no declara el decorador (`ADR-014` punto 4). Verificación: test que registra
-  una ruta sin decorador y confirma que la app no arranca.
-  > **Se parte en dos**, porque la evaluación de permisos es una regla de negocio y no plomería de
-  > NestJS: **(a)** `hasPermission` y la matriz de `docs/06` §4 en `packages/domain` — hecho
-  > 2026-08-10, 21 tests, ver `verification.md` §T-022a; **(b)** el decorador, el guard y la
-  > comprobación de arranque, que es lo que queda.
+  una ruta sin decorador y confirma que la app no arranca. ✅ 2026-08-10
+  > **Se partió en dos**, porque la evaluación de permisos es una regla de negocio y no plomería de
+  > NestJS: **(a)** `hasPermission` y la matriz de `docs/06` §4 en `packages/domain` — 21 tests,
+  > ver `verification.md` §T-022a; **(b)** el decorador, el guard y la comprobación de arranque —
+  > 16 tests, ver `verification.md` §T-022b.
 - [ ] **T-023** `AuditInterceptor` + `@Auditable()`: registra automáticamente antes/después en
   mutaciones marcadas. Verificación: una mutación de prueba genera exactamente una fila en
   `audit_log`.

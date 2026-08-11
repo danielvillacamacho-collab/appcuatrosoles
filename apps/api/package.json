@@ -8,7 +8,7 @@
     "build": "nest build -p tsconfig.build.json",
     "start": "node dist/main.js",
     "test": "vitest run",
-    "test:cov": "vitest run --coverage",
+    "test:cov": "rm -rf .vitest-reports && vitest run --coverage --coverage.thresholds.lines=0 --coverage.thresholds.statements=0 --coverage.thresholds.branches=0 --coverage.thresholds.functions=0 --reporter=blob --outputFile=.vitest-reports/unit.json && vitest run --config vitest.int.config.ts --coverage --coverage.thresholds.lines=0 --coverage.thresholds.statements=0 --coverage.thresholds.branches=0 --coverage.thresholds.functions=0 --reporter=blob --outputFile=.vitest-reports/int.json && vitest run --merge-reports --coverage",
     "test:int": "vitest run --config vitest.int.config.ts",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "lint": "eslint src test prisma",

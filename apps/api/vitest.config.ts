@@ -38,6 +38,12 @@ export default defineConfig({
         // (`test/integration/seed.int-spec.ts`), que no participa de esta medición.
         "prisma/**",
       ],
+      // El umbral se evalúa sobre el informe **combinado** de las dos suites (`test:cov` corre
+      // unit e integración con `--reporter=blob` y las junta con `--merge-reports`). Medir sólo
+      // la suite unitaria daría 40 % y empujaría a escribir tests con Prisma simulado para
+      // levantar el número: probarían el simulacro, no el guard. Los pasos intermedios corren con
+      // los umbrales en cero **porque el umbral real se aplica al final**, sobre el total — no se
+      // baja ningún gate (CLAUDE.md regla 12).
       thresholds: { lines: 50, statements: 50, branches: 50, functions: 50 },
     },
   },
