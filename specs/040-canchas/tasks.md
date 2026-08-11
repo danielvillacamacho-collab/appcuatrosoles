@@ -41,13 +41,17 @@ por salir.
 
 ## B — Dominio puro (antes que el API, a propósito)
 
-- [ ] **T-410** `seSolapan(a, b)` en `packages/domain/scheduling`, con la convención semiabierta de
+- [x] **T-410** `seSolapan(a, b)` en `packages/domain/scheduling`, con la convención semiabierta de
   R-040-04.
   Verificación: los bordes exactos. `[4:00, 5:30)` y `[5:30, 7:00)` **no** se solapan; `[4:00, 5:30)`
   y `[5:29, 6:00)` sí; rangos idénticos sí; uno contenido en otro sí; rangos de duración cero
   —que la base ya rechaza— documentados como imposibles aquí también.
   > Son tres líneas y merece existir aparte: es la regla que 050, 060 y 070 van a preguntar, y
   > tenerla en un solo lugar es lo que evita que cada uno resuelva el borde a su manera.
+  ✅ 2026-08-11 — 10 tests. **Y el caso del rango vacío estaba mal**: `a.inicio < b.fin && b.inicio
+  < a.fin` responde `true` para un rango de duración cero contenido en otro. El test lo atrapó, y
+  `SELECT tstzrange(x,x) && …` en PostgreSQL confirmó que la base responde `false`. Sin tratarlo
+  aparte, la aplicación y la base discrepaban **justo donde el comentario prometía que no**.
 
 - [ ] **T-411** `cabeEnElHorario(rango, horario)` — R-040-06, con el horario como parámetro y no
   como constante (P-04).

@@ -22,3 +22,4 @@ export * from "./tenant/resolveTenant.js";
 // Configuración (specs/020-club-configuracion)
 export * from "./settings/catalog.js";
 export * from "./settings/resolveSetting.js";
+export * from "./scheduling/overlap.js";
