@@ -1335,3 +1335,55 @@ diagnóstico sin salida es una pared con nombre.
   (T-050/T-090). Es el mensaje correcto para el sistema terminado, y hoy manda a revisar un correo
   que no llegó. Se deja así a conciencia —cambiarlo por un texto provisional significaría acordarse
   de volver— pero conviene tenerlo en cuenta si alguien prueba con usuarios reales antes de T-050.
+
+---
+
+## T-034 — Cerrar sesión, de verdad
+
+**Fecha:** 2026-08-11 · 9 tests de integración (223 en total)
+
+### El criterio de la tarea, probado como se vive
+
+«La sesión cerrada no sirve ni con el "atrás" del navegador». Volver atrás reenvía la misma
+solicitud con la misma cookie: si el cierre fuera sólo del lado del cliente, seguiría funcionando.
+El test entra, opera, cierra y repite la misma petición → `401`.
+
+### Revoca, no borra
+
+`revoked_at` deja constancia de **cuándo** se cerró, que es lo que permite responder «¿desde cuándo
+no entra esta persona?» y lo que va a sostener la lista de dispositivos de T-043 (P-06).
+
+### Cerrar algo ya cerrado es un éxito
+
+Dos pestañas cerrando a la vez es un caso real, no un borde teórico. Se usa `updateMany` sobre las
+sesiones **vivas**: si ya estaba revocada, no falla. (La segunda petición sí recibe `401`, pero
+porque el guard ya no reconoce la sesión — no porque el cierre reviente.)
+
+### `logout-all` incluye la sesión actual
+
+Media desconexión no tranquiliza a nadie: quien sospecha que dejó la sesión abierta en un
+dispositivo ajeno quiere que no quede ninguna. Y no toca las de otra persona — tiene su test.
+
+### Se borran las dos cookies
+
+Dejarlas puestas haría que el navegador siguiera mandando una credencial muerta en cada solicitud.
+La de sesión y la de CSRF, las dos.
+
+### `@RutaPublica` pasó a llamarse `@SinPermiso`
+
+Cubre dos familias que conviene distinguir al leer el motivo: **rutas públicas** —iniciar sesión,
+pedir un restablecimiento— donde exigir autoridad es imposible, y **rutas autenticadas sin permiso**
+—cerrar la sesión propia, cambiar la propia contraseña— donde hay sesión pero no hay nada que
+autorizar, porque cada quien manda sobre lo suyo. El nombre viejo describía sólo la primera.
+
+### El aislamiento de estas rutas es por cuenta, no por club
+
+Se declararon en la suite de T-261 como «con test propio»: el recorrido genérico prueba con
+recursos de **otro club**, y aquí lo que importa es que cierren lo que es de **quien pide** y nada
+más. Los dos tests que lo cubren están en este archivo.
+
+### Pendiente declarado
+
+- **Las sesiones revocadas no se limpian nunca.** La tabla crece con una fila por inicio de sesión,
+  para siempre. No es urgente —son filas pequeñas— pero conviene un job de purga cuando exista
+  `pg-boss` (ADR-012), conservando las de los últimos meses para la lista de dispositivos.

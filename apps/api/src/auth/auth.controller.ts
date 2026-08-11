@@ -3,7 +3,9 @@ import type { Response } from "express";
 import type { ConTenant } from "../tenant/tenant-context.js";
 import { LoginRequest, LoginResponse } from "@polo/contracts";
 import { COOKIE_CSRF, tokenCsrfParaSesion } from "../common/auth/csrf.js";
-import { RutaPublica } from "../common/auth/require-permission.js";
+import { SinPermiso } from "../common/auth/require-permission.js";
+import { SessionGuard } from "../common/auth/session.guard.js";
+import type { ConSessionUser } from "../common/auth/current-user.js";
 import { COOKIE_DE_SESION } from "../common/auth/session-token.js";
 import { ZodValidationPipe } from "../common/http/zod-validation.pipe.js";
 import { clubDeLaSolicitud } from "../club/tenant-de-la-solicitud.js";
@@ -28,7 +30,7 @@ export class AuthController {
    */
   @Post("login")
   @HttpCode(200)
-  @RutaPublica("Iniciar sesión es lo que uno hace antes de tener autoridad: no hay permiso que exigir.")
+  @SinPermiso("Iniciar sesión es lo que uno hace antes de tener autoridad: no hay permiso que exigir.")
   async login(
     @Body(new ZodValidationPipe(LoginRequest)) cuerpo: LoginRequest,
     @Req() req: ConTenant,
@@ -67,6 +69,49 @@ export class AuthController {
 
     return sesion.usuario;
   }
+
+  /**
+   * `POST /auth/logout` — cierra **esta** sesión (T-034, R-010-09).
+   *
+   * Revoca la fila, no borra: `revoked_at` deja constancia de cuándo se cerró, que es lo que
+   * permite responder «¿desde cuándo no entra esta persona?» sin adivinar. Y borra las dos cookies,
+   * porque dejarlas puestas haría que el navegador siguiera mandando una credencial muerta en cada
+   * solicitud.
+   */
+  @Post("logout")
+  @HttpCode(204)
+  @UseGuards(SessionGuard)
+  @SinPermiso("Cerrar la sesión propia no exige permiso: es la sesión de quien pide.")
+  async logout(@Req() req: ConSessionUser, @Res({ passthrough: true }) res: Response): Promise<void> {
+    await this.servicio.cerrarSesion(sesionDeLaSolicitud(req));
+
+    this.borrarCookies(res);
+  }
+
+  /**
+   * `POST /auth/logout-all` — cierra **todas** las sesiones de la cuenta.
+   *
+   * Es lo que usa alguien que sospecha que dejó la sesión abierta en un dispositivo ajeno. Incluye
+   * la actual: media desconexión no tranquiliza a nadie.
+   */
+  @Post("logout-all")
+  @HttpCode(204)
+  @UseGuards(SessionGuard)
+  @SinPermiso("Cerrar las sesiones propias no exige permiso: son las de quien pide.")
+  async logoutAll(
+    @Req() req: ConSessionUser,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    await this.servicio.cerrarTodasLasSesiones(usuarioDeLaSolicitud(req).userAccountId);
+
+    this.borrarCookies(res);
+  }
+
+  private borrarCookies(res: Response): void {
+    for (const nombre of [COOKIE_DE_SESION, COOKIE_CSRF]) {
+      res.clearCookie(nombre, { path: "/" });
+    }
+  }
 }
 
 /**
@@ -75,4 +120,22 @@ export class AuthController {
  */
 function esProduccion(): boolean {
   return process.env.NODE_ENV === "production";
+}
+
+/**
+ * El usuario de la sesión, o un error de programación si el guard no corrió. Mismo criterio que
+ * `clubDeLaSolicitud`: la aserción no-nula está prohibida en el repo, y con razón.
+ */
+function usuarioDeLaSolicitud(req: ConSessionUser): { userAccountId: string; sessionId: string } {
+  const usuario = req.sessionUser;
+
+  if (usuario === undefined) {
+    throw new Error("Ruta sin SessionGuard: no hay usuario en la solicitud (T-021).");
+  }
+
+  return usuario;
+}
+
+function sesionDeLaSolicitud(req: ConSessionUser): string {
+  return usuarioDeLaSolicitud(req).sessionId;
 }

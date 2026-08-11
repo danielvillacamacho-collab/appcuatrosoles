@@ -40,7 +40,15 @@ const BASE = "polo.test";
  * no entra por este subdominio**. Registrar la ruta en esta suite fue lo que hizo notar que sin esa
  * comprobación cualquiera con cuenta en un club podía abrir sesión en otro.
  */
-const CON_TEST_PROPIO = ["POST /auth/login"];
+const CON_TEST_PROPIO = [
+  "POST /auth/login",
+  // `auth-logout.int-spec` → «no toca las demás sesiones» y «no toca las sesiones de otra
+  // persona». El aislamiento de estas dos rutas es por **cuenta**, no por club: cierran lo que es
+  // de quien pide y nada más. El recorrido genérico de abajo, que prueba con recursos de otro
+  // club, no diría nada sobre eso.
+  "POST /auth/logout",
+  "POST /auth/logout-all",
+];
 
 /** Rutas que no operan dentro de un club y por lo tanto no tienen tenant que aislar. */
 const SIN_TENANT = [

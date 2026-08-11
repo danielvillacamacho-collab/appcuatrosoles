@@ -62,20 +62,23 @@ export interface PermisoDeclarado extends OpcionesDePermiso {
   permission: Permission;
 }
 
-export const RUTA_PUBLICA = "ruta_publica";
+export const SIN_PERMISO = "sin_permiso";
 
 /**
  * Declara que una ruta mutante **no exige permiso**, y por qué.
  *
- * Existe para un puñado de casos legítimos —iniciar sesión, pedir un restablecimiento de
- * contraseña— en los que exigir autoridad es imposible: son justamente lo que uno usa *antes* de
- * tenerla.
+ * Dos familias de casos legítimos, y conviene distinguirlas al leer el motivo:
+ *
+ * 1. **Rutas públicas**: iniciar sesión, pedir un restablecimiento de contraseña. Exigir autoridad
+ *    es imposible — son justamente lo que uno usa *antes* de tenerla.
+ * 2. **Rutas autenticadas sin permiso**: cerrar la sesión propia, cambiar la propia contraseña. Hay
+ *    sesión, pero no hay nada que autorizar: cada quien manda sobre lo suyo.
  *
  * **Pide el motivo por escrito, y el arranque falla si está vacío.** La alternativa —dejar que una
  * ruta mutante simplemente no declare nada— convertiría la comprobación de `ADR-014` punto 4 en
  * una formalidad: cualquiera podría saltarla olvidándose. Así, saltarla es una decisión que queda
  * escrita en la ruta y se lee en la revisión.
  */
-export function RutaPublica(razon: string): CustomDecorator<string> {
-  return SetMetadata(RUTA_PUBLICA, razon);
+export function SinPermiso(razon: string): CustomDecorator<string> {
+  return SetMetadata(SIN_PERMISO, razon);
 }

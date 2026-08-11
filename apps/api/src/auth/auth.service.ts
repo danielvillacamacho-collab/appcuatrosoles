@@ -203,6 +203,28 @@ export class AuthService {
   private async gastarElMismoTiempo(contrasena: string): Promise<boolean> {
     return this.passwords.verificar(HASH_SEÑUELO, contrasena);
   }
+
+  /**
+   * Cierra una sesión concreta. **Revoca, no borra** (P-06): la fila queda con su `revoked_at`, que
+   * es lo que permite responder «¿desde cuándo no entra?» y ver el historial de dispositivos.
+   *
+   * `updateMany` y no `update`: si la sesión ya estaba revocada —dos pestañas cerrando a la vez—
+   * no debe fallar. Cerrar algo que ya estaba cerrado es un éxito, no un error.
+   */
+  async cerrarSesion(sessionId: string): Promise<void> {
+    await this.prisma.session.updateMany({
+      where: { id: sessionId, revokedAt: null },
+      data: { revokedAt: this.clock.now() },
+    });
+  }
+
+  /** Cierra todas las sesiones vivas de una cuenta, **incluida la actual** (R-010-09). */
+  async cerrarTodasLasSesiones(userAccountId: string): Promise<void> {
+    await this.prisma.session.updateMany({
+      where: { userAccountId, revokedAt: null },
+      data: { revokedAt: this.clock.now() },
+    });
+  }
 }
 
 /**

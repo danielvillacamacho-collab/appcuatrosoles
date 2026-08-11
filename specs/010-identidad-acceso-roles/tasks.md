@@ -165,8 +165,12 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > suspendida responde exactamente lo mismo que un correo inexistente. Es lo que hace compatibles
   > el PRD («un mensaje acorde al estado») y P-12, y lo hace posible el orden que `resolveLoginOutcome`
   > fijó en T-010.
-- [ ] **T-034** `POST /auth/logout` y `POST /auth/logout-all`. Test: sesión cerrada no sirve
+- [x] **T-034** `POST /auth/logout` y `POST /auth/logout-all`. Test: sesión cerrada no sirve
   ni con "atrás" del navegador (repetir la misma request con la cookie vieja → `401`).
+  ✅ 2026-08-11 — 9 tests, ver `verification.md` §T-034.
+  > El decorador `@RutaPublica` pasó a llamarse **`@SinPermiso`**: ahora cubre dos familias
+  > distintas —rutas públicas (login) y rutas autenticadas sin nada que autorizar (cerrar la
+  > sesión propia)— y el nombre viejo describía sólo la primera.
 - [ ] **T-035** `POST /auth/password/forgot`: mismo mensaje exista o no la cuenta (R-010-07);
   encola `identity.send-password-reset` en la misma transacción (P-11).
 - [ ] **T-036** `POST /auth/password/reset`: token de un solo uso, expira en 1h, revoca las

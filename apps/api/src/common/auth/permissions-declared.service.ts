@@ -1,7 +1,7 @@
 import { Injectable, RequestMethod, type OnApplicationBootstrap } from "@nestjs/common";
 import { METHOD_METADATA } from "@nestjs/common/constants.js";
 import { DiscoveryService, MetadataScanner, Reflector } from "@nestjs/core";
-import { PERMISO_REQUERIDO, RUTA_PUBLICA } from "./require-permission.js";
+import { PERMISO_REQUERIDO, SIN_PERMISO } from "./require-permission.js";
 
 /** Los verbos que cambian datos. Un `GET` no necesita declarar permiso; todo lo demás, sí. */
 const VERBOS_MUTANTES: ReadonlySet<RequestMethod> = new Set([
@@ -24,7 +24,7 @@ const VERBOS_MUTANTES: ReadonlySet<RequestMethod> = new Set([
  * Falla **con la lista completa** de rutas ofensoras y no con la primera: si hay tres, el objetivo
  * es que se arreglen las tres, no que se descubran de a una por despliegue.
  *
- * La única salida es `@RutaPublica("motivo")`, que exige escribir por qué. Sin ese motivo, esto
+ * La única salida es `@SinPermiso("motivo")`, que exige escribir por qué. Sin ese motivo, esto
  * sería una formalidad que cualquiera saltaría olvidándose de declarar el permiso.
  */
 @Injectable()
@@ -84,9 +84,9 @@ export class PermissionsDeclaredService implements OnApplicationBootstrap {
           continue;
         }
 
-        // Una ruta puede declararse pública **con su motivo escrito** (`@RutaPublica`). Un motivo
+        // Una ruta puede declararse pública **con su motivo escrito** (`@SinPermiso`). Un motivo
         // vacío no cuenta: la excusa tiene que poder leerse en la revisión.
-        const razon = this.reflector.getAllAndOverride<unknown>(RUTA_PUBLICA, [
+        const razon = this.reflector.getAllAndOverride<unknown>(SIN_PERMISO, [
           manejador,
           controlador.constructor,
         ]);
