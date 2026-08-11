@@ -2435,3 +2435,38 @@ de `docs/10` §3. La tarea queda abierta a propósito.
 Todo se puede probar sin AWS: la cuenta de ejemplo es `admin@club-demo.test` / `demo1234`, y los
 correos —invitaciones y restablecimientos incluidos— se escriben como `.html` en `apps/api/.correos`
 (`ADR-008`; SES entra con el despliegue).
+
+---
+
+## El CI, la primera vez que corrió de verdad
+
+**Fecha:** 2026-08-11 · `appcuatrosoles` en GitHub, rama `main`
+
+El pipeline llevaba setenta y cinco commits escrito y **nunca había corrido**. Todos los gates que
+este documento reporta en verde habían corrido sólo en una máquina. Costó **cuatro intentos**, y
+ninguno de los cuatro fallos estaba en el código del producto:
+
+1. **`pnpm/action-setup@v4` aborta** con «Multiple versions of pnpm specified» cuando recibe
+   `version` y el repositorio además declara `packageManager`. Se quitó del workflow: la versión
+   buena es la del `package.json`, y fijarla dos veces es pedir que alguien las sincronice.
+2. **El cliente de Prisma no se generaba en un clon limpio.** Es código generado, no está en el
+   repositorio, y sin él `typecheck` muere con cincuenta errores que parecen del código —
+   «Parameter implicitly has an `any` type», «no exported member `UserAccountStatus`»— y son de un
+   archivo que no existe. En esta máquina no se veía porque estaba generado desde la primera
+   migración, hacía setenta y cinco commits. **Cualquiera que clonara el repositorio se habría
+   estrellado con esto en el primer minuto.** Se arregló con un `postinstall`, reproduciendo el
+   fallo en un clon limpio y verificándolo en otro.
+3. **El escáner de secretos marcaba `"password1"`**, una contraseña de las más usadas escrita a
+   propósito para comprobar que el API la rechaza. Se arregló por el lado del código —hoy sale de
+   `PASSWORDS_COMUNES`, la lista del dominio— y el literal que quedó en el historial se aceptó con
+   sus **dos huellas exactas** en `.gitleaksignore`, no bajando la regla ni excluyendo el archivo.
+4. **`gitleaks-action` exige `GITHUB_TOKEN`** y `actions/checkout` trae un solo commit por defecto.
+   Sin token abortaba antes de escanear, y el paso lo reportaba como «encontró secretos» — que manda
+   a buscar exactamente al lugar equivocado.
+
+El segundo es el que importa: **es un bug real del repositorio**, no del pipeline, y sólo aparece
+cuando alguien más lo clona. Los otros tres son del pipeline, y su valor es que ya no van a volver.
+
+Ahora corren en cada `push`: lint, typecheck, arquitectura, migraciones `up`/`down`/`up` contra
+PostgreSQL real, cobertura con umbrales, integración, aislamiento de tenant, build, presupuesto de
+bundle y escaneo de secretos. Y en `main`, además, los E2E de API y los de navegador con Playwright.
