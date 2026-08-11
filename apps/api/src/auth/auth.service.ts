@@ -3,6 +3,8 @@ import { ApiException } from "../common/errors/api-error.js";
 import type { LoginResponse } from "@polo/contracts";
 import {
   resolveLoginOutcome,
+  validatePassword,
+  type PasswordRejection,
   type AccountStatus,
   type Clock,
   type LoginRejection,
@@ -218,6 +220,57 @@ export class AuthService {
     });
   }
 
+  /**
+   * Cambia la contraseña de quien ya está dentro (T-037, `docs/06` §2).
+   *
+   * Tres cosas que no son obvias:
+   *
+   * 1. **Se exige la contraseña actual**, aunque haya sesión válida. Una sesión abierta en un
+   *    dispositivo prestado no debería alcanzar para quedarse con la cuenta.
+   * 2. **La nueva pasa por la política del dominio** (T-038), con el correo, para que no pueda
+   *    contenerlo.
+   * 3. **Se cierran las demás sesiones.** Quien cambia su contraseña suele hacerlo porque sospecha
+   *    de alguien; dejar vivas las otras sesiones convierte el gesto en un trámite. La actual
+   *    sobrevive: obligar a volver a entrar justo después de cambiarla es confuso y no protege de
+   *    nada, porque es la sesión de quien acaba de demostrar que sabe la contraseña.
+   */
+  async cambiarContrasena(
+    userAccountId: string,
+    sessionId: string,
+    actual: string,
+    nueva: string,
+  ): Promise<void> {
+    const cuenta = await this.prisma.userAccount.findUniqueOrThrow({
+      where: { id: userAccountId },
+      select: { passwordHash: true, email: true },
+    });
+
+    if (!(await this.passwords.verificar(cuenta.passwordHash, actual))) {
+      // El mismo mensaje que un login fallido: no hay nada que revelar aquí que no se revele allá.
+      throw credencialesInvalidas();
+    }
+
+    const politica = validatePassword(nueva, cuenta.email);
+
+    if (!politica.ok) {
+      throw new ApiException(
+        "PASSWORD_POLICY",
+        HttpStatus.UNPROCESSABLE_ENTITY,
+        MENSAJES_DE_POLITICA[politica.error],
+      );
+    }
+
+    const hash = await this.passwords.hash(nueva);
+
+    await this.prisma.$transaction([
+      this.prisma.userAccount.update({ where: { id: userAccountId }, data: { passwordHash: hash } }),
+      this.prisma.session.updateMany({
+        where: { userAccountId, revokedAt: null, id: { not: sessionId } },
+        data: { revokedAt: this.clock.now() },
+      }),
+    ]);
+  }
+
   /** Cierra todas las sesiones vivas de una cuenta, **incluida la actual** (R-010-09). */
   async cerrarTodasLasSesiones(userAccountId: string): Promise<void> {
     await this.prisma.session.updateMany({
@@ -290,6 +343,21 @@ function cuentaBloqueada(): ApiException {
 function estaBloqueada(cuenta: { lockedUntil: Date | null }, ahora: Date): boolean {
   return cuenta.lockedUntil !== null && cuenta.lockedUntil.getTime() > ahora.getTime();
 }
+
+/**
+ * Qué se le dice a alguien cuya contraseña nueva no pasa la política.
+ *
+ * Cada texto dice **qué hacer**. «La contraseña no cumple los requisitos» es la forma más rápida de
+ * que alguien pruebe cinco veces y se rinda.
+ */
+const MENSAJES_DE_POLITICA: Record<PasswordRejection, string> = {
+  muy_corta: "La contraseña debe tener al menos 8 caracteres.",
+  muy_larga: "La contraseña es demasiado larga (máximo 200 caracteres).",
+  sin_letras: "La contraseña debe incluir al menos una letra.",
+  sin_numeros: "La contraseña debe incluir al menos un número.",
+  demasiado_comun: "Esa contraseña es de las más usadas. Elige otra menos previsible.",
+  contiene_el_correo: "La contraseña no puede contener tu correo.",
+};
 
 /**
  * Hash de una contraseña aleatoria, generado una vez y fijo. Existe sólo para que el camino «no

@@ -27,3 +27,23 @@ export const LoginResponse = z.object({
 });
 
 export type LoginResponse = z.infer<typeof LoginResponse>;
+
+/**
+ * Cambio de contraseña estando dentro (T-037).
+ *
+ * Pide la nueva **dos veces**: no es redundancia, es la única forma de que un error de tipeo no se
+ * convierta en «no puedo entrar y no sé por qué». La comparación se hace aquí, en el contrato, para
+ * que el servicio reciba una sola contraseña y no tenga que acordarse de comparar.
+ */
+export const ChangePasswordRequest = z
+  .object({
+    currentPassword: z.string().min(1),
+    newPassword: z.string().min(1),
+    newPasswordConfirmation: z.string().min(1),
+  })
+  .refine((datos) => datos.newPassword === datos.newPasswordConfirmation, {
+    message: "Las dos contraseñas nuevas no coinciden.",
+    path: ["newPasswordConfirmation"],
+  });
+
+export type ChangePasswordRequest = z.infer<typeof ChangePasswordRequest>;

@@ -48,6 +48,9 @@ const CON_TEST_PROPIO = [
   // club, no diría nada sobre eso.
   "POST /auth/logout",
   "POST /auth/logout-all",
+  // `me-password.int-spec` → «exige la contraseña actual aunque haya sesión válida» y «las demás
+  // sesiones se cierran». Igual que las de arriba: su aislamiento es por **cuenta**, no por club.
+  "POST /me/password",
 ];
 
 /** Rutas que no operan dentro de un club y por lo tanto no tienen tenant que aislar. */

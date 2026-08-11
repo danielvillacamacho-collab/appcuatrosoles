@@ -1387,3 +1387,85 @@ más. Los dos tests que lo cubren están en este archivo.
 - **Las sesiones revocadas no se limpian nunca.** La tabla crece con una fila por inicio de sesión,
   para siempre. No es urgente —son filas pequeñas— pero conviene un job de purga cuando exista
   `pg-boss` (ADR-012), conservando las de los últimos meses para la lista de dispositivos.
+
+---
+
+## T-038 — La política de contraseñas
+
+**Fecha:** 2026-08-11 · 24 tests de dominio (207 en total, 100 % de cobertura)
+
+Vive en `packages/domain`: es una regla, no plomería, y se prueba sin levantar nada. Los parámetros
+de Argon2id —la otra mitad de la tarea— se habían fijado ya en T-030, con su razón escrita.
+
+### Lo que se exige, y lo que deliberadamente no
+
+Mínimo 8, al menos una letra, al menos un número, y no estar en la lista de las más usadas
+(`docs/06` §2). **No se exigen símbolos ni mayúsculas**, y esa ausencia es una decisión: las reglas
+de complejidad barrocas producen `Password1!` en todas partes y una nota adhesiva en el monitor. Lo
+que protege de verdad es el largo, y por eso el máximo es generoso (200) — una frase larga vale más
+que un jeroglífico de ocho. Hay un test que acepta «el caballo tordillo del potrero 3».
+
+El máximo tampoco es una regla de seguridad sino una defensa contra nosotros mismos: Argon2 hashea
+lo que le den, y una contraseña de un megabyte es una forma barata de tener el servidor ocupado.
+
+### Una regla que el documento no pedía
+
+**La contraseña no puede contener el correo.** `maria@lospinos.co` con `maria123` cumple todo lo
+demás y es lo primero que prueba cualquiera que vea la lista de socios del club. Se compara contra
+el correo entero y contra su parte local —quien lo usa casi nunca pone el correo completo, pone
+`maria`— y se exige que esa parte tenga al menos tres caracteres: con dos, cualquier contraseña la
+contendría por azar. El correo es opcional, porque hay flujos que todavía no lo conocen.
+
+### La lista de comunes es corta a propósito
+
+Las listas serias tienen millones de entradas y viven en un servicio aparte. Ésta cubre lo que la
+gente escribe cuando el sistema le exige «ocho caracteres con letras y números» y quiere terminar
+rápido — que es exactamente el caso que una regla de complejidad no atrapa por su cuenta. Incluye
+variantes en español (`contrasena123`, `colombia1`) porque una lista en inglés dejaría pasar lo que
+un club colombiano escribe.
+
+Dos tests la vigilan: que todas sus entradas estén en minúsculas (se compara así) y que **ninguna
+sea más corta que el mínimo** — tenerla ahí haría creer que la lista cubre algo que ya cubría el
+largo.
+
+### El orden de los motivos
+
+Una contraseña corta **y** común se reporta como corta. Pedirle a alguien que arregle lo segundo
+cuando lo primero también falla lo obliga a adivinar dos veces.
+
+---
+
+## T-037 — Cambiar la propia contraseña
+
+**Fecha:** 2026-08-11 · 12 tests de integración (235 en total)
+
+### Tres cosas que no son obvias
+
+1. **Se exige la contraseña actual, aunque haya sesión válida.** Una sesión abierta en un
+   dispositivo prestado no debería alcanzar para quedarse con la cuenta — cambiar la contraseña es
+   justamente lo que deja a su dueño afuera. El rechazo usa el mismo mensaje que un login fallido.
+2. **Las dos contraseñas nuevas se comparan en el contrato**, no en el servicio: así el servicio
+   recibe una sola y no tiene que acordarse de comparar. El error señala el campo exacto.
+3. **Se cierran las demás sesiones y sobrevive la actual.** Quien cambia su contraseña suele
+   hacerlo porque sospecha de alguien; dejar vivas las otras convierte el gesto en un trámite. La
+   actual sigue porque obligar a volver a entrar justo después no protege de nada: es la sesión de
+   quien acaba de demostrar que sabe la contraseña.
+
+### La ruta vive en su propio controlador
+
+`docs/03` la documenta en `/me/password`, y el prefijo de `AuthController` es `auth` — la operación
+habría quedado en `/auth/me/password`. La lógica, en cambio, sigue en `AuthService` junto al login:
+**es una operación de credenciales**, comparte reglas, mensajes y consecuencias con él, no con
+editar el teléfono.
+
+### Cada rechazo dice qué hacer
+
+«La contraseña debe incluir al menos un número», «Esa contraseña es de las más usadas, elige otra
+menos previsible». «No cumple los requisitos» es la forma más rápida de que alguien pruebe cinco
+veces y se rinda. Hay un test que lo exige sobre el texto.
+
+### Pendiente declarado
+
+- **No se guarda historial de contraseñas**, así que nadie impide volver a la anterior. `docs/06` §2
+  descarta explícitamente la expiración periódica, y prohibir la reutilización sin expiración
+  protege poco; si se agrega, es una tarea con su propia decisión.

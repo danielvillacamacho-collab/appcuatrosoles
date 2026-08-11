@@ -175,10 +175,18 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   encola `identity.send-password-reset` en la misma transacción (P-11).
 - [ ] **T-036** `POST /auth/password/reset`: token de un solo uso, expira en 1h, revoca las
   demás sesiones al usarse (R-010-09). Tests: token usado dos veces, token expirado.
-- [ ] **T-037** `POST /me/password` (cambio estando dentro): valida contraseña actual, exige
-  las dos nuevas contraseñas coincidentes, rechaza si la actual es incorrecta.
-- [ ] **T-038** Política de complejidad de contraseña (mínimo 8, letras+números, rechaza lista
+- [x] **T-037** `POST /me/password` (cambio estando dentro): valida contraseña actual, exige
+  las dos nuevas contraseñas coincidentes, rechaza si la actual es incorrecta. ✅ 2026-08-11 —
+  12 tests, ver `verification.md` §T-037.
+  > **Cierra las demás sesiones** y conserva la actual. No estaba pedido: quien cambia su
+  > contraseña suele hacerlo porque sospecha de alguien, y dejar vivas las otras convierte el gesto
+  > en un trámite.
+- [x] **T-038** Política de complejidad de contraseña (mínimo 8, letras+números, rechaza lista
   de comunes) + Argon2id con parámetros documentados (`plan.md` §7 riesgo de configuración).
+  ✅ 2026-08-11 — 24 tests de dominio, ver `verification.md` §T-038. Los parámetros de Argon2id
+  se fijaron en T-030.
+  > Una regla que el documento no pedía: **la contraseña no puede contener el correo**. Y dos que
+  > el documento no pide y que se decidieron **no** agregar: símbolos y mayúsculas obligatorios.
 
 ## E — Perfil propio (`me/`)
 
