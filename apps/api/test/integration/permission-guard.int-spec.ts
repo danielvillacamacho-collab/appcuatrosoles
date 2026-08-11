@@ -44,9 +44,20 @@ class ControladorDeUsuarios {
   }
 }
 
+/** Ruta de ámbito de organización: el permiso se evalúa contra ESA organización (T-223). */
+@Controller("organizaciones")
+@UseGuards(SessionGuard, PermissionGuard)
+class ControladorDeOrganizaciones {
+  @Post(":id/algo")
+  @RequirePermission("organization.manage", { organizacion: { desde: "params", campo: "id" } })
+  actuar(): { ok: true } {
+    return { ok: true };
+  }
+}
+
 @Module({
   imports: [PrismaModule, ClockModule, AuthModule],
-  controllers: [ControladorDeUsuarios],
+  controllers: [ControladorDeUsuarios, ControladorDeOrganizaciones],
 })
 class ModuloDeUsuarios {}
 
@@ -218,6 +229,79 @@ describe("PermissionGuard (T-022b, docs/03 §6)", () => {
 
       expect((await crear(token, suClub)).status).toBe(201);
       expect((await crear(token, otroClub)).status).toBe(403);
+    });
+  });
+
+  describe("ámbito de organización (T-223)", () => {
+    async function crearOrganizacion(clubId: string, nombre: string): Promise<string> {
+      const organizacion = await prisma.organization.create({
+        data: { clubId, name: `${nombre}-${etiqueta("org")}`, type: "school" },
+      });
+
+      return organizacion.id;
+    }
+
+    function actuarSobre(organizacionId: string, token: string, club: string): request.Test {
+      return request(app.getHttpServer())
+        .post(`/organizaciones/${organizacionId}/algo`)
+        .set("Cookie", `${COOKIE_DE_SESION}=${token}`)
+        .set("x-club-de-prueba", club);
+    }
+
+    it("el administrador de una organización actúa sobre la suya", async () => {
+      const club = await crearClubDePrueba(prisma, "con-org");
+      const organizacionId = await crearOrganizacion(club, "propia");
+      const token = await crearActorCon([
+        { role: "organization_admin", scope: "organization", scopeId: organizacionId },
+      ]);
+
+      expect((await actuarSobre(organizacionId, token, club)).status).toBe(201);
+    });
+
+    it("pero no sobre otra organización del mismo club", async () => {
+      const club = await crearClubDePrueba(prisma, "con-dos-orgs");
+      const suya = await crearOrganizacion(club, "suya");
+      const ajena = await crearOrganizacion(club, "ajena");
+      const token = await crearActorCon([
+        { role: "organization_admin", scope: "organization", scopeId: suya },
+      ]);
+
+      expect((await actuarSobre(suya, token, club)).status).toBe(201);
+      expect((await actuarSobre(ajena, token, club)).status).toBe(403);
+    });
+
+    it("el administrador del club sí actúa sobre cualquier organización suya", async () => {
+      const club = await crearClubDePrueba(prisma, "club-manda");
+      const organizacionId = await crearOrganizacion(club, "cualquiera");
+      const token = await crearActorCon([{ role: "club_admin", scope: "club", scopeId: club }]);
+
+      expect((await actuarSobre(organizacionId, token, club)).status).toBe(201);
+    });
+
+    it("una organización de OTRO club responde 404, nunca 403 (P-05)", async () => {
+      // Un 403 confirmaría que esa organización existe en algún lado, y entre inquilinos eso ya
+      // es una fuga. La consulta va acotada por club_id: ni siquiera se lee la fila ajena.
+      const club = await crearClubDePrueba(prisma, "mi-club");
+      const otroClub = await crearClubDePrueba(prisma, "club-ajeno");
+      const organizacionAjena = await crearOrganizacion(otroClub, "ajena");
+      const token = await crearActorCon([{ role: "club_admin", scope: "club", scopeId: club }]);
+
+      expect((await actuarSobre(organizacionAjena, token, club)).status).toBe(404);
+    });
+
+    it("una organización inexistente también responde 404", async () => {
+      const club = await crearClubDePrueba(prisma, "sin-org");
+      const token = await crearActorCon([{ role: "club_admin", scope: "club", scopeId: club }]);
+
+      expect((await actuarSobre("no-existe", token, club)).status).toBe(404);
+    });
+
+    it("un jugador no actúa sobre ninguna organización", async () => {
+      const club = await crearClubDePrueba(prisma, "club-jugador");
+      const organizacionId = await crearOrganizacion(club, "cualquiera");
+      const token = await crearActorCon([{ role: "player", scope: "club", scopeId: club }]);
+
+      expect((await actuarSobre(organizacionId, token, club)).status).toBe(403);
     });
   });
 

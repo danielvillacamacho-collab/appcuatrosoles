@@ -1,17 +1,23 @@
 import {
   ForbiddenException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
   type CanActivate,
   type ExecutionContext,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { RoleName as RoleNameDb, ScopeKind as ScopeKindDb } from "@prisma/client";
-import { hasPermission, type Permission, type RoleName, type ScopeKind } from "@polo/domain";
+import {
+  hasPermission,
+  type PermissionTarget,
+  type RoleName,
+  type ScopeKind,
+} from "@polo/domain";
 import { PrismaService } from "../prisma/prisma.service.js";
 import type { ConTenant } from "../../tenant/tenant-context.js";
 import type { ConSessionUser } from "./current-user.js";
-import { PERMISO_REQUERIDO } from "./require-permission.js";
+import { PERMISO_REQUERIDO, type PermisoDeclarado } from "./require-permission.js";
 
 /**
  * Exige el permiso que la ruta declaró con `@RequirePermission()` (`docs/03` §6).
@@ -32,19 +38,21 @@ export class PermissionGuard implements CanActivate {
   ) {}
 
   async canActivate(contexto: ExecutionContext): Promise<boolean> {
-    const permiso = this.reflector.getAllAndOverride<Permission | undefined>(PERMISO_REQUERIDO, [
-      contexto.getHandler(),
-      contexto.getClass(),
-    ]);
+    const declarado = this.reflector.getAllAndOverride<PermisoDeclarado | undefined>(
+      PERMISO_REQUERIDO,
+      [contexto.getHandler(), contexto.getClass()],
+    );
 
     // Una ruta sin permiso declarado es de lectura pública dentro de la sesión (p. ej. `/me`). Que
     // una ruta **mutante** llegue aquí sin declararlo es imposible: la aplicación no arranca
     // (`permissions-declared.service.ts`).
-    if (permiso === undefined) {
+    if (declarado === undefined) {
       return true;
     }
 
-    const req = contexto.switchToHttp().getRequest<ConSessionUser & ConTenant>();
+    const req = contexto
+      .switchToHttp()
+      .getRequest<ConSessionUser & ConTenant & { params?: unknown; body?: unknown }>();
     const usuario = req.sessionUser;
 
     if (usuario === undefined) {
@@ -57,8 +65,10 @@ export class PermissionGuard implements CanActivate {
       // Error de programación —falta `TenantGuard` antes de éste—, no del usuario. Se responde
       // como error interno y no como `403`: un `403` mentiría diciendo «no tienes permiso» cuando
       // lo que pasa es que el servidor no sabe en qué club está parado.
-      throw new Error("PermissionGuard sin tenant: TenantGuard debe correr antes (T-020).");
+      throw new Error("PermissionGuard sin tenant: TenantGuard debe correr antes (T-221).");
     }
+
+    const target = await this.resolverAmbito(declarado, req, tenant.clubId);
 
     const asignaciones = await this.prisma.roleAssignment.findMany({
       // Sólo las vigentes: una asignación revocada no otorga nada, y filtrarlo aquí evita que cada
@@ -75,11 +85,8 @@ export class PermissionGuard implements CanActivate {
           scopeId: asignacion.scopeId,
         })),
       },
-      permiso,
-      // Ámbito de club: es el tenant de la solicitud. Las rutas de ámbito de **organización**
-      // (T-052, T-054) necesitan además saber a qué organización se refiere el cuerpo de la
-      // petición; ese resolvedor entra con la primera de ellas, no antes de tener un caso real.
-      { scope: "club", scopeId: tenant.clubId, clubId: tenant.clubId },
+      declarado.permission,
+      target,
     );
 
     if (!veredicto.ok) {
@@ -88,6 +95,55 @@ export class PermissionGuard implements CanActivate {
 
     return true;
   }
+
+  /**
+   * Contra qué se evalúa el permiso: el club de la solicitud, o una organización concreta si la
+   * ruta lo declaró (T-223).
+   *
+   * **La organización tiene que pertenecer al club del tenant, y si no, la respuesta es `404`.**
+   * No `403`: un `403` confirmaría que esa organización existe en algún lado, y entre inquilinos
+   * eso ya es una fuga (P-05, `docs/03` §3). Se comprueba con una consulta acotada por `club_id`,
+   * no comparando después de traer la fila — así ni siquiera se lee el dato de otro club.
+   */
+  private async resolverAmbito(
+    declarado: PermisoDeclarado,
+    req: { params?: unknown; body?: unknown },
+    clubId: string,
+  ): Promise<PermissionTarget> {
+    if (declarado.organizacion === undefined) {
+      return { scope: "club", scopeId: clubId, clubId };
+    }
+
+    const origen = declarado.organizacion.desde === "params" ? req.params : req.body;
+    const organizationId = leerCampo(origen, declarado.organizacion.campo);
+
+    if (organizationId === undefined) {
+      // La ruta declaró que su ámbito sale de un campo que no llegó. Es un error de programación
+      // —o un cliente probando—, y en cualquier caso no hay ámbito que evaluar: no se concede.
+      throw new NotFoundException();
+    }
+
+    const organizacion = await this.prisma.organization.findFirst({
+      where: { id: organizationId, clubId },
+      select: { id: true },
+    });
+
+    if (organizacion === null) {
+      throw new NotFoundException();
+    }
+
+    return { scope: "organization", scopeId: organizacion.id, clubId };
+  }
+}
+
+function leerCampo(origen: unknown, campo: string): string | undefined {
+  if (origen === null || typeof origen !== "object") {
+    return undefined;
+  }
+
+  const valor: unknown = (origen as Record<string, unknown>)[campo];
+
+  return typeof valor === "string" ? valor : undefined;
 }
 
 /**

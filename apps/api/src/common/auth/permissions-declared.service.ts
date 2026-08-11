@@ -72,7 +72,7 @@ export class PermissionsDeclaredService implements OnApplicationBootstrap {
 
         // `getAllAndOverride` acepta el decorador puesto en el método **o** en el controlador
         // entero: un controlador de administración puede declararlo una vez para todas sus rutas.
-        const permiso = this.reflector.getAllAndOverride<string | undefined>(PERMISO_REQUERIDO, [
+        const permiso = this.reflector.getAllAndOverride<unknown>(PERMISO_REQUERIDO, [
           manejador,
           controlador.constructor,
         ]);

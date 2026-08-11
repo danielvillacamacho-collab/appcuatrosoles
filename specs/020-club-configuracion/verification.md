@@ -575,3 +575,42 @@ autoridad, y los únicos con alguna siguen siendo los tres administradores.
   de la ruta: un `organization_admin` puede fijar la configuración de su organización pero no la
   del club. La puerta gruesa ya lo distingue; el resolvedor que le dice al guard **de qué
   organización se trata** es T-223.
+
+---
+
+## T-223 — El ámbito de organización, resuelto por el guard
+
+**Fecha:** 2026-08-11 · 6 tests de integración (101 en total) · **cierra la sección C**
+
+Era el pendiente declarado de T-022b: hasta hoy, `PermissionGuard` evaluaba siempre contra el club
+del tenant, así que un `organization_admin` no pasaba ninguna ruta. Ahora una ruta puede declarar de
+dónde sale la organización sobre la que actúa:
+
+```ts
+@RequirePermission("organization.manage", { organizacion: { desde: "params", campo: "id" } })
+```
+
+**Sólo dos orígenes, y ninguno es adivinar**: el parámetro de la ruta o un campo del cuerpo. Un
+tercero —una cabecera, una query— sería una vía más por la que el cliente elige su propio ámbito.
+
+### Una organización de otro club responde 404, nunca 403
+
+Un `403` diría «existe, pero no puedes»; entre inquilinos, esa confirmación ya es una fuga (P-05,
+`docs/03` §3). La consulta va **acotada por `club_id`** en vez de traer la fila y comparar después:
+así ni siquiera se lee el dato de otro club. Una organización inexistente da la misma respuesta,
+que es el punto.
+
+### Lo que queda probado, por rol
+
+| Actor | Su organización | Otra del mismo club | De otro club |
+|---|---|---|---|
+| `organization_admin` | pasa | `403` | `404` |
+| `club_admin` | pasa | pasa | `404` |
+| `player` | `403` | `403` | `404` |
+
+### Pendiente declarado
+
+- Un campo declarado que **no llega** en la solicitud responde `404`. Es un error de programación
+  —o un cliente probando— y en cualquier caso no hay ámbito que evaluar, así que no se concede. Si
+  algún día una ruta necesita «organización opcional», tendrá que decirlo explícitamente, no
+  aprovecharse de este silencio.

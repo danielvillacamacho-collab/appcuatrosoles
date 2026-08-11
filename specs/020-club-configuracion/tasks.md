@@ -115,9 +115,12 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
   > categorías, y un `club_admin` no administra la plataforma. Con una regla implícita («los
   > administradores pueden todo») los seis permisos habrían quedado concedidos por omisión.
 
-- [ ] **T-223** Resolvedor de ámbito de organización en `PermissionGuard` (pendiente declarado de
+- [x] **T-223** Resolvedor de ámbito de organización en `PermissionGuard` (pendiente declarado de
   T-022b): una ruta puede indicar de dónde sale la organización objetivo. Verificación: un
   `organization_admin` pasa en la suya y es rechazado en otra, por la misma ruta.
+  ✅ 2026-08-11 — 6 tests, ver `verification.md` §T-223. **Cierra la sección C.**
+  > Una organización de **otro club** responde `404` y no `403`, y la consulta va acotada por
+  > `club_id`: ni siquiera se lee la fila ajena.
 
 ## D — Plataforma (superadministrador)
 
