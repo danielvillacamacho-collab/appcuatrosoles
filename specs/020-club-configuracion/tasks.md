@@ -48,9 +48,14 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
 
 ## B — Dominio puro (`packages/domain`)
 
-- [ ] **T-210** `isValidSlug` / `normalizeSlug`: minúsculas, `[a-z0-9-]`, sin guion al principio ni
+- [x] **T-210** `isValidSlug` / `normalizeSlug`: minúsculas, `[a-z0-9-]`, sin guion al principio ni
   al final, longitud acotada. Tests: los casos válidos, y explícitamente mayúsculas, punto,
-  espacio, guion bajo, cadena vacía y un slug de 300 caracteres.
+  espacio, guion bajo, cadena vacía y un slug de 300 caracteres. ✅ 2026-08-11 — 29 tests de
+  dominio + 2 de integración, ver `verification.md` §T-210.
+  > Dos cosas que no estaban en la tarea: una **lista de subdominios reservados** (`www`, `api`,
+  > `admin`…), porque un club en `api` no falla, **funciona**, y queda accesible desde donde no
+  > debe; y dos tests de integración que comparan la regla del dominio contra el `CHECK` de la
+  > base, que es lo que impide que la aplicación acepte algo que la base rechaza.
 
 - [ ] **T-211** `resolveTenant(host, clubs)` (`specs/140` §9): extrae el subdominio de un host y
   devuelve el club activo o un fallo. Tests: host con puerto, host con mayúsculas, dominio raíz sin

@@ -11,3 +11,6 @@ export * from "./identity/hasPermission.js";
 export * from "./identity/isInvitationLinkValid.js";
 export * from "./identity/isWaiverAcceptanceCurrent.js";
 export * from "./identity/resolvePrimaryPayer.js";
+
+// Tenant (specs/020-club-configuracion)
+export * from "./tenant/slug.js";

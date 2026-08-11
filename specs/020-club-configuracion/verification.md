@@ -194,3 +194,52 @@ Dos comprobaciones nuevas que no son de conteo:
   para que la distinción no se pierda.
 - **La temporada está abierta y tiene fechas reales**, no una ventana ficticia permanente: es la
   decisión D-020-03 del spec, y se comprueba en la fila, no en la intención.
+
+---
+
+## T-210 — `validateSlug`: la forma del subdominio, que es la forma del tenant
+
+**Fecha:** 2026-08-11 · 29 tests de dominio + 2 de integración · dominio al 100 % (125 tests)
+
+### La regla está escrita dos veces, y por eso hay un test que las compara
+
+El formato vive en `packages/domain/tenant/slug.ts` **y** en el `CHECK club_slug_formato` de la
+migración T-201. La duplicación es deliberada: la base protege de cualquier vía de escritura
+—un script, una migración, un `psql`—, y el dominio protege de aceptar algo y fallar después. Pero
+si las dos se separan, el usuario recibe un `500` donde debería recibir un mensaje claro.
+
+Dos tests de integración vigilan la relación en las dos direcciones: **todo lo que el dominio
+acepta, la base lo acepta**, y **todo lo que la base rechaza por formato, el dominio ya lo había
+rechazado**. El segundo distingue el rechazo por formato del choque con el índice único (`P2002`),
+porque un slug repetido significa que el formato **sí** pasó — el motor llegó hasta la unicidad.
+
+Escribir bien ese test costó dos intentos: la primera versión insertaba el texto crudo en vez del
+normalizado y daba por «contradicción» que `LosPinos` fuera rechazado por la base. No lo es: el
+contrato del dominio es «validá y guardá lo que te devuelvo», no «guardá lo que escribió el
+usuario».
+
+### Normaliza lo que no cambia el significado, y nada más
+
+Recorta espacios y baja a minúsculas. **No** convierte «Los Pinos» en `los-pinos` por su cuenta:
+arreglarlo en silencio parece amable hasta que el club descubre que su dirección —la que va impresa
+en el correo de invitación de todos sus socios— no es la que creyó elegir. Se rechaza diciendo qué
+pasa.
+
+Los motivos de rechazo se distinguen (`slug_muy_corto`, `slug_formato_invalido`,
+`slug_reservado`…) porque cada uno merece un mensaje distinto para quien está creando el club.
+
+### Una adición que no estaba en el spec: subdominios reservados
+
+`www`, `api`, `admin`, `app`, `static`, `assets`, `mail`, `staging`, `localhost`. Si un club tomara
+uno de esos, el caso feo no es que falle: es que **funcione**, y que el club quede servido en una
+dirección que el resto del sistema —o el navegador de cualquiera— espera que sea otra cosa.
+
+La lista se mantiene corta a propósito, y hay un test que lo exige: cada nombre reservado es un
+nombre que un cliente real no puede usar, y reservar de más es tan malo como reservar de menos. La
+reserva es exacta, no por parecido: `api-polo` y `mi-app` son válidos.
+
+### Pendiente declarado
+
+- El límite de 63 caracteres es el de **una etiqueta** de nombre de host (RFC 1035). El nombre
+  completo (`<slug>.<dominio>`) tiene su propio límite de 253, que sólo se puede comprobar cuando
+  se conozca el dominio de la instalación — entra con la configuración de despliegue, no aquí.
