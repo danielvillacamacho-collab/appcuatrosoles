@@ -47,3 +47,22 @@ export const ChangePasswordRequest = z
   });
 
 export type ChangePasswordRequest = z.infer<typeof ChangePasswordRequest>;
+
+export const ForgotPasswordRequest = z.object({
+  email: z.string().trim().email(),
+});
+
+export type ForgotPasswordRequest = z.infer<typeof ForgotPasswordRequest>;
+
+export const ResetPasswordRequest = z
+  .object({
+    token: z.string().min(1),
+    newPassword: z.string().min(1),
+    newPasswordConfirmation: z.string().min(1),
+  })
+  .refine((datos) => datos.newPassword === datos.newPasswordConfirmation, {
+    message: "Las dos contraseñas nuevas no coinciden.",
+    path: ["newPasswordConfirmation"],
+  });
+
+export type ResetPasswordRequest = z.infer<typeof ResetPasswordRequest>;

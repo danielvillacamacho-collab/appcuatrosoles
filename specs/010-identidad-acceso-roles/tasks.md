@@ -184,10 +184,14 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > El decorador `@RutaPublica` pasó a llamarse **`@SinPermiso`**: ahora cubre dos familias
   > distintas —rutas públicas (login) y rutas autenticadas sin nada que autorizar (cerrar la
   > sesión propia)— y el nombre viejo describía sólo la primera.
-- [ ] **T-035** `POST /auth/password/forgot`: mismo mensaje exista o no la cuenta (R-010-07);
-  encola `identity.send-password-reset` en la misma transacción (P-11).
-- [ ] **T-036** `POST /auth/password/reset`: token de un solo uso, expira en 1h, revoca las
+- [x] **T-035** `POST /auth/password/forgot`: mismo mensaje exista o no la cuenta (R-010-07);
+  encola `identity.send-password-reset` en la misma transacción (P-11). ✅ 2026-08-11 —
+  ver `verification.md` §T-035/036.
+- [x] **T-036** `POST /auth/password/reset`: token de un solo uso, expira en 1h, revoca las
   demás sesiones al usarse (R-010-09). Tests: token usado dos veces, token expirado.
+  ✅ 2026-08-11 — 12 tests entre las dos, ver `verification.md` §T-035/036. **Cierra la sección D.**
+  > Revoca **todas** las sesiones, no «las demás»: si alguien entró con credenciales robadas,
+  > dejarle una viva convierte el gesto en nada.
 - [x] **T-037** `POST /me/password` (cambio estando dentro): valida contraseña actual, exige
   las dos nuevas contraseñas coincidentes, rechaza si la actual es incorrecta. ✅ 2026-08-11 —
   12 tests, ver `verification.md` §T-037.

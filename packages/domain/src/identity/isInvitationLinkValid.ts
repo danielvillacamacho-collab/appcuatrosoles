@@ -36,6 +36,27 @@ export type InvitationLinkDenial =
 const MILISEGUNDOS_POR_DIA = 24 * 60 * 60 * 1000;
 
 /**
+ * La misma regla, con la ventana en milisegundos.
+ *
+ * Existe porque el enlace de **restablecimiento** dura una hora (`docs/08` §9) y expresarla como
+ * fracción de día sería una forma rebuscada de decir lo mismo. La lógica —uso primero, vencimiento
+ * después, borde que no concede— es idéntica y vive una sola vez: los dos enlaces son el mismo
+ * problema con distinta duración, y separarlos habría sido la manera de que uno de los dos se
+ * arreglara sin el otro.
+ */
+export function isOneTimeLinkValid(
+  link: InvitationLink,
+  validityMs: number,
+  clock: Clock,
+): Result<void, InvitationLinkDenial> {
+  if (link.usedAt !== null) {
+    return err("link_already_used");
+  }
+
+  return clock.now().getTime() >= link.sentAt.getTime() + validityMs ? err("link_expired") : ok(undefined);
+}
+
+/**
  * ¿Sirve todavía este enlace de invitación? (R-010-08, HU-010-02)
  *
  * **Vence al cumplirse la ventana, no un instante después.** En el segundo exacto en que se

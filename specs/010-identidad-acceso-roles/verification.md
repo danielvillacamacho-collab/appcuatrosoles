@@ -1537,3 +1537,60 @@ probar el producto en local**, y cuando entre no toca ni a quien encola ni a qui
   sesiones revocadas (T-034): un job de purga cuando exista el planificador.
 - **`SesMailer` no existe**, a propósito: es lo primero que se escribe al configurar AWS, y su
   contrato ya está fijado por el puerto.
+
+---
+
+## T-035 y T-036 — Recuperar la contraseña
+
+**Fecha:** 2026-08-11 · 12 tests de integración (254 en total) · **cierra la sección D**
+
+Las dos juntas: comparten servicio, tabla y el enlace que va del correo a la pantalla.
+
+### Una tabla para los dos enlaces de un solo uso
+
+`one_time_token` guarda la invitación y el restablecimiento. Son el mismo objeto con distinta
+duración y distinto correo; separarlos habría duplicado la lógica de vigencia y la de un solo uso,
+que es exactamente la que no conviene tener dos veces. Se guarda el **hash** del token, nunca el
+token: si la base se filtra, ningún enlace pendiente es utilizable. Tiene test.
+
+En el dominio se generalizó `isInvitationLinkValid` a `isOneTimeLinkValid(link, validityMs, clock)`:
+el restablecimiento dura una hora y expresarla como fracción de día habría sido una forma rebuscada
+de decir lo mismo. La lógica —uso primero, vencimiento después, borde que no concede— vive una sola
+vez.
+
+### Pedir es la contracara del login
+
+Responde **lo mismo exista o no la cuenta** (R-010-07). Si aquí dijéramos «ese correo no existe»,
+daría igual todo el cuidado que se puso en el login. Y una cuenta de **otro club** tampoco recibe
+nada desde este subdominio, por la misma razón que en T-030: si no, pedir restablecimientos serviría
+para averiguar quién tiene cuenta en otros clubes.
+
+El token y el correo se crean **en la misma transacción** (P-11): un enlace guardado cuyo correo
+nunca sale deja a alguien esperando, y un correo enviado sin token guardado lo manda a un enlace
+que no funciona.
+
+### El enlace se arma con el slug del club, no con el `Host`
+
+Un `Host` falsificado convertiría el correo de restablecimiento en un enlace **al sitio del
+atacante, con el token de la víctima adentro**. Se construye desde el slug y el dominio de la
+instalación, y hay un test que manda un `X-Forwarded-Host` hostil y exige que no aparezca.
+
+### Usar el enlace revoca TODAS las sesiones
+
+No «las demás»: **todas**. Si alguien entró con credenciales robadas, restablecer la contraseña es
+lo que lo saca; dejarle una sesión viva convierte el gesto en nada (R-010-09). También levanta el
+bloqueo por intentos fallidos —quien acaba de demostrar que controla su correo no debería esperar
+quince minutos por sus propios errores de tipeo— y encola el aviso «tu contraseña cambió», que es la
+única señal que recibe alguien a quien le cambiaron la contraseña sin saberlo.
+
+### Un solo mensaje para tres fallas
+
+Token inexistente, ya usado y vencido responden igual. Distinguirlos le diría a quien prueba tokens
+cuáles existieron alguna vez; y para quien tiene el enlace en su correo, la salida es la misma en
+los tres casos: pedir uno nuevo. El texto lo dice.
+
+### Pendiente declarado
+
+- **La pantalla `/restablecer-contrasena` no existe todavía.** El enlace del correo la apunta y es
+  la ruta correcta; hasta que exista la interfaz, el flujo se prueba llamando al endpoint con el
+  token que aparece en el correo escrito a disco.

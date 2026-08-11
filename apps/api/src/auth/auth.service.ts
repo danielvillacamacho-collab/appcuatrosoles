@@ -350,7 +350,7 @@ function estaBloqueada(cuenta: { lockedUntil: Date | null }, ahora: Date): boole
  * Cada texto dice **qué hacer**. «La contraseña no cumple los requisitos» es la forma más rápida de
  * que alguien pruebe cinco veces y se rinda.
  */
-const MENSAJES_DE_POLITICA: Record<PasswordRejection, string> = {
+export const MENSAJES_DE_POLITICA: Record<PasswordRejection, string> = {
   muy_corta: "La contraseña debe tener al menos 8 caracteres.",
   muy_larga: "La contraseña es demasiado larga (máximo 200 caracteres).",
   sin_letras: "La contraseña debe incluir al menos una letra.",

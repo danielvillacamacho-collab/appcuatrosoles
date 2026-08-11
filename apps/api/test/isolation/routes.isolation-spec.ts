@@ -51,6 +51,11 @@ const CON_TEST_PROPIO = [
   // `me-password.int-spec` → «exige la contraseña actual aunque haya sesión válida» y «las demás
   // sesiones se cierran». Igual que las de arriba: su aislamiento es por **cuenta**, no por club.
   "POST /me/password",
+  // `password-reset.int-spec` → «una cuenta de otro club no recibe nada desde este subdominio» y
+  // «el enlace apunta al subdominio del club, no al Host de la solicitud». El aislamiento de estas
+  // dos es doble: por club al pedir, y por token al usar.
+  "POST /auth/password/forgot",
+  "POST /auth/password/reset",
 ];
 
 /** Rutas que no operan dentro de un club y por lo tanto no tienen tenant que aislar. */

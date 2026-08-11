@@ -1,7 +1,12 @@
 import { Body, Controller, HttpCode, Post, Req, Res, UseGuards } from "@nestjs/common";
 import type { Response } from "express";
 import type { ConTenant } from "../tenant/tenant-context.js";
-import { LoginRequest, LoginResponse } from "@polo/contracts";
+import {
+  ForgotPasswordRequest,
+  LoginRequest,
+  LoginResponse,
+  ResetPasswordRequest,
+} from "@polo/contracts";
 import { COOKIE_CSRF, tokenCsrfParaSesion } from "../common/auth/csrf.js";
 import { SinPermiso } from "../common/auth/require-permission.js";
 import { SessionGuard } from "../common/auth/session.guard.js";
@@ -11,11 +16,20 @@ import { ZodValidationPipe } from "../common/http/zod-validation.pipe.js";
 import { clubDeLaSolicitud } from "../club/tenant-de-la-solicitud.js";
 import { TenantGuard } from "../tenant/tenant.guard.js";
 import { AuthService } from "./auth.service.js";
+import { PasswordResetService } from "./password-reset.service.js";
+import { BASE_DOMAIN } from "../tenant/base-domain.js";
+import { Inject } from "@nestjs/common";
+import { ClubDirectory } from "../tenant/club-directory.js";
 
 @Controller("auth")
 @UseGuards(TenantGuard)
 export class AuthController {
-  constructor(private readonly servicio: AuthService) {}
+  constructor(
+    private readonly servicio: AuthService,
+    private readonly restablecimiento: PasswordResetService,
+    private readonly clubes: ClubDirectory,
+    @Inject(BASE_DOMAIN) private readonly baseDomain: string,
+  ) {}
 
   /**
    * `POST /auth/login` (HU-010-04, T-030).
@@ -105,6 +119,55 @@ export class AuthController {
     await this.servicio.cerrarTodasLasSesiones(usuarioDeLaSolicitud(req).userAccountId);
 
     this.borrarCookies(res);
+  }
+
+  /**
+   * `POST /auth/password/forgot` (T-035, HU-010-06).
+   *
+   * **Siempre responde lo mismo**, exista o no la cuenta: «si el correo está registrado, te
+   * enviamos un enlace» (R-010-07). Es la contracara del login — si aquí dijéramos «ese correo no
+   * existe», daría igual todo el cuidado que se puso allá.
+   */
+  @Post("password/forgot")
+  @HttpCode(202)
+  @SinPermiso("Pedir un restablecimiento es lo que hace quien no puede entrar: no hay permiso posible.")
+  async olvide(
+    @Body(new ZodValidationPipe(ForgotPasswordRequest)) cuerpo: ForgotPasswordRequest,
+    @Req() req: ConTenant,
+  ): Promise<{ mensaje: string }> {
+    await this.restablecimiento.pedir(
+      cuerpo.email,
+      clubDeLaSolicitud(req),
+      await this.urlDelClub(clubDeLaSolicitud(req)),
+    );
+
+    return {
+      mensaje: "Si el correo está registrado, te enviamos un enlace para restablecer tu contraseña.",
+    };
+  }
+
+  /** `POST /auth/password/reset` (T-036, R-010-09). */
+  @Post("password/reset")
+  @HttpCode(204)
+  @SinPermiso("Restablecer con un enlace de un solo uso es el camino de quien no tiene sesión.")
+  async restablecer(
+    @Body(new ZodValidationPipe(ResetPasswordRequest)) cuerpo: ResetPasswordRequest,
+  ): Promise<void> {
+    await this.restablecimiento.restablecer(cuerpo.token, cuerpo.newPassword);
+  }
+
+  /**
+   * La dirección pública del club, para armar el enlace del correo.
+   *
+   * Se construye desde el **slug del club y el dominio de la instalación**, nunca desde el `Host`
+   * de la solicitud: un `Host` falsificado convertiría el correo de restablecimiento en un enlace
+   * al sitio del atacante, con el token de la víctima adentro.
+   */
+  private async urlDelClub(clubId: string): Promise<string> {
+    const club = (await this.clubes.all()).find((candidato) => candidato.id === clubId);
+    const esquema = esProduccion() ? "https" : "http";
+
+    return `${esquema}://${club?.slug ?? ""}.${this.baseDomain}`;
   }
 
   private borrarCookies(res: Response): void {

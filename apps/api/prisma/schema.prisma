@@ -126,6 +126,7 @@ model UserAccount {
   auditEntriesOnBehalf AuditLog[]              @relation("AuditOnBehalfOf")
 
   settingsCreated Setting[]
+  oneTimeTokens   OneTimeToken[]
 
   @@map("user_account")
 }
@@ -714,6 +715,45 @@ model Setting {
   @@unique([scope, scopeId, key, effectiveFrom])
   @@index([scope, scopeId, key, effectiveFrom])
   @@map("setting")
+}
+
+// ─── T-035/T-036 · Enlaces de un solo uso ───────────────────────────────────────
+// specs/010-identidad-acceso-roles/spec.md R-010-08, R-010-09 · docs/06 §2
+
+/// Un enlace de un solo uso: la invitación para definir la primera contraseña, o el
+/// restablecimiento cuando alguien la olvida.
+///
+/// Los dos son el mismo objeto con distinta duración y distinto correo, así que comparten tabla:
+/// separarlos habría duplicado la lógica de vigencia y la de un solo uso, que es exactamente la
+/// que no conviene tener dos veces.
+model OneTimeToken {
+  id            String @id @default(uuid(7))
+  userAccountId String @map("user_account_id")
+
+  type OneTimeTokenType
+
+  /// Igual que en `session`: se guarda el hash, nunca el token. Si la base se filtra, ningún
+  /// enlace pendiente es utilizable.
+  tokenHash String @unique @map("token_hash")
+
+  /// Desde cuándo cuenta la ventana de validez.
+  sentAt DateTime  @default(now()) @map("sent_at") @db.Timestamptz(3)
+  /// Cuándo se usó. De un solo uso (R-010-08): con esto puesto, el enlace ya no sirve.
+  usedAt DateTime? @map("used_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  userAccount UserAccount @relation(fields: [userAccountId], references: [id], onDelete: Restrict)
+
+  @@index([userAccountId, type, usedAt])
+  @@map("one_time_token")
+}
+
+enum OneTimeTokenType {
+  invitation
+  password_reset
+
+  @@map("one_time_token_type")
 }
 
 // ─── T-026 · Bandeja de salida transaccional ────────────────────────────────────
