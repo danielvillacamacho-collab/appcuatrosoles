@@ -243,3 +243,62 @@ reserva es exacta, no por parecido: `api-polo` y `mi-app` son válidos.
 - El límite de 63 caracteres es el de **una etiqueta** de nombre de host (RFC 1035). El nombre
   completo (`<slug>.<dominio>`) tiene su propio límite de 253, que sólo se puede comprobar cuando
   se conozca el dominio de la instalación — entra con la configuración de despliegue, no aquí.
+
+---
+
+## T-211 — `resolveTenant`: a qué club pertenece una solicitud
+
+**Fecha:** 2026-08-11 · 18 tests · dominio al 100 % (143 tests)
+
+Es la función de la que depende el aislamiento entero: si devuelve el club equivocado, todo el
+resto del sistema —repositorios, guards, auditoría— trabaja con diligencia sobre el inquilino
+equivocado. Por eso no adivina nada.
+
+### El dominio base es un parámetro, y ésa es la decisión importante
+
+`specs/140` §9 anunciaba `resolveTenant(host, clubs)`. Falta un dato: sin saber cuál es el dominio
+de la instalación no se puede distinguir `polo.app` —el sitio— de un club llamado «polo», y la
+alternativa habitual («tomar lo que está antes del primer punto») convierte el apex en un tenant el
+día que alguien registre ese slug. El dominio base es configuración de la instalación (`docs/07`),
+no conocimiento del dominio. `specs/140` §9 quedó corregido con la firma real.
+
+### Lo que se rechaza, que es donde vive la seguridad
+
+| Host | Resultado | Por qué importa |
+|---|---|---|
+| `polo.app` | `sin_subdominio` | el apex es el sitio, no un club |
+| `lospinos.otrositio.com` | `host_invalido` | un `Host` falsificado apuntando a nuestro servidor no se interpreta, se rechaza |
+| `a.lospinos.polo.app` | `subdominio_invalido` | **no se recorta al primer nivel** |
+| `www.polo.app` | `subdominio_invalido` | reservado, aunque alguien registre el slug |
+| `moroso.polo.app` (suspendido) | `club_suspendido` | para el cliente, idéntico a que no exista |
+
+**El subdominio de más nivel es la trampa que convierte un bug en una fuga.** Si
+`a.lospinos.polo.app` resolviera a «lospinos», cualquiera podría servir un club desde una dirección
+que no es la suya — y las cookies de sesión, que se comparten hacia abajo entre subdominios,
+viajarían hasta ahí. Se rechaza, no se recorta.
+
+### Los cinco motivos son la misma respuesta para el cliente
+
+`club_desconocido` y `club_suspendido` son motivos distintos **sólo para el log**. Distinguirlos en
+la respuesta le confirmaría a un competidor que cierto club es cliente nuestro (R-020-02, P-12). El
+guard de T-221 los colapsa en un `404` idéntico, y ahí va el test que compara las respuestas byte a
+byte — igual que se hizo con los siete rechazos de `SessionGuard` en T-021.
+
+Queda escrito en el propio tipo, con la prohibición explícita, porque es exactamente la clase de
+distinción que alguien convierte en «mensajes más útiles» con la mejor intención.
+
+### Detalles del host que parecen menores y no lo son
+
+Puerto (`:3000` en desarrollo), mayúsculas y **el punto final de un nombre absoluto**
+(`lospinos.polo.app.`, que es el mismo host y que una comparación de texto ingenua no reconocería).
+Los tres tienen test.
+
+Además hay un test de barrido con nueve formas de colar un host ajeno —prefijos, sufijos, dominios
+parecidos, doble punto, `@`, punycode— que exige que la lista de los que pasaron esté **vacía**.
+
+### Pendiente declarado
+
+- **De dónde sale el `Host` en producción** es responsabilidad del despliegue: detrás de un proxy
+  inverso, el encabezado tiene que venir de una fuente confiable y configurada explícitamente
+  (`plan.md` §5, `docs/07`). Esta función confía en el texto que recibe; quien se lo pasa es quien
+  debe garantizar que no lo escribió un cliente.

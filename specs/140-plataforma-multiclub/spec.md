@@ -156,7 +156,10 @@ administración, no desde el subdominio de un cliente. Dos condiciones, no una.
 
 ```ts
 // packages/domain/tenancy
-function resolveTenant(host: string, clubs: ClubRef[]): Result<ClubRef, UnknownTenant>
+// Implementada en specs/020 (T-211). La firma real lleva el dominio base de la instalación: sin
+// él no se puede distinguir el apex del sitio de un club llamado igual, y deducirlo del host
+// convertiría `polo.app` en un tenant.
+function resolveTenant(host: string, baseDomain: string, clubs: ClubRef[]): Result<ClubRef, TenantRejection>
 function activeClubFor(session: Session, memberships: StaffMembership[], at: Date): Result<ClubId>
 function withinPlanLimits(plan: TenantPlan, usage: Usage): Result<void, LimitExceeded>
 function applyTemplate(template: ClubTemplate): SeedOperations[]

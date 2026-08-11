@@ -57,11 +57,15 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
   > debe; y dos tests de integración que comparan la regla del dominio contra el `CHECK` de la
   > base, que es lo que impide que la aplicación acepte algo que la base rechaza.
 
-- [ ] **T-211** `resolveTenant(host, clubs)` (`specs/140` §9): extrae el subdominio de un host y
+- [x] **T-211** `resolveTenant(host, clubs)` (`specs/140` §9): extrae el subdominio de un host y
   devuelve el club activo o un fallo. Tests: host con puerto, host con mayúsculas, dominio raíz sin
   subdominio, `www`, subdominio desconocido, club suspendido, y host malformado. **Ninguna
   variante puede devolver un club distinto del que corresponde**: es la función de la que depende
-  P-05 entero.
+  P-05 entero. ✅ 2026-08-11 — 18 tests, ver `verification.md` §T-211.
+  > La firma lleva el **dominio base** de la instalación, que `specs/140` §9 no preveía: sin él,
+  > `polo.app` sería el club «polo». Corregido allá. Y el subdominio de más nivel
+  > (`a.lospinos.polo.app`) **no se recorta**: recortarlo serviría un club desde una dirección
+  > que no es la suya, con las cookies de sesión viajando hasta ahí.
 
 - [ ] **T-212** Catálogo de configuración tipado (`plan.md` §0): clave → ámbito, tipo, valor por
   defecto y fuente documental. Se cargan las claves de `docs/08` que corresponden a módulos ya
