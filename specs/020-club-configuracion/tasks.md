@@ -124,14 +124,16 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
 
 ## D — Plataforma (superadministrador)
 
-- [ ] **T-230** `POST /platform/clubs`: alta con nombre, slug, zona horaria y moneda; crea la
+- [x] **T-230** `POST /platform/clubs`: alta con nombre, slug, zona horaria y moneda; crea la
   temporada abierta y las categorías por defecto; invita al primer administrador. Verificación:
   contrato, camino feliz, slug duplicado, slug inválido, zona horaria inexistente, y rol no
-  autorizado.
+  autorizado. ✅ 2026-08-11 — 15 tests junto con T-231, ver `verification.md` §T-230/231.
 
-- [ ] **T-231** `POST /platform/clubs/:id/suspend` y `/reactivate`. Suspender **corta el acceso de
+- [x] **T-231** `POST /platform/clubs/:id/suspend` y `/reactivate`. Suspender **corta el acceso de
   inmediato** (R-020-04): invalida la caché y revoca las sesiones activas del club. Verificación:
   suspender y pedir en la misma prueba → `404`; reactivar → vuelve a funcionar.
+  ✅ 2026-08-11 — **hecha junto con T-230**: comparten controlador y servicio, y partirlas
+  significaba escribir el mismo controlador dos veces.
 
 - [ ] **T-232** Script de arranque (`pnpm bootstrap:club`, HU-020-03): crea el primer club, su
   administrador y el superadministrador. Verificación: correrlo dos veces no duplica nada y avisa;

@@ -1,6 +1,7 @@
 import { pathToFileURL } from "node:url";
 import argon2 from "argon2";
 import { PrismaClient, type OrgRelationship, type RoleName } from "@prisma/client";
+import { CATEGORIAS_POR_DEFECTO } from "../src/club/default-membership-categories.js";
 
 /**
  * Datos de ejemplo para desarrollo (`pnpm db:seed`).
@@ -80,37 +81,7 @@ const PERSONAS: PersonaDemo[] = [
  * Categorías del catálogo estándar. Las cuotas son valores de relleno redondos y evidentemente
  * ficticios, en centavos (P-02): las reales las define el club.
  */
-const CATEGORIAS = [
-  { code: "student", name: "Estudiante", monthlyFeeCents: 0n, rights: { requiere_aptitud: true } },
-  {
-    code: "temporary_member",
-    name: "Miembro temporal",
-    monthlyFeeCents: 10000000n,
-    rights: { puede_postular_practicas: true },
-  },
-  {
-    code: "permanent_member",
-    name: "Miembro permanente",
-    monthlyFeeCents: 20000000n,
-    rights: { puede_postular_practicas: true, puede_reservar_taqueo: true },
-  },
-  {
-    code: "partner",
-    name: "Socio",
-    monthlyFeeCents: 30000000n,
-    rights: {
-      puede_postular_practicas: true,
-      puede_inscribir_copas: true,
-      puede_reservar_taqueo: true,
-    },
-  },
-  {
-    code: "guest",
-    name: "Invitado",
-    monthlyFeeCents: 0n,
-    rights: { puede_inscribir_copas: true },
-  },
-];
+
 
 /**
  * Siembra el club de ejemplo. Recibe el cliente en vez de crearlo para que un test pueda
@@ -156,14 +127,14 @@ export async function sembrarClubDemo(
 
   // ── Categorías de membresía ─────────────────────────────────────────────────
   // `upsert` sobre (club_id, code), que es único: correrlo de nuevo actualiza en vez de duplicar.
-  for (const categoria of CATEGORIAS) {
+  for (const categoria of CATEGORIAS_POR_DEFECTO) {
     await prisma.membershipCategory.upsert({
       where: { clubId_code: { clubId: CLUB_ID, code: categoria.code } },
       create: { clubId: CLUB_ID, ...categoria },
       update: { name: categoria.name, rights: categoria.rights },
     });
   }
-  log(`  ${CATEGORIAS.length} categorías de membresía`);
+  log(`  ${CATEGORIAS_POR_DEFECTO.length} categorías de membresía`);
 
   // ── Versión del waiver ──────────────────────────────────────────────────────
   // Sin un waiver publicado nadie puede postularse a una práctica ni reservar una clase

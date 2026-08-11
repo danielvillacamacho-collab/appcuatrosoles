@@ -17,6 +17,16 @@ export interface AmbitoDeOrganizacion {
 
 export interface OpcionesDePermiso {
   organizacion?: AmbitoDeOrganizacion;
+  /**
+   * Marca la ruta como de **ámbito de plataforma**: no actúa dentro de un club sino sobre la
+   * plataforma misma (dar de alta clubes, configuración global).
+   *
+   * Existe porque esas rutas no tienen tenant —no llegan por el subdominio de ningún club— y sin
+   * decirlo el guard exigiría uno y respondería error interno. Que haya que declararlo, en vez de
+   * deducirlo del permiso, es a propósito: convertir una ruta en «de plataforma» es una decisión
+   * de seguridad y tiene que verse en la ruta.
+   */
+  plataforma?: true;
 }
 
 /**

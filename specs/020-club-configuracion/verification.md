@@ -614,3 +614,66 @@ que es el punto.
   —o un cliente probando— y en cualquier caso no hay ámbito que evaluar, así que no se concede. Si
   algún día una ruta necesita «organización opcional», tendrá que decirlo explícitamente, no
   aprovecharse de este silencio.
+
+---
+
+## T-230 y T-231 — Alta, suspensión y reactivación de clubes
+
+**Fecha:** 2026-08-11 · 15 tests de integración (116 en total)
+
+Se hicieron juntas: comparten controlador y servicio, y partirlas significaba escribir el mismo
+controlador dos veces.
+
+### Un club nace completo o no nace
+
+Todo el alta va en **una transacción**: club, cinco categorías de membresía, temporada abierta del
+año en curso, persona y cuenta del primer administrador, y su rol de `club_admin`. Un club a medio
+crear —con su fila pero sin categorías— es peor que ningún club, porque **parece que existe**. Hay
+un test que lo fuerza (correo de administrador ya usado) y comprueba que no quedó ni la fila del
+club.
+
+Al terminar se **invalida la caché de tenants**: sin eso, el subdominio nuevo respondería `404`
+hasta un minuto — justo mientras quien lo creó lo está probando. Tiene test.
+
+### El fallo de diseño que destapó el primer test
+
+Las rutas de plataforma **no llegan por el subdominio de ningún club**, así que no tienen tenant —
+pero `PermissionGuard` exigía uno siempre y respondía error interno. Todas las peticiones daban
+`500`.
+
+Se resolvió declarándolo en la ruta: `@RequirePermission("platform.club.manage", { plataforma:
+true })`. Que haya que decirlo, en vez de deducirlo del nombre del permiso, es deliberado: convertir
+una ruta en «de plataforma» es una decisión de seguridad y tiene que verse en la ruta.
+
+### Suspender es tres cosas, no una
+
+R-020-04 dice «de inmediato», y eso significa: marcar el club, **revocar todas las sesiones activas
+de su gente**, e invalidar la caché. Sin la segunda, quien ya estaba adentro seguiría trabajando
+hasta que su sesión venciera sola; sin la tercera, el subdominio seguiría resolviendo hasta un
+minuto más. Las tres tienen test.
+
+**Reactivar no borra `suspendedAt` ni el motivo**: la historia de un corte de servicio es lo que
+hace falta si meses después hay una discusión contractual, y el estado ya dice que hoy está activo.
+Las sesiones revocadas tampoco vuelven — una sesión cortada durante una suspensión no debería
+revivir sola.
+
+### Validación en tres capas, cada una con su código HTTP
+
+| Falla | Respuesta | Quién la detecta |
+|---|---|---|
+| El cuerpo no cumple el contrato | `400` con los campos | Zod (`ZodValidationPipe` → filtro de T-024) |
+| Slug con forma inválida o reservado | `422` con su código | `validateSlug` del dominio |
+| Zona horaria inexistente | `422` | `Intl`, no una lista propia — la base de zonas cambia y una lista escrita a mano envejece sin que nadie se entere |
+| Slug ya usado | `409` | consulta previa + índice único |
+| Rol sin `platform.club.manage` | `403` | `PermissionGuard` |
+| Sin sesión | `401` | `SessionGuard` |
+
+### Pendientes declarados
+
+- **La invitación no se envía.** El primer administrador queda `invited` con un hash de contraseña
+  inutilizable, pero el correo lo manda `identity.send-invitation` (T-050/T-090 de `specs/010`), que
+  todavía no existe. Hoy hay que darle el acceso por otra vía; **el club no es usable de punta a
+  punta hasta que esa tarea esté**.
+- **La ruta de plataforma se sirve desde cualquier subdominio.** `specs/140` §8 pide **dos**
+  condiciones: el permiso *y* que se sirva desde el dominio de administración, no desde el de un
+  cliente. La primera está; la segunda es de despliegue (`docs/07`) y entra con `specs/140`.

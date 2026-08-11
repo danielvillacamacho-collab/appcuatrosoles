@@ -59,16 +59,7 @@ export class PermissionGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
-    const tenant = req.tenant;
-
-    if (tenant === undefined) {
-      // Error de programación —falta `TenantGuard` antes de éste—, no del usuario. Se responde
-      // como error interno y no como `403`: un `403` mentiría diciendo «no tienes permiso» cuando
-      // lo que pasa es que el servidor no sabe en qué club está parado.
-      throw new Error("PermissionGuard sin tenant: TenantGuard debe correr antes (T-221).");
-    }
-
-    const target = await this.resolverAmbito(declarado, req, tenant.clubId);
+    const target = await this.resolverAmbito(declarado, req);
 
     const asignaciones = await this.prisma.roleAssignment.findMany({
       // Sólo las vigentes: una asignación revocada no otorga nada, y filtrarlo aquí evita que cada
@@ -107,9 +98,25 @@ export class PermissionGuard implements CanActivate {
    */
   private async resolverAmbito(
     declarado: PermisoDeclarado,
-    req: { params?: unknown; body?: unknown },
-    clubId: string,
+    req: ConTenant & { params?: unknown; body?: unknown },
   ): Promise<PermissionTarget> {
+    // Ruta de plataforma: no actúa dentro de ningún club y por lo tanto no necesita tenant.
+    if (declarado.plataforma === true) {
+      return { scope: "platform", scopeId: null, clubId: null };
+    }
+
+    const tenant = req.tenant;
+
+    if (tenant === undefined) {
+      // Error de programación —falta `TenantGuard` antes de éste, o la ruta debía declararse de
+      // plataforma—, no del usuario. Se responde como error interno y no como `403`: un `403`
+      // mentiría diciendo «no tienes permiso» cuando lo que pasa es que el servidor no sabe en
+      // qué club está parado.
+      throw new Error("PermissionGuard sin tenant: falta TenantGuard (T-221) o `{ plataforma: true }`.");
+    }
+
+    const clubId = tenant.clubId;
+
     if (declarado.organizacion === undefined) {
       return { scope: "club", scopeId: clubId, clubId };
     }
