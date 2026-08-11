@@ -67,11 +67,15 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
   > (`a.lospinos.polo.app`) **no se recorta**: recortarlo serviría un club desde una dirección
   > que no es la suya, con las cookies de sesión viajando hasta ahí.
 
-- [ ] **T-212** Catálogo de configuración tipado (`plan.md` §0): clave → ámbito, tipo, valor por
+- [x] **T-212** Catálogo de configuración tipado (`plan.md` §0): clave → ámbito, tipo, valor por
   defecto y fuente documental. Se cargan las claves de `docs/08` que corresponden a módulos ya
   escritos o transversales; las de módulos futuros las agrega cada módulo. Verificación: un test
   recorre el catálogo y exige que toda clave tenga ámbito, tipo y default, y que no haya
-  duplicados.
+  duplicados. ✅ 2026-08-11 — 19 tests, ver `verification.md` §T-212.
+  > El ámbito declarado es el **más específico** en el que se puede fijar la clave: fijarla en uno
+  > más amplio siempre se puede (la plataforma define el default de todos), en uno más específico
+  > no. Y `auth.session_idle_timeout_hours` quedó en `null` —sin cierre por inactividad—, que es lo
+  > que el sistema hace hoy: poner un número anunciaría un comportamiento inexistente.
 
 - [ ] **T-213** `resolveSetting`: dada la lista de valores fijados y un instante, resuelve el
   vigente siguiendo organización → club → plataforma → default (R-020-10) e informa **de dónde

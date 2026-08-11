@@ -302,3 +302,64 @@ parecidos, doble punto, `@`, punycode— que exige que la lista de los que pasar
   inverso, el encabezado tiene que venir de una fuente confiable y configurada explícitamente
   (`plan.md` §5, `docs/07`). Esta función confía en el texto que recibe; quien se lo pasa es quien
   debe garantizar que no lo escribió un cliente.
+
+---
+
+## T-212 — El catálogo de configuración, en código
+
+**Fecha:** 2026-08-11 · 19 tests · dominio al 100 % (162 tests)
+
+Diez claves: las siete de identidad y acceso (`docs/08` §9) y las dos de notificaciones (§10).
+Ninguna de módulos que todavía no existen — un catálogo lleno de claves que nadie lee no es
+previsión, es ruido con apariencia de contrato. Cada módulo agrega las suyas al llegar.
+
+### El ámbito declarado es el más específico, no el único
+
+`auth.*` es de plataforma, `identity.*` es de club. La regla que se desprende: **fijar una clave en
+un ámbito más amplio siempre se puede** —así la plataforma define el default de todos los clubes—
+**y en uno más específico, no**. Una clave de plataforma que cada club pudiera cambiar por su
+cuenta dejaría de ser una regla de la plataforma, y las reglas de la plataforma existen justamente
+porque no son negociables por inquilino.
+
+Ese orden (`platform` < `club` < `organization`) es también la regla de herencia que implementará
+T-213, y está escrito una sola vez.
+
+### Dos declaraciones que dicen la verdad sobre el sistema, no sobre el deseo
+
+- **`auth.session_idle_timeout_hours` vale `null`**, es decir «sin cierre por inactividad». `docs/08`
+  lo deja «por definir», y `SessionGuard` (T-021) no escribe `last_seen_at`, así que no puede medir
+  inactividad. Poner aquí un número —12, 8, lo que fuera— anunciaría un comportamiento que no
+  existe, y alguien lo leería como una garantía de seguridad.
+- **`identity.waiver_renewal_policy` admite un solo valor**, `on_text_change`. No es una omisión: es
+  el único comportamiento implementado (T-013 compara versiones). Listar «anual» prometería algo
+  que el código no hace.
+
+Los dos tienen test propio, para que si mañana alguien implementa el comportamiento, el test le
+recuerde actualizar la declaración.
+
+### Se valida al escribir, nunca al leer
+
+Un valor mal tipado que entra a la base rompe el módulo que lo lee, en producción, lejos de donde
+alguien se equivocó. Al escribir hay una persona mirando la pantalla que puede corregirlo.
+
+Detalles con test: `NaN` e `Infinity` se rechazan aunque JavaScript los considere `number`;
+`toString` y `constructor` no son claves válidas (el catálogo se consulta con `Object.hasOwn`, no
+con `in`, que las daría por existentes); y **el ámbito se comprueba antes que el tipo**, porque con
+el orden inverso un club que intenta cambiar una clave de plataforma con un valor mal escrito
+recibiría «tipo inválido», lo corregiría, y volvería a chocar contra el mismo muro.
+
+### Un detalle de TypeScript que costó una corrección
+
+El catálogo se declara con `as const satisfies`, lo que conserva los tipos literales de cada
+entrada — y entonces `definicion.allowed` no compila, porque no existe en las claves que no lo
+declaran. Se resolvió leyendo el catálogo por el accesor `settingDefinition`, que devuelve el tipo
+ancho. Lo atrapó `pnpm typecheck`: los tests pasaban, porque Vitest no comprueba tipos.
+
+### Pendiente declarado
+
+- **El catálogo declara el default, pero nadie lo lee todavía.** Los consumidores llegan con
+  T-250/T-251 (API) y con las tareas de la sección D de `specs/010` que usen estos valores
+  (T-032 el bloqueo, T-036 el enlace de restablecimiento). Hoy `isInvitationLinkValid` recibe la
+  ventana como parámetro y el llamador la inventará hasta que exista el servicio de configuración.
+- `docs/08` no distingue qué claves ya están en el catálogo y cuáles no. Cuando el catálogo crezca
+  conviene generar esa tabla desde el código, para que no haya dos listas que se contradigan.
