@@ -151,8 +151,13 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > ruta que exige sesión y desconcertante para quien acaba de escribir su contraseña. Ahora el
   > login tiene el suyo, y se comparan **cuatro** formas de fallar, no dos: cuerpo, estado y
   > cabeceras.
-- [ ] **T-032** Bloqueo tras 5 intentos fallidos (`docs/08` `auth.failed_login_lockout_*`).
-  Test con `FixedClock`: al quinto intento bloquea; pasado el tiempo, desbloquea.
+- [x] **T-032** Bloqueo tras 5 intentos fallidos (`docs/08` `auth.failed_login_lockout_*`).
+  Test con `FixedClock`: al quinto intento bloquea; pasado el tiempo, desbloquea. ✅ 2026-08-11 —
+  6 tests, ver `verification.md` §T-032.
+  > **Primer consumidor real del catálogo de configuración** (T-212 de `specs/020`): el umbral y
+  > los minutos salen de `setting`, no de constantes, y hay un test que baja el umbral a 2 y
+  > comprueba que el comportamiento cambia sin desplegar nada. Con esto P-04 deja de cumplirse
+  > sólo en el diseño.
 - [ ] **T-033** Rechazo de login por estado `invited`/`suspended`/`archived` con mensaje
   específico por estado (no el genérico de credenciales).
 - [ ] **T-034** `POST /auth/logout` y `POST /auth/logout-all`. Test: sesión cerrada no sirve

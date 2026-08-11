@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
 import request from "supertest";
-import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from "vitest";
 import { LoginResponse } from "@polo/contracts";
 import { AppModule } from "../../src/app.module.js";
 import { PasswordService } from "../../src/auth/password.service.js";
@@ -68,6 +68,16 @@ describe("Inicio de sesión (T-030, HU-010-04)", () => {
     app.get(ClubDirectory).invalidate();
 
     correo = await crearCuenta("active");
+  });
+
+  beforeEach(async () => {
+    // Los tests de este archivo comparten una cuenta y varios fallan la contraseña a propósito.
+    // Desde T-032 eso la bloquea de verdad —el sistema hace lo que debe— así que se limpia el
+    // contador entre pruebas. El bloqueo tiene su propio archivo, con cuentas propias.
+    await prisma.userAccount.updateMany({
+      where: { email: correo },
+      data: { failedAttempts: 0, lockedUntil: null },
+    });
   });
 
   afterAll(async () => {

@@ -6,6 +6,7 @@ import type { UserAccountStatus } from "@prisma/client";
 import { CLOCK } from "../common/clock/clock.module.js";
 import { PrismaService } from "../common/prisma/prisma.service.js";
 import { crearTokenDeSesion, hashDeTokenDeSesion } from "../common/auth/session-token.js";
+import { SettingsService } from "../settings/settings.service.js";
 import { PasswordService } from "./password.service.js";
 
 /**
@@ -40,6 +41,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly passwords: PasswordService,
+    private readonly settings: SettingsService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -67,6 +69,8 @@ export class AuthService {
         id: true,
         passwordHash: true,
         status: true,
+        failedAttempts: true,
+        lockedUntil: true,
         person: { select: { id: true, fullName: true, clubId: true } },
         roleAssignments: {
           where: { revokedAt: null },
@@ -79,6 +83,18 @@ export class AuthService {
       cuenta === null
         ? await this.gastarElMismoTiempo(contrasena)
         : await this.passwords.verificar(cuenta.passwordHash, contrasena);
+
+    // El bloqueo se comprueba **después** de verificar la contraseña, no antes, y no es un
+    // descuido: comprobarlo antes haría que una cuenta bloqueada respondiera más rápido que una
+    // que no lo está —no paga el costo de Argon2—, y esa diferencia de tiempo es medible desde
+    // afuera. Quien esté probando correos sabría cuáles existen y cuáles acaba de bloquear.
+    if (cuenta !== null && estaBloqueada(cuenta, this.clock.now())) {
+      throw credentialsValid ? cuentaBloqueada() : credencialesInvalidas();
+    }
+
+    if (cuenta !== null && !credentialsValid) {
+      await this.registrarIntentoFallido(cuenta.id, cuenta.failedAttempts);
+    }
 
     const veredicto = resolveLoginOutcome({
       credentialsValid,
@@ -145,6 +161,39 @@ export class AuthService {
   }
 
   /**
+   * Suma un intento fallido y bloquea al llegar al umbral (`docs/08` §9, R-010-06).
+   *
+   * El umbral y la duración salen de la **configuración**, no de constantes: es exactamente el
+   * caso que P-04 describe —el club decide cuán estricto es— y el primer consumidor real del
+   * catálogo de T-212. Son de ámbito de plataforma: un club no negocia la política de bloqueo de
+   * otro.
+   */
+  private async registrarIntentoFallido(cuentaId: string, fallidosPrevios: number): Promise<void> {
+    const umbral = await this.valorNumerico("auth.failed_login_lockout_threshold", 5);
+    const minutos = await this.valorNumerico("auth.failed_login_lockout_minutes", 15);
+    const fallidos = fallidosPrevios + 1;
+
+    await this.prisma.userAccount.update({
+      where: { id: cuentaId },
+      data: {
+        failedAttempts: fallidos,
+        ...(fallidos >= umbral
+          ? { lockedUntil: new Date(this.clock.now().getTime() + minutos * 60_000) }
+          : {}),
+      },
+    });
+  }
+
+  private async valorNumerico(clave: string, respaldo: number): Promise<number> {
+    const resuelto = await this.settings.leer(
+      { scope: "platform", clubId: null, organizationId: null },
+      clave,
+    );
+
+    return typeof resuelto.value === "number" ? resuelto.value : respaldo;
+  }
+
+  /**
    * Verifica la contraseña contra un hash real inservible, para que el tiempo de respuesta sea el
    * mismo exista o no la cuenta. El hash es de una contraseña aleatoria que nadie conoce.
    */
@@ -165,6 +214,24 @@ function credencialesInvalidas(): ApiException {
     HttpStatus.UNAUTHORIZED,
     "Correo o contraseña incorrectos.",
   );
+}
+
+/**
+ * Rechazo de una cuenta bloqueada. **Sólo se le muestra a quien acertó la contraseña**: para
+ * cualquier otro, el bloqueo es indistinguible de una credencial incorrecta (`docs/06` §2). Al
+ * titular legítimo, en cambio, decirle «esperá un rato» es la diferencia entre entender qué pasa y
+ * pensar que perdió su cuenta.
+ */
+function cuentaBloqueada(): ApiException {
+  return new ApiException(
+    "ACCOUNT_LOCKED",
+    HttpStatus.UNAUTHORIZED,
+    "Demasiados intentos fallidos. Espera unos minutos antes de volver a intentar.",
+  );
+}
+
+function estaBloqueada(cuenta: { lockedUntil: Date | null }, ahora: Date): boolean {
+  return cuenta.lockedUntil !== null && cuenta.lockedUntil.getTime() > ahora.getTime();
 }
 
 /**

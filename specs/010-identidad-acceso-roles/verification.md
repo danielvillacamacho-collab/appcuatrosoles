@@ -1253,3 +1253,51 @@ caminos**.
 La función que lo construye está aislada y comentada precisamente para que nadie la haga más
 específica con buena intención: cualquier diferencia —el mensaje, el código, el estado, una
 cabecera— convierte el login en un detector de correos registrados.
+
+---
+
+## T-032 — Bloqueo por intentos fallidos
+
+**Fecha:** 2026-08-11 · 6 tests de integración (213 en total)
+
+Cinco intentos fallidos seguidos bloquean quince minutos. Los dos números salen de `setting`
+(`docs/08` §9), no de constantes: es el **primer consumidor real del catálogo de T-212**, y hay un
+test que baja el umbral a 2 y comprueba que el comportamiento cambia sin desplegar nada. Con esto
+P-04 deja de cumplirse sólo en el diseño.
+
+### A quién se le dice que está bloqueado
+
+Sólo a quien acertó la contraseña. Para cualquier otro, el bloqueo es indistinguible de una
+credencial incorrecta (`docs/06` §2) — si no, bloquear cuentas ajenas sería una forma de averiguar
+cuáles existen. Al titular legítimo, en cambio, decirle «esperá unos minutos» es la diferencia
+entre entender qué pasa y creer que perdió su cuenta.
+
+### El bloqueo se comprueba DESPUÉS de verificar la contraseña
+
+Parece al revés y es deliberado: comprobarlo antes haría que una cuenta bloqueada respondiera más
+rápido —no paga el costo de Argon2— y esa diferencia de tiempo es medible desde afuera. Quien
+estuviera probando correos sabría cuáles existen y cuáles acaba de bloquear.
+
+### El contador se limpia al entrar bien
+
+Sin eso, cuatro errores de tipeo repartidos en un mes acabarían bloqueando a alguien que nunca falló
+dos veces seguidas. Hay un test con **ocho fallos en total** que nunca llegan a cinco seguidos, y
+que entra sin problema.
+
+### El reloj movible, otra vez
+
+«Pasaron dieciséis minutos» se escribe, no se espera: el test sustituye el `CLOCK` inyectado. Es la
+tercera tarea que se apoya en esa decisión de T-021 (las otras son T-220 y las de dominio).
+
+### Lo que este cambio rompió, y por qué está bien
+
+El archivo de tests del login comparte una cuenta y varios casos fallan la contraseña a propósito.
+Con el bloqueo real, esa cuenta empezó a bloquearse de verdad a mitad del archivo — el sistema
+haciendo exactamente lo que debe. Se limpia el contador entre pruebas, y el bloqueo tiene su propio
+archivo con cuentas propias.
+
+### Pendiente declarado
+
+- **No hay límite de tasa por IP** (`docs/03` §3, `429`). El bloqueo protege una cuenta concreta;
+  no protege contra alguien que prueba una contraseña común contra mil correos distintos, que es el
+  ataque simétrico y más habitual. Necesita su propia tarea.
