@@ -138,8 +138,12 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 
 ## D — Autenticación (`auth/`)
 
-- [ ] **T-030** `POST /auth/login`: camino feliz (HU-010-04, cuenta activa). Test de contrato
-  + test de camino feliz.
+- [x] **T-030** `POST /auth/login`: camino feliz (HU-010-04, cuenta activa). Test de contrato
+  + test de camino feliz. ✅ 2026-08-11 — 20 tests, ver `verification.md` §T-030.
+  > **Encontró un agujero de aislamiento**: sin comprobarlo, cualquiera con cuenta en un club podía
+  > iniciar sesión por el subdominio de otro y leer su estructura por las rutas que sólo exigen
+  > sesión. Ahora una cuenta sólo entra donde pertenece. Se decidieron y documentaron además la
+  > duración de la sesión (12 h / 30 días con «recordarme») y los parámetros de Argon2id.
 - [ ] **T-031** `POST /auth/login`: mensaje de error genérico ante credencial incorrecta y
   ante correo inexistente — mismo mensaje en ambos casos (R-010-07). Test que compara los dos
   cuerpos de respuesta byte a byte.

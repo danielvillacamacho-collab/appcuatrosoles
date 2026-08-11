@@ -1149,3 +1149,80 @@ por una razón que no tiene que ver con lo que prueban.
   capa. En el despliegue es obligatorio (`.env.example`, `docs/07`).
 - **La cookie de sesión debe emitirse sin atributo `Domain`** para que no la comparta el resto de
   los subdominios. Es responsabilidad de T-030, y es la otra mitad de esta defensa.
+
+---
+
+## T-030 — `POST /auth/login`
+
+**Fecha:** 2026-08-11 · 20 tests de integración (205 en total)
+
+### El agujero que encontró registrar la ruta
+
+La suite de aislamiento (T-261 de `specs/020`) exige que **toda ruta registrada** declare qué se
+espera de ella cuando la llama alguien de otro club. Al preguntarse eso para `POST /auth/login`
+apareció el problema:
+
+**Cualquiera con cuenta en un club podía iniciar sesión por el subdominio de otro.** No obtendría
+permisos —sus roles son de su club— pero las rutas que sólo exigen sesión (el detalle del club, los
+listados de organizaciones, temporadas y categorías) le habrían quedado abiertas. Un club leyendo
+la estructura de otro con sólo tener una cuenta propia.
+
+Ahora una cuenta entra sólo donde pertenece, y hay tres formas de pertenecer: su persona es de ese
+club, tiene un rol de ámbito de club **ahí** (nuestro personal de servicio, `specs/140` HU-140-03),
+o es `superadmin`. La respuesta al rechazo es la misma que para una contraseña incorrecta: decir
+«tu cuenta no es de este club» confirmaría que existe (P-12). Los dos casos tienen test.
+
+### Las dos decisiones que se tomaron aquí, con su razón
+
+**Duración de la sesión — 12 horas, o 30 días con «recordarme».** No estaba en `docs/08`: lo que sí
+está, y quedó «por definir», es el cierre por *inactividad*. Las 12 horas cubren una jornada del
+administrador y obligan a volver a entrar al día siguiente, que es lo que protege un dispositivo
+compartido —la computadora de la secretaría—. Los 30 días son para quien mira desde su celular si
+quedó cupo el sábado: pedirle contraseña cada vez es lo que hace que la gente vuelva a WhatsApp,
+que es el problema que vinimos a resolver. Si el club pide otra cosa, pasa a ser configuración con
+su clave en `docs/08`.
+
+**Argon2id: 19 MiB, 2 iteraciones, paralelismo 1** — el perfil de OWASP para servidores modestos,
+que es lo que hay (`docs/07`). Se fijan explícitamente y no se deja el default de la librería:
+ese default cambia entre versiones, y un `pnpm update` no debería mover el costo de verificar una
+contraseña sin que nadie lo decida. Están juntos y comentados para que la revisión de la primera
+auditoría sea mirar un archivo.
+
+### Detalles que no se ven pero cambian el resultado
+
+- **El tiempo de respuesta es el mismo exista o no la cuenta.** Si no hay cuenta, igual se verifica
+  la contraseña contra un hash señuelo. Sin eso, la diferencia entre milisegundos y el costo de
+  Argon2 diría qué correos tienen cuenta sin necesidad de leer ninguna respuesta.
+- **`PasswordService.verificar` nunca lanza.** Un hash inservible —el que tienen las cuentas
+  invitadas— haría que `argon2.verify` lanzara, y eso saldría como `500`: distinguible desde afuera
+  de un `401`, y por lo tanto una forma de averiguar qué cuentas tienen contraseña utilizable.
+- **El token no viaja en el cuerpo**, sólo en la cookie `httpOnly`: devolverlo también anularía esa
+  protección, bastaría un XSS. Hay un test que compara la lista exacta de campos de la respuesta.
+- **La cookie de sesión se emite sin atributo `Domain`**, que es la mitad silenciosa de la defensa
+  CSRF: así es de este host y sólo de este host, y el subdominio de otro club no la recibe.
+- **Entrar bien borra el contador de intentos fallidos**, o cuatro errores de tipeo repartidos en un
+  mes acabarían bloqueando a alguien que nunca falló dos veces seguidas.
+
+### La otra mitad de T-025
+
+El login emite la cookie `polo_csrf` que la protección de T-025 esperaba y que nadie ponía. Hay un
+test que comprueba que **el token emitido es exactamente el que el middleware espera**: si no
+coincidieran, el sistema quedaría inusable para un cliente real y ningún test de T-025 lo habría
+notado, porque allá el token se calcula.
+
+### `@RutaPublica`, la excepción que no es un hueco
+
+La comprobación de arranque de T-022 rechazó esta ruta: es mutante y no declara permiso. No podía
+declarar ninguno —iniciar sesión es lo que uno hace *antes* de tener autoridad— así que se agregó
+`@RutaPublica("motivo")`, que **exige el motivo por escrito y falla el arranque si está vacío**. La
+alternativa —dejar que una ruta mutante simplemente no declare nada— habría convertido la
+comprobación de `ADR-014` punto 4 en una formalidad que cualquiera saltea olvidándose.
+
+### Pendientes declarados
+
+- **El bloqueo por intentos fallidos no está** (T-032): el contador se limpia al entrar bien, pero
+  nadie lo incrementa todavía ni comprueba `lockedUntil`.
+- **El mensaje por estado de cuenta** (T-033) tampoco: hoy invitada, suspendida y archivada reciben
+  el mismo `401` genérico. El dominio ya distingue los cuatro motivos desde T-010; falta que el
+  controlador los use **sólo para quien demostró conocer su contraseña**.
+- **No hay `logout`** (T-034) ni límite de tasa (T-032, `docs/03` §3 `429`).

@@ -32,6 +32,16 @@ const BASE = "polo.test";
  * endpoint que lea datos de un club sin haber pensado qué pasa si lo llama otro.
  */
 
+/**
+ * Rutas cuyo aislamiento se prueba en su propio archivo, porque no encaja en el recorrido genérico
+ * de abajo (necesitan un cuerpo válido y propio para significar algo).
+ *
+ * `POST /auth/login` está aquí, y su caso lo cubre `auth-login.int-spec`: **una cuenta de otro club
+ * no entra por este subdominio**. Registrar la ruta en esta suite fue lo que hizo notar que sin esa
+ * comprobación cualquiera con cuenta en un club podía abrir sesión en otro.
+ */
+const CON_TEST_PROPIO = ["POST /auth/login"];
+
 /** Rutas que no operan dentro de un club y por lo tanto no tienen tenant que aislar. */
 const SIN_TENANT = [
   "GET /health",
@@ -143,7 +153,11 @@ describe("Aislamiento de tenant por ruta (T-261, ADR-014 punto 3)", () => {
   });
 
   it("toda ruta registrada está declarada: sin su caso de aislamiento, esto falla", () => {
-    const declaradas = new Set([...SIN_TENANT, ...COBERTURA.map((caso) => caso.ruta)]);
+    const declaradas = new Set([
+      ...SIN_TENANT,
+      ...CON_TEST_PROPIO,
+      ...COBERTURA.map((caso) => caso.ruta),
+    ]);
     const sinDeclarar = rutasRegistradas.filter((ruta) => !declaradas.has(ruta));
 
     expect(sinDeclarar).toEqual([]);
@@ -153,7 +167,7 @@ describe("Aislamiento de tenant por ruta (T-261, ADR-014 punto 3)", () => {
     // El error simétrico. Sin esto, la lista se llena de rutas que ya no existen y deja de decir
     // nada sobre la aplicación real.
     const registradas = new Set(rutasRegistradas);
-    const sobrantes = [...SIN_TENANT, ...COBERTURA.map((caso) => caso.ruta)].filter(
+    const sobrantes = [...SIN_TENANT, ...CON_TEST_PROPIO, ...COBERTURA.map((caso) => caso.ruta)].filter(
       (ruta) => !registradas.has(ruta),
     );
 
