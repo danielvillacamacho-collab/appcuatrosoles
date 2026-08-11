@@ -223,26 +223,31 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 
 ## F — Gestión de usuarios (`users/`)
 
-- [ ] **T-050** `POST /users`: creación por administrador, estado inicial `invited`, encola
+- [x] **T-050** `POST /users`: creación por administrador, estado inicial `invited`, encola
   `identity.send-invitation` en la misma transacción. Test de contrato + HU-010-01 camino
   feliz.
-- [ ] **T-051** `POST /users` — rechazo por correo duplicado (HU-010-01, segundo criterio).
-- [ ] **T-052** `POST /users` — administrador de organización sólo puede asignar roles dentro
+- [x] **T-051** `POST /users` — rechazo por correo duplicado (HU-010-01, segundo criterio).
+- [x] **T-052** `POST /users` — administrador de organización sólo puede asignar roles dentro
   de su organización al crear (usa `canAssignRole` de T-011).
-- [ ] **T-053** `POST /users/:id/invite` (reenvío) — nueva invitación, el enlace anterior deja
+- [x] **T-053** `POST /users/:id/invite` (reenvío) — nueva invitación, el enlace anterior deja
   de ser válido.
-- [ ] **T-054** `GET /users` con filtros (`status`, `role`, `organizationId`, `categoryId`,
+- [x] **T-054** `GET /users` con filtros (`status`, `role`, `organizationId`, `categoryId`,
   `q`) + aislamiento: administrador de organización nunca ve usuarios de otra (HU-010-08,
   segundo criterio) — test de aislamiento explícito.
-- [ ] **T-055** `GET /users/:id` y `PATCH /users/:id`. Test de aislamiento igual que T-054
+- [x] **T-055** `GET /users/:id` y `PATCH /users/:id`. Test de aislamiento igual que T-054
   sobre acceso directo por id (`404`, no `403`, si es de otro ámbito administrable — ver
   `docs/03` §3 tabla de códigos).
-- [ ] **T-056** `POST /users/:id/suspend` y `/reactivate`: suspender revoca todas las sesiones
+- [x] **T-056** `POST /users/:id/suspend` y `/reactivate`: suspender revoca todas las sesiones
   activas de inmediato (test explícito, no basta con cambiar el estado en base de datos).
-- [ ] **T-057** `POST /users/:id/archive` y `/restore`.
-- [ ] **T-058** Auto-protección: `suspend`/`archive`/retirar rol sobre el propio actor →
+- [x] **T-057** `POST /users/:id/archive` y `/restore`.
+- [x] **T-058** Auto-protección: `suspend`/`archive`/retirar rol sobre el propio actor →
   rechazado (R-010-05) sin importar que sea `superadmin`.
-- [ ] **T-059** `GET /users/export`: mismo filtro que el listado, formato Excel/CSV.
+- [x] **T-059** `GET /users/export`: mismo filtro que el listado, formato Excel/CSV.
+  ✅ 2026-08-11 — 19 tests para toda la sección F, ver `verification.md` §F. **Cierra la sección F.**
+  > Tres cosas que la sección destapó: el guard no dejaba trabajar a un administrador de
+  > organización (se agregó ámbito **opcional** y **amplio** al decorador), crear a alguien con rol
+  > de organización no lo **vinculaba** a ella, y cambiar de categoría el mismo día choca con la
+  > restricción de la base — y hace bien.
 
 ## G — Roles (`roles/`)
 

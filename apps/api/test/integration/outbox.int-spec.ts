@@ -14,6 +14,11 @@ import { PrismaService } from "../../src/common/prisma/prisma.service.js";
 import { configurarApp } from "../../src/configure-app.js";
 import { etiqueta } from "../db.js";
 
+/**
+ * El límite del procesador va alto a propósito: los demás archivos de la suite comparten la base y
+ * encolan sus propias invitaciones, así que con el límite por defecto este test podía quedarse sin
+ * llegar a su mensaje. Es un detalle del arnés, no del componente.
+ */
 describe("Bandeja de salida transaccional (T-026, P-11)", () => {
   let app: INestApplication;
   let prisma: PrismaService;
@@ -89,7 +94,7 @@ describe("Bandeja de salida transaccional (T-026, P-11)", () => {
       const email = `${etiqueta("enviado")}@ejemplo.test`;
       await encolarInvitacion(email);
 
-      await procesador.procesarPendientes();
+      await procesador.procesarPendientes(500);
 
       const archivos = await readdir(carpeta);
       const suyo = archivos.find((nombre) => nombre.includes(email));
@@ -105,9 +110,9 @@ describe("Bandeja de salida transaccional (T-026, P-11)", () => {
       const email = `${etiqueta("unavez")}@ejemplo.test`;
       await encolarInvitacion(email);
 
-      await procesador.procesarPendientes();
+      await procesador.procesarPendientes(500);
       const despuesDelPrimero = (await readdir(carpeta)).filter((n) => n.includes(email)).length;
-      await procesador.procesarPendientes();
+      await procesador.procesarPendientes(500);
       const despuesDelSegundo = (await readdir(carpeta)).filter((n) => n.includes(email)).length;
 
       expect(despuesDelPrimero).toBe(1);
@@ -121,7 +126,7 @@ describe("Bandeja de salida transaccional (T-026, P-11)", () => {
       const mailer = app.get<Mailer>(MAILER);
       const espia = vi.spyOn(mailer, "enviar").mockRejectedValueOnce(new Error("SMTP caído"));
 
-      await procesador.procesarPendientes();
+      await procesador.procesarPendientes(500);
 
       const mensaje = await prisma.outboxMessage.findFirstOrThrow({
         where: { payload: { path: ["email"], equals: email } },
@@ -142,7 +147,7 @@ describe("Bandeja de salida transaccional (T-026, P-11)", () => {
         data: { type: "identity.enviar-algo-que-no-existe", payload: { email: "x@y.test" } },
       });
 
-      await procesador.procesarPendientes();
+      await procesador.procesarPendientes(500);
 
       const mensaje = await prisma.outboxMessage.findFirstOrThrow({
         where: { type: "identity.enviar-algo-que-no-existe" },
@@ -159,7 +164,7 @@ describe("Bandeja de salida transaccional (T-026, P-11)", () => {
     const espia = vi.spyOn(mailer, "enviar");
 
     await encolarInvitacion(email);
-    await procesador.procesarPendientes();
+    await procesador.procesarPendientes(500);
 
     const enviado = espia.mock.calls.find((llamada) => llamada[0].para === email)?.[0];
 

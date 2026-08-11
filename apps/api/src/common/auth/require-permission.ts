@@ -13,6 +13,15 @@ export const PERMISO_REQUERIDO = "permiso_requerido";
 export interface AmbitoDeOrganizacion {
   desde: "params" | "body";
   campo: string;
+  /**
+   * El campo puede no venir. Cuando falta, el permiso se evalúa contra el **club** del subdominio.
+   *
+   * Existe para rutas que sirven a los dos casos: crear un usuario con un rol de organización
+   * (ámbito: esa organización) o con uno de club (ámbito: el club). Sin esto, una de las dos
+   * quedaría afuera — y la que quedaba afuera era la del administrador de organización, que es
+   * justo a quien R-010-04 le reconoce autoridad dentro de la suya.
+   */
+  opcional?: true;
 }
 
 export interface OpcionesDePermiso {
@@ -27,6 +36,16 @@ export interface OpcionesDePermiso {
    * de seguridad y tiene que verse en la ruta.
    */
   plataforma?: true;
+  /**
+   * La ruta actúa sobre **muchos** recursos a la vez —un listado, una exportación— y el ámbito de
+   * cada uno no se conoce hasta consultarlos.
+   *
+   * El guard deja pasar a quien tenga el permiso en el club **o en alguna organización de ese
+   * club**, y **acotar el resultado es responsabilidad del servicio**. Es la única forma de que un
+   * administrador de organización pueda listar a su gente sin que el guard tenga que adivinar de
+   * antemano a quién va a devolver la consulta.
+   */
+  ambitoAmplio?: true;
 }
 
 /**

@@ -6,3 +6,4 @@ export * from "./membership.js";
 export * from "./setting.js";
 export * from "./auth.js";
 export * from "./me.js";
+export * from "./user.js";

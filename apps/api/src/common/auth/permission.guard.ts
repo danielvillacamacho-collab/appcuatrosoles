@@ -68,23 +68,62 @@ export class PermissionGuard implements CanActivate {
       select: { role: true, scope: true, scopeId: true },
     });
 
-    const veredicto = hasPermission(
-      {
-        roles: asignaciones.map((asignacion) => ({
-          role: aRolDeDominio(asignacion.role),
-          scope: aAmbitoDeDominio(asignacion.scope),
-          scopeId: asignacion.scopeId,
-        })),
-      },
-      declarado.permission,
-      target,
-    );
+    const actor = {
+      roles: asignaciones.map((asignacion) => ({
+        role: aRolDeDominio(asignacion.role),
+        scope: aAmbitoDeDominio(asignacion.scope),
+        scopeId: asignacion.scopeId,
+      })),
+    };
 
-    if (!veredicto.ok) {
-      throw new ForbiddenException();
+    if (hasPermission(actor, declarado.permission, target).ok) {
+      return true;
     }
 
+    // Ámbito amplio: la ruta devuelve muchos recursos y el ámbito de cada uno se conoce al
+    // consultarlos. Alcanza con tener el permiso en **alguna** organización del club; el servicio
+    // se encarga de que el resultado no salga de ahí.
+    if (declarado.ambitoAmplio === true && (await this.puedeEnAlgunaOrganizacion(actor, declarado, target))) {
+      return true;
+    }
+
+    throw new ForbiddenException();
+
     return true;
+  }
+
+  /**
+   * ¿Tiene el permiso en alguna organización del club? Ver `ambitoAmplio` en el decorador.
+   *
+   * Se comprueba que cada organización sea **del club del subdominio** antes de considerarla: un
+   * rol en una organización de otro club no da autoridad aquí (P-05).
+   */
+  private async puedeEnAlgunaOrganizacion(
+    actor: { roles: { role: RoleName; scope: ScopeKind; scopeId: string | null }[] },
+    declarado: PermisoDeclarado,
+    target: PermissionTarget,
+  ): Promise<boolean> {
+    const suyas = actor.roles
+      .filter((rol) => rol.scope === "organization" && rol.scopeId !== null)
+      .map((rol) => rol.scopeId ?? "");
+
+    if (suyas.length === 0 || target.clubId === null) {
+      return false;
+    }
+
+    const delClub = await this.prisma.organization.findMany({
+      where: { id: { in: suyas }, clubId: target.clubId },
+      select: { id: true },
+    });
+
+    return delClub.some(
+      (organizacion) =>
+        hasPermission(actor, declarado.permission, {
+          scope: "organization",
+          scopeId: organizacion.id,
+          clubId: target.clubId,
+        }).ok,
+    );
   }
 
   /**
@@ -123,6 +162,11 @@ export class PermissionGuard implements CanActivate {
 
     const origen = declarado.organizacion.desde === "params" ? req.params : req.body;
     const organizationId = leerCampo(origen, declarado.organizacion.campo);
+
+    if (organizationId === undefined && declarado.organizacion.opcional === true) {
+      // La ruta sirve a los dos casos y esta petición no trae organización: se evalúa contra el club.
+      return { scope: "club", scopeId: clubId, clubId };
+    }
 
     if (organizationId === undefined) {
       // La ruta declaró que su ámbito sale de un campo que no llegó. Es un error de programación

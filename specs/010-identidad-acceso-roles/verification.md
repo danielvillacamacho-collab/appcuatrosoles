@@ -1648,3 +1648,68 @@ La lista marca cuál es la sesión actual, para que la interfaz no ofrezca «cer
 - **`last_seen_at` no se actualiza**, así que la lista de dispositivos muestra la hora de creación
   como último uso. Es el mismo pendiente que T-021 declaró sobre el cierre por inactividad: entra
   con esa tarea.
+
+---
+
+## Sección F — Gestión de usuarios (T-050 a T-059)
+
+**Fecha:** 2026-08-11 · 19 tests de integración (286 en total)
+
+### El guard no dejaba trabajar a un administrador de organización
+
+Fue el hallazgo grande. `PermissionGuard` evaluaba siempre contra el club, así que un
+`organization_admin` —a quien R-010-04 le reconoce autoridad dentro de la suya— recibía `403` al
+crear usuarios y al listarlos. Se agregaron dos modos al decorador, cada uno para un problema
+distinto:
+
+- **`opcional`** en el ámbito de organización: la ruta sirve a los dos casos. `POST /users` con
+  `organizationId` evalúa contra esa organización; sin él, contra el club. Es lo que permite que un
+  administrador de organización cree a su instructor **sin** poder crear un administrador de club.
+- **`ambitoAmplio`**: la ruta devuelve muchos recursos y el ámbito de cada uno no se conoce hasta
+  consultarlos (listar, exportar). El guard deja pasar a quien tenga el permiso en el club **o en
+  alguna organización de ese club**, y **acotar el resultado es del servicio**. El listado lo hace:
+  quien sólo manda en organizaciones ve únicamente a la gente de las suyas, con test.
+
+### Un rol de organización sin vínculo deja a la persona en el limbo
+
+Crear a alguien con rol de `instructor` no lo hacía miembro de la organización, así que **no
+aparecía en el listado de su propia escuela** y su administrador no podía verlo. El rol dice *qué
+puede hacer*; el vínculo, *dónde está* — y hacen falta los dos. Lo encontró el test de listado por
+organización.
+
+### Cambiar de categoría el mismo día: la base tenía razón
+
+`effective_to > effective_from` y el rango de exclusión `[from, to)` hacen **imposible** cerrar hoy
+una asignación que empezó hoy. En vez de forzarlo, se aceptó lo que la restricción estaba diciendo:
+una asignación que nunca estuvo vigente un día completo no es historia, es una corrección. El mismo
+día se corrige la fila; otro día se cierra y se abre una nueva. Los dos casos tienen test, y el
+segundo comprueba que el club puede responder «con qué categoría jugaba en marzo».
+
+### Lo demás, en orden
+
+| Tarea | Qué quedó probado |
+|---|---|
+| T-050 | Nace `invited`, sin contraseña utilizable, con su invitación encolada **en la misma transacción** |
+| T-051 | Correo duplicado → `409`. Aquí **sí** se dice: quien crea usuarios necesita saber que esa persona ya tiene cuenta |
+| T-052 | Un `organization_admin` otorga `instructor` en la suya y no `club_admin` (R-010-04, vía `canAssignRole`) |
+| T-053 | Reenviar **invalida el enlace anterior**: si el primero se filtró, reenviar tiene que cerrarlo, no sumar un segundo válido |
+| T-054/T-055 | Filtros por estado, rol, organización, categoría y texto; nunca aparece nadie de otro club; acceso directo a un usuario ajeno → `404` |
+| T-056 | Suspender **revoca las sesiones en el acto** — cambiar el estado sin cortarlas deja a la persona trabajando hasta que la suya venza sola |
+| T-057 | Archivar y restaurar conservan la fila y la historia |
+| T-058 | Nadie se suspende ni se archiva a sí mismo, **ni siquiera un superadministrador** |
+| T-059 | CSV con el mismo filtro, y con las comillas escapadas: un nombre con coma no parte la fila |
+
+### La invitación se acepta sin sesión
+
+`POST /auth/invitation/accept` no estaba en las tareas y sin ella el flujo no cierra: quien recibe
+la invitación **todavía no tiene cuenta utilizable**. Define su contraseña con el enlace, la cuenta
+pasa a `active` y entra. El test lo recorre entero, incluido el login final.
+
+### Pendientes declarados
+
+- **El listado no pagina.** `docs/03` §7 exige cursor con límite 25 y máximo 100. Con un club de
+  cien personas no se nota; con mil, sí. Es una tarea propia y conviene hacerla antes de cargar los
+  datos reales.
+- **`treasurer` se asume de ámbito de club** al crear. Es el único rol que vive en dos ámbitos
+  (`docs/06` §4); asignarlo a la tesorería de una organización necesita decirlo explícitamente, y
+  hoy la ruta no tiene cómo.

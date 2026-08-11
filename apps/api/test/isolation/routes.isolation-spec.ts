@@ -64,6 +64,21 @@ const CON_TEST_PROPIO = [
   "POST /me/email-change/confirm",
   "GET /me/sessions",
   "DELETE /me/sessions/:id",
+  // `users.int-spec` cubre el aislamiento de todas éstas: «nunca lista usuarios de otro club»,
+  // «un usuario de otro club responde 404 por acceso directo» y «un administrador de organización
+  // sólo ve a la gente de la suya». El recorrido genérico no sirve aquí porque cada ruta necesita
+  // un cuerpo propio y válido para llegar siquiera al servicio.
+  "GET /users",
+  "GET /users/export",
+  "GET /users/:id",
+  "POST /users",
+  "PATCH /users/:id",
+  "POST /users/:id/invite",
+  "POST /users/:id/suspend",
+  "POST /users/:id/reactivate",
+  "POST /users/:id/archive",
+  "POST /users/:id/restore",
+  "POST /auth/invitation/accept",
 ];
 
 /** Rutas que no operan dentro de un club y por lo tanto no tienen tenant que aislar. */
