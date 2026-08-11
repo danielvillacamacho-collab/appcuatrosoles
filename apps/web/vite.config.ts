@@ -16,6 +16,14 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
+    // Escucha en toda la red local, no sólo en `localhost`: es lo que permite abrir el producto
+    // desde un celular con `pnpm dev:celular` (`docs/10` §3). La prueba que más importa es
+    // «ábrelo en tu teléfono», y sin esto no se podía hacer.
+    host: true,
+    // Vite bloquea por defecto los hosts que no conoce, y aquí llegan por subdominio del club:
+    // `club-demo.192-168-1-50.nip.io`. Se permiten esos dos sufijos y ninguno más — abrirlo del
+    // todo dejaría el servidor de desarrollo contestando a cualquier nombre que apunte a esta IP.
+    allowedHosts: [".localhost", ".nip.io"],
     // Una sola entrada, porque todo el API cuelga de `/api` (ver `configure-app.ts`). Antes había
     // una por recurso, y `/me` capturaba también la ruta `/me/profile` de esta aplicación: la
     // pantalla del perfil devolvía el JSON del API en vez de existir.

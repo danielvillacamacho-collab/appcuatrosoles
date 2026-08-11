@@ -388,6 +388,14 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > anotado «pendiente» en esas cuatro filas habría dado el módulo por terminado sin estarlo.
 - [ ] **T-111** Demostración en staging desde un celular real (`docs/10` §3 punto 4) antes de
   continuar con el módulo 020.
+  > **Desbloqueada 2026-08-11: ya no hace falta staging.** `pnpm dev:celular` sirve el producto en
+  > la red local y lo abre en el teléfono sin instalar nada en él (`docs/10` §3.1). Lo que faltaba
+  > no era el despliegue: era que `club-demo.localhost` no resuelve fuera del computador, y el club
+  > se resuelve por subdominio (`ADR-013`).
+  > De paso apareció que **`pnpm dev` no funcionaba**: el API arrancaba sin `DATABASE_URL` y moría
+  > en la primera consulta. Un proyecto recién clonado no corría con el comando que documenta su
+  > propio `CLAUDE.md`.
+  > La tarea sigue abierta porque **la hace una persona**: mirar, tocar, y decir si se siente bien.
 
 ## M — Interfaz *(agregada 2026-08-11 — `plan.md` §9)*
 

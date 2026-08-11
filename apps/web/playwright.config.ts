@@ -11,7 +11,16 @@ import { defineConfig, devices } from "@playwright/test";
  * el servidor resuelve el tenant (`ADR-013`), así que un E2E que entrara por `localhost` a secas
  * probaría un camino que no existe en producción.
  */
-const SUBDOMINIO = "http://club-demo.localhost:5173";
+/**
+ * El dominio base **sigue al del entorno**, no está fijo.
+ *
+ * Con `pnpm dev:celular` corriendo, los servidores levantados resuelven el club contra otro dominio
+ * (`192-168-1-51.nip.io`), y como en desarrollo Playwright los reusa, un `baseURL` fijo entraba por
+ * un subdominio que ese API no reconoce: la página cargaba y toda consulta respondía 404. El
+ * síntoma no decía nada sobre la causa.
+ */
+const DOMINIO = process.env.BASE_DOMAIN ?? "localhost";
+const SUBDOMINIO = `http://club-demo.${DOMINIO}:5173`;
 
 export default defineConfig({
   testDir: "./e2e",

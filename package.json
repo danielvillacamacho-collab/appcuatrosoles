@@ -9,6 +9,7 @@
   "packageManager": "pnpm@9.12.0",
   "scripts": {
     "dev": "turbo run dev",
+    "dev:celular": "node scripts/dev-celular.mjs",
     "build": "turbo run build",
     "test": "turbo run test",
     "test:cov": "turbo run test:cov",

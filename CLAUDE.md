@@ -88,6 +88,7 @@ imprescindible. Lee `docs/10-operating-manual-solo.md`.
 
 ```bash
 pnpm dev            # api + web + worker en watch
+pnpm dev:celular    # lo mismo, accesible desde un teléfono en el mismo wifi (docs/10 §3.1)
 pnpm test           # unit + integration
 pnpm test:cov       # con umbrales de cobertura
 pnpm test:e2e       # flujos críticos: API (Testcontainers) + navegador (Playwright)

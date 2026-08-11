@@ -62,9 +62,37 @@ pueden ver sin entender la implementación:
    agregando una excepción, eso es una regresión disfrazada. Está prohibido.
 3. **¿El diff toca sólo lo de la tarea?** Archivos inesperados = alcance descontrolado.
 4. **¿Funciona en el celular?** Abre la pantalla en tu teléfono. Es la prueba que ninguna
-   automatización reemplaza y la que más importa en este producto.
+   automatización reemplaza y la que más importa en este producto. Ver §3.1: hay un comando.
 5. **¿Puedes explicar en una frase qué hace el cambio?** Si no puedes, pídele al agente que
    te lo explique. Si su explicación no coincide con la tarea, algo se desvió.
+
+### 3.1. Cómo abrirlo en el teléfono
+
+```bash
+pnpm dev:celular
+```
+
+Imprime una dirección como `http://club-demo.192-168-1-51.nip.io:5173` y la abres en el teléfono,
+**conectado al mismo wifi**. No hay que instalar ni configurar nada en el celular.
+
+Por qué hace falta un comando en vez de escribir la IP a mano: el club se resuelve por
+**subdominio** (`ADR-013`), y `club-demo.localhost` sólo existe dentro del computador. `nip.io` es
+un DNS público que devuelve la IP escrita en el propio nombre, así que `club-demo.192-168-1-51.nip.io`
+resuelve desde cualquier dispositivo con internet. Es una herramienta de desarrollo: no entra en
+producción ni en CI.
+
+Antes de la primera vez, con Docker levantado:
+
+```bash
+pnpm db:migrate:deploy && pnpm db:seed
+```
+
+La cuenta de ejemplo es `admin@club-demo.test` con contraseña `demo1234`. **Los correos no salen a
+internet**: se escriben como `.html` en `apps/api/.correos` y se abren desde el computador (`ADR-008`
+— SES entra con el despliegue). Así se prueba una invitación completa sin depender de AWS.
+
+Si el teléfono no carga nada, casi siempre es el cortafuegos de macOS bloqueando las conexiones
+entrantes al proceso de Node.
 
 ---
 

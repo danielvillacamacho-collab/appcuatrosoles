@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "nest start --watch",
+    "dev": "dotenv -e ../../.env -- nest start --watch",
     "build": "nest build -p tsconfig.build.json",
     "start": "node dist/main.js",
     "test": "vitest run",
@@ -39,6 +39,7 @@
     "@types/node": "^26.2.0",
     "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^2.1.0",
+    "dotenv-cli": "^11.0.0",
     "prisma": "^6.19.3",
     "supertest": "^7.0.0",
     "testcontainers": "^10.13.0",

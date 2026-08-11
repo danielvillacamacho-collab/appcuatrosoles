@@ -2391,3 +2391,47 @@ tests de un lado solo —por buenos que sean— no ven lo que pasa entre dos lad
 - **La foto de perfil** — el contrato acepta `photoKey` y no hay dónde subir el archivo.
 - **Editar la ficha y otorgar roles desde ella** — el API lo soporta; la pantalla sólo lee y retira.
 - **Los E2E de navegador corren contra el servidor de desarrollo**, no contra el build.
+
+---
+
+## T-111 — Desbloqueada: probar en un celular real, sin staging
+
+**Fecha:** 2026-08-11
+
+La tarea decía «demostración **en staging** desde un celular real». Al ir a hacerla aparecieron dos
+cosas, y ninguna era el despliegue.
+
+### `pnpm dev` no funcionaba
+
+El API arrancaba sin `DATABASE_URL` y moría en la primera consulta. **Un proyecto recién clonado no
+corría con el comando que documenta su propio `CLAUDE.md`** — lo que había estado pasando es que
+cada quien lo levantaba a mano con `dotenv -e .env`. Ahora el script del API carga el `.env` de la
+raíz, igual que los de base de datos.
+
+### Y `club-demo.localhost` no existe fuera del computador
+
+Es lo que hacía imposible la prueba, no la falta de un servidor en la nube: el club se resuelve por
+**subdominio** (`ADR-013`), y un teléfono no puede resolver `.localhost`. Editarle el archivo de
+hosts a un iPhone no es una opción.
+
+`pnpm dev:celular` (`docs/10` §3.1) calcula la IP de la máquina en la red local y sirve el producto
+en `http://club-demo.192-168-1-51.nip.io:5173`. `nip.io` es un DNS público que devuelve la IP
+escrita en el propio nombre, así que **no hay que instalar ni configurar nada en el teléfono**. Es
+una herramienta de desarrollo: no entra en producción ni en CI.
+
+Hizo falta declarar `BASE_DOMAIN` y `WEB_PORT` en la tarea `dev` de `turbo.json`: turbo corre en
+modo estricto y filtra el entorno, así que la variable no llegaba al API. El síntoma era el peor
+posible — la página cargaba y **toda** consulta respondía 404, sin nada que apuntara a la causa.
+
+De paso, el `baseURL` de Playwright ahora sigue a `BASE_DOMAIN` en vez de estar fijo: con
+`dev:celular` levantado, los E2E reusaban esos servidores y entraban por un subdominio que ese API
+no reconocía.
+
+### Lo que sigue siendo de una persona
+
+**Mirar, tocar y decir si se siente bien.** Eso no lo hace ninguna automatización, y es el punto 4
+de `docs/10` §3. La tarea queda abierta a propósito.
+
+Todo se puede probar sin AWS: la cuenta de ejemplo es `admin@club-demo.test` / `demo1234`, y los
+correos —invitaciones y restablecimientos incluidos— se escriben como `.html` en `apps/api/.correos`
+(`ADR-008`; SES entra con el despliegue).
