@@ -210,8 +210,13 @@ pantalla de ingreso **para** saber que estoy en el lugar correcto antes de escri
 
 ## 7. Datos
 
-`club`, `organization`, `season`, `setting`, `setting_definition`, y la relación de las tablas ya
-existentes de 010 con `club` (`docs/02` §A). Esta versión **agrega las llaves foráneas que 010
+`club`, `organization`, `season`, `setting`, y la relación de las tablas ya existentes de 010 con
+`club` (`docs/02` §A).
+
+> **Corregido al escribir `plan.md`:** este apartado listaba también una tabla `setting_definition`
+> para el catálogo de claves. Se descartó — el catálogo vive en código, porque agregar una clave es
+> siempre un cambio de código (alguien tiene que leerla), y una clave creable desde la base sin
+> código que la consuma es configuración que no aplica nada. Ver `plan.md` §0. Esta versión **agrega las llaves foráneas que 010
 dejó pendientes**: `person.club_id`, `person_organization.club_id` y `.organization_id`,
 `commissioner_delegation.club_id`, hoy texto libre sin integridad referencial — está anotado como
 entregable de este módulo en el propio `schema.prisma`.
