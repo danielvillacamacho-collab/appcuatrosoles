@@ -53,16 +53,29 @@ por salir.
   `SELECT tstzrange(x,x) && …` en PostgreSQL confirmó que la base responde `false`. Sin tratarlo
   aparte, la aplicación y la base discrepaban **justo donde el comentario prometía que no**.
 
-- [ ] **T-411** `cabeEnElHorario(rango, horario)` — R-040-06, con el horario como parámetro y no
+- [x] **T-411** `cabeEnElHorario(rango, horario)` — R-040-06, con el horario como parámetro y no
   como constante (P-04).
   Verificación: dentro entra; empezar antes de la apertura no; terminar después del cierre no;
   exactamente en el borde de apertura y de cierre **sí** entra.
+  ✅ 2026-08-11 — 17 tests. Devuelve el motivo y no un booleano: «el club abre a las 6:00» y «el
+  club cierra a las 18:00» son mensajes distintos, y con un booleano quien llama tendría que
+  recalcular cuál fue.
+  > **La zona horaria entra como parámetro**, y hay un test que compara el mismo instante contra dos
+  > clubes en husos distintos. Con `getHours()` una práctica de las 4:00 p.m. en Bogotá se leería
+  > como las 9:00 p.m. — y el fallo aparecería sólo en producción, donde el servidor corre en UTC.
+  > `leerHorario` valida el formato en vez de confiar: `"6-18"` produce `NaN` y comparaciones que
+  > **siempre dan falso**, así que el club no podría programar nada y nada en pantalla lo explicaría.
 
-- [ ] **T-412** `puedeVerElDetalle(evento, quienMira)` — R-040-07 como función pura.
+- [x] **T-412** `puedeVerElDetalle(evento, quienMira)` — R-040-07 como función pura.
   Verificación: los seis casos, cada uno con su nombre en español — participante, creador, evento
   público, evento privado ajeno, evento público ajeno, y **sin sesión**. El caso «sin sesión» existe
   porque `GET /calendar` va a estar detrás del guard hoy, y el día que alguien lo abra al público la
   regla ya está decidida y probada.
+  ✅ 2026-08-11 — 8 tests. **Cierra la sección B**, con `scheduling` al 100 % de líneas y ramas.
+  > A la función entra lo mínimo para decidir: visibilidad y quién lo creó. No sabe de qué tipo es
+  > el evento ni a qué práctica pertenece — cuanto menos entra, menos puede filtrarse por descuido.
+  > Un test comprueba que **ser del mismo club no alcanza**: si pertenecer bastara, el calendario
+  > publicaría las clases particulares de todo el mundo entre sí.
 
 ## C — El servicio de reservas, que es el que van a usar los demás módulos
 

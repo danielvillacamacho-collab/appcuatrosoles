@@ -23,3 +23,5 @@ export * from "./tenant/resolveTenant.js";
 export * from "./settings/catalog.js";
 export * from "./settings/resolveSetting.js";
 export * from "./scheduling/overlap.js";
+export * from "./scheduling/operatingHours.js";
+export * from "./scheduling/calendarPrivacy.js";
