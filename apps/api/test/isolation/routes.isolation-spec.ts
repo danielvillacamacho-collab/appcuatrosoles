@@ -90,6 +90,9 @@ const CON_TEST_PROPIO = [
   "GET /waivers/current",
   "POST /waivers",
   "POST /waivers/current/accept",
+  // `audit-log.int-spec` → «nunca muestra auditoría de otro club» y «un administrador de
+  // organización sólo ve lo de su gente».
+  "GET /audit-log",
 ];
 
 /** Rutas que no operan dentro de un club y por lo tanto no tienen tenant que aislar. */

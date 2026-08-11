@@ -1811,3 +1811,38 @@ del mismo día que impuso la base. No se duplicó aquí.
 - **El job de integridad no está programado.** La función existe y tiene test, pero nadie la corre
   a diario: eso es `pg-boss` (ADR-012), que sigue sin montarse. Es la misma dependencia que la
   purga de sesiones y la de mensajes enviados; conviene resolverlas juntas.
+
+---
+
+## Sección I — Auditoría (T-080, T-081)
+
+**Fecha:** 2026-08-11 · 8 tests de integración (311 en total)
+
+### El recorte del administrador de organización se hace por la gente
+
+`audit_log` **no guarda a qué organización pertenece cada fila**, y no podría: audita cualquier
+entidad del sistema, no sólo personas. Así que «su ámbito» se lee con los datos que existen — ve lo
+que **hicieron los suyos** y lo que **se hizo sobre los suyos**. Está anotado en el código porque el
+día que haya entidades de organización que no sean personas, habrá que ampliarlo.
+
+El guard usa `ambitoAmplio`: comprueba que tenga `audit.view` en algún lado del club, y **qué filas
+son suyas lo decide el servicio**. Es el mismo patrón que el listado de usuarios.
+
+### No hay ruta para escribir ni para borrar
+
+La tabla es append-only por triggers desde T-004 y sólo la escribe el interceptor de T-023. Una ruta
+de escritura sería la forma de convertir el registro en algo que alguien puede maquillar; hay un test
+que comprueba que no existe.
+
+### T-081 recorre las cinco acciones de R-010-11 en una sola prueba
+
+Crear, editar, suspender, reactivar, archivar y otorgar rol sobre **la misma persona**, y después
+cuenta: **exactamente una fila por acción, ni cero ni dos**. Cero significaría que se perdió el
+rastro; dos, que aparece un cambio que no ocurrió. Un segundo test comprueba lo simétrico: una
+acción **rechazada** no deja ninguna fila.
+
+### Pendiente declarado
+
+- **El listado tiene tope duro de 200 y no pagina.** Es el mismo pendiente que el listado de
+  usuarios (`docs/03` §7 pide cursor). En auditoría se nota antes, porque crece con cada acción del
+  club y nunca se borra.

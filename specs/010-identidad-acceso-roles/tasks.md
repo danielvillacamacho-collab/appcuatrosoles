@@ -285,10 +285,14 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 
 ## I — Auditoría
 
-- [ ] **T-080** `GET /audit-log` con filtros y aislamiento por ámbito del solicitante
+- [x] **T-080** `GET /audit-log` con filtros y aislamiento por ámbito del solicitante
   (`organization_admin` sólo ve auditoría de su organización).
-- [ ] **T-081** Test transversal: cada acción de la lista de R-010-11 (crear, suspender,
+- [x] **T-081** Test transversal: cada acción de la lista de R-010-11 (crear, suspender,
   archivar, asignar/retirar rol) deja **exactamente una** fila de auditoría, ni cero ni dos.
+  ✅ 2026-08-11 — 8 tests, ver `verification.md` §I. **Cierra la sección I.**
+  > El recorte para un `organization_admin` se hace **por la gente**, no por la fila: `audit_log`
+  > no guarda organización —no podría, audita cualquier entidad— así que ve lo que hicieron los
+  > suyos y lo que se hizo sobre los suyos.
 
 ## J — Notificaciones del módulo base
 
