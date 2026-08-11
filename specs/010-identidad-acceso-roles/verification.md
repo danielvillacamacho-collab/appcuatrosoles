@@ -1013,3 +1013,77 @@ se estaba midiendo.
   el arranque garantiza es que la ruta **declare** su permiso, no que tenga el guard montado.
   Cuando exista el primer controlador de negocio conviene registrarlos como `APP_GUARD` globales
   con una excepción explícita para las rutas públicas, y ahí la garantía pasa a ser completa.
+
+---
+
+## T-023 — `AuditInterceptor`: el rastro se escribe solo, o no existe
+
+**Fecha:** 2026-08-10 · 8 tests de integración · cobertura del API al 86,8 % (61 tests)
+
+Cierra la sección C salvo T-020. El criterio de la tarea era **exactamente una fila** por mutación
+marcada, y está probado literalmente: ni cero (se perdió el rastro) ni dos (aparece un cambio que
+nunca ocurrió).
+
+### Qué es automático y qué no puede serlo
+
+| Dato | De dónde sale |
+|---|---|
+| quién | `sessionUser` de la sesión; nulo si actuó el sistema |
+| cuándo | `occurred_at`, de la base |
+| en qué club | el tenant de la solicitud |
+| `requestId` | el mismo que recibió el cliente y que loguea Pino |
+| sobre qué entidad | lo anotado por el servicio → el `id` de la respuesta → el `:id` de la ruta |
+| el **después** | la respuesta del manejador |
+| el **antes** | lo aporta el servicio con `anotarEstadoPrevio` |
+
+El «antes» es el único que **no se puede inferir**, y conviene entender por qué antes de que a
+alguien le parezca una omisión: leerlo de forma genérica exigiría que el interceptor supiera qué
+tabla y qué identificador consultar para cada acción, y una consulta adivinada en la ruta caliente
+—que además duplica lecturas— es peor que una línea explícita en el servicio, que ya tiene la fila
+en la mano.
+
+Si el identificador de la entidad no aparece por ninguna de las tres vías, **falla**. Una fila de
+auditoría que no sabe sobre qué entidad fue no responde la única pregunta que la auditoría existe
+para responder, y escribirla igual con un valor vacío es peor que no escribirla: parece que hay
+rastro.
+
+### Sólo se audita lo que ocurrió
+
+Una mutación que falla no deja fila. Un registro con un intento fallido por línea deja de servir
+para «¿qué le pasó a esta cuenta?» y pasa a ser un log de tráfico, donde encontrar el cambio real
+entre cien rechazos es exactamente el trabajo que la auditoría debería ahorrar. Los intentos
+rechazados son otra cosa —seguridad, no historia— y ya viven en el log de Pino con su `requestId`.
+
+### Lo que entra ahí no se puede corregir nunca
+
+`audit_log` es append-only por triggers (P-07, T-004), así que un secreto que se cuele queda para
+el resto de la vida del sistema —ni el superusuario de la base puede quitarlo—. Por eso la limpieza
+va **antes** de escribir y **por nombre de campo** (`password`, `passwordHash`, `token`,
+`tokenHash`, `ipHash`), no confiando en que ningún servicio lo pase por descuido. Hay un test cuyo
+controlador devuelve deliberadamente un `passwordHash` en la respuesta y exige que no aparezca en
+la fila — y que el resto del contenido sí.
+
+Otro test vuelve a comprobar, ya desde la aplicación real y no desde `psql`, que la fila escrita no
+se puede modificar ni borrar: es la garantía de T-004 verificada por el camino por el que de verdad
+va a llegar el dato.
+
+### Un hallazgo, cortesía de T-022
+
+La primera corrida de este test **no arrancó**: el controlador de prueba tenía rutas `POST` sin
+`@RequirePermission()` y la comprobación de arranque lo rechazó. Funcionó exactamente como debía, y
+sobre código escrito una hora después que ella. Vale como evidencia de que el control no es
+decorativo: alcanza a todo el que registre una ruta mutante, incluidos los tests.
+
+### Pendientes declarados
+
+- **La fila se escribe fuera de la transacción del cambio.** Si el proceso muere entre el `COMMIT`
+  del cambio y el `INSERT` de la auditoría, el cambio queda sin rastro. `docs/03` §9 prescribe el
+  interceptor global y así está implementado, pero cuando exista el primer servicio con transacción
+  propia (T-050) hay que evaluar mover el `INSERT` adentro. Hoy, si el `INSERT` falla, la respuesta
+  falla con él: se prefiere que el operador se entere a perder la traza en silencio.
+- **`onBehalfOfId` no se llena todavía**: la actuación por delegación (subcomisario) llega con el
+  módulo deportivo. La columna existe y el interceptor la dejará poner por la misma vía que el
+  «antes».
+- **El interceptor no se aplica solo**: va con `@UseInterceptors(AuditInterceptor)`. Cuando los
+  guards pasen a ser globales (ver T-022b), este debería acompañarlos — y ahí T-081 (cada acción de
+  R-010-11 deja exactamente una fila) se vuelve comprobable de punta a punta.

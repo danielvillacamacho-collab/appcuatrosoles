@@ -115,9 +115,13 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > NestJS: **(a)** `hasPermission` y la matriz de `docs/06` §4 en `packages/domain` — 21 tests,
   > ver `verification.md` §T-022a; **(b)** el decorador, el guard y la comprobación de arranque —
   > 16 tests, ver `verification.md` §T-022b.
-- [ ] **T-023** `AuditInterceptor` + `@Auditable()`: registra automáticamente antes/después en
+- [x] **T-023** `AuditInterceptor` + `@Auditable()`: registra automáticamente antes/después en
   mutaciones marcadas. Verificación: una mutación de prueba genera exactamente una fila en
-  `audit_log`.
+  `audit_log`. ✅ 2026-08-10 — 8 tests de integración, ver `verification.md` §T-023.
+  > El «antes» **no se puede inferir**: leerlo de forma genérica exigiría que el interceptor supiera
+  > qué tabla consultar para cada acción. Lo aporta el servicio con `anotarEstadoPrevio`, y todo lo
+  > demás —quién, cuándo, en qué club, con qué `requestId`, sobre qué entidad— sí es automático.
+  > Con esto **cierra la sección C salvo T-020**, que sigue bloqueada.
 - [x] **T-024** Filtro global de excepciones → formato de error único de `docs/03` §2, con
   `requestId` (Pino) en cada respuesta de error. ✅ 2026-08-10 — 12 tests, ver
   `verification.md` §T-024.
