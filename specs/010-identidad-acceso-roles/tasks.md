@@ -384,18 +384,53 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 
 ### M.1 — Los cimientos (sin ellos, cada pantalla los inventaría por su cuenta)
 
-- [ ] **T-120** `lib/api-client.ts`: un solo lugar que habla con el API — `credentials: "include"`,
+- [x] **T-120** `lib/api-client.ts`: un solo lugar que habla con el API — `credentials: "include"`,
   la cabecera de CSRF en toda mutación, y traducción del error de contrato a un tipo propio con su
   `code`. Tests: manda la cabecera, la omite en `GET`, y un `401` se distingue de un `422`.
   > Que el CSRF viva aquí y no en cada `useMutation` es la diferencia entre un olvido imposible y un
   > `403` incomprensible en producción.
-- [ ] **T-121** `lib/query-keys.ts` + proveedores en `__root.tsx` (Query, Router, tokens de marca).
+  ✅ 2026-08-11 — 14 tests. Tres cosas que quedaron encerradas aquí y no se pueden olvidar:
+  > `credentials: "include"` (sin él la aplicación entera sale anónima y el `401` no se explica
+  > solo), la cabecera de CSRF en toda mutación, y `204` sin intentar parsear un cuerpo vacío.
+  > `NetworkError` es una clase aparte de `ApiError` porque lo que se le dice a la persona es
+  > distinto —«revisa tu conexión» y no «no tienes permiso»— y porque reintentar tiene sentido en
+  > uno y no en el otro. `AbortError` se deja pasar tal cual: cancelar no es fallar.
+- [x] **T-121** `lib/query-keys.ts` + proveedores en `__root.tsx` (Query, Router, tokens de marca).
   Tests: la aplicación monta y muestra la pantalla de ingreso.
-- [ ] **T-122** Traducción `código de error → texto en español` en `i18n/es-CO.ts`, con caída a un
+  ✅ 2026-08-11 — 9 tests. Rutas por archivo con `@tanstack/router-plugin`; `routeTree.gen.ts` **se
+  versiona**, porque generarlo en CI es un paso más que puede fallar distinto de como falla en la
+  máquina de quien programa.
+  > Las cuatro decisiones de TanStack Query están probadas, no comentadas: **un error del API no se
+  > reintenta** (un `403` no mejora repitiéndolo), un fallo de red sí una vez, **ninguna mutación se
+  > reintenta** —repetir un `POST` que quizá llegó crea dos usuarios, dos cobros, dos
+  > inscripciones— y `staleTime` corto, porque ver una lista vieja de inscritos es peor que una
+  > consulta de más.
+  > La pantalla de ingreso es T-124; el test de esta tarea comprueba que el árbol de rutas monta.
+- [x] **T-122** Traducción `código de error → texto en español` en `i18n/es-CO.ts`, con caída a un
   texto genérico **y aviso en consola** para los códigos sin traducir. Test: cada código que hoy
   devuelve el API tiene su texto.
-- [ ] **T-123** Tokens de marca de `docs/04` §1 en `packages/ui/tokens.css` + Tailwind 4 configurado.
+  ✅ 2026-08-11 — 10 tests. La lista de códigos vive en `packages/contracts` (`CODIGOS_DE_ERROR`)
+  porque **es el contrato**: `docs/03` §2 declara el `code` estable y ramificable por el cliente.
+  Agregar uno al API sin traducirlo rompe el test a propósito — ya atrapó a `METHOD_NOT_ALLOWED`.
+  > **El `message` del API no se muestra nunca.** Está en español y es correcto, pero se escribió
+  > sin saber en qué pantalla iba a aparecer —«La operación no cumple una regla del club» es cierto
+  > y no le sirve a nadie que está tratando de entrar— y vive fuera de `es-CO.ts`, donde el club no
+  > puede revisarlo.
+  > Un test comprueba que el texto de `CREDENTIALS_INVALID` **no** distingue «no existe» de
+  > «contraseña mala»: el API responde un solo código a propósito (R-010-07, P-12), y separar los
+  > textos aquí desharía esa protección desde el frontend.
+- [x] **T-123** Tokens de marca de `docs/04` §1 en `packages/ui/tokens.css` + Tailwind 4 configurado.
   Test: el bundle no trae un color hex suelto fuera de ese archivo.
+  ✅ 2026-08-11 — 3 tests. **Tailwind no estaba conectado**: el andamiaje traía `@import
+  "tailwindcss"` sin `@tailwindcss/vite`, así que producía CSS y **ninguna utilidad**. Una clase
+  como `bg-cream` no daba error, no aparecía en ningún log y el componente salía sin fondo. Se vio
+  al mirar el CSS compilado, no al correr los tests.
+  > Los tokens pasaron de `:root` a `@theme`, que es lo que Tailwind lee para generar las
+  > utilidades además de publicar las variables. El CSS del build bajó de 21 KB a 5 KB, porque
+  > recién ahí empezó a descartar lo que no se usa.
+  > El test recorre los archivos de `apps/web` buscando `#hex`, `rgb(` y `hsl(`: sin él la regla de
+  > `docs/04` §1 es una recomendación, y basta un `#fff` apurado para que el día que un club cargue
+  > su propio color (`specs/140` HU-140-04) la pantalla quede a medio pintar.
 
 ### M.2 — El recorrido de T-100, que es por donde entra todo el mundo
 

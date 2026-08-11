@@ -2,8 +2,14 @@
  * docs/04-frontend-conventions.md §1 — extraído del brandbook (docs/brand/brandbook_text.txt),
  * no inventado. Un color nuevo se agrega primero aquí, con su justificación en docs/04,
  * antes de usarse en un componente.
+ *
+ * **Va en `@theme` y no en `:root`, y la diferencia importa** (T-123): Tailwind 4 lee este bloque
+ * y genera con él las utilidades —`bg-cream`, `text-ink`, `font-sans`—, además de publicar cada
+ * token como variable CSS igual que antes. Con `:root` a secas, las variables existirían y las
+ * clases **no**: un componente que escribiera `bg-cream` no daría error, no aparecería en ningún
+ * log y simplemente saldría sin fondo. Ya pasó una vez.
  */
-:root {
+@theme {
   /* Colores de marca — Cuatro Soles Brand Guidelines 2025 */
   --color-coquelicot: #f64a1f;
   --color-brunswick: #224331;
@@ -23,6 +29,9 @@
   --font-sans: "Montserrat", system-ui, sans-serif;
   --tracking-title: 0.15em;
 
-  /* Objetivo táctil mínimo (docs/04 §2) */
-  --tap-target-min: 44px;
+  /*
+   * Objetivo táctil mínimo (`docs/04` §2): 44 px, sin excepción. Como token y no como número
+   * suelto para que `min-h-tap` sea lo natural de escribir y nadie tenga que acordarse del valor.
+   */
+  --spacing-tap: 44px;
 }

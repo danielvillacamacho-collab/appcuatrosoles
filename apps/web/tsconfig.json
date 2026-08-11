@@ -5,7 +5,9 @@
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "noEmit": true
+    "noEmit": true,
+    // `import.meta.env` y los tipos de los assets que resuelve Vite.
+    "types": ["vite/client"]
   },
   "include": ["src"]
 }

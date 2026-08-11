@@ -1,5 +1,20 @@
+/*
+ * El orden importa: primero Tailwind, después los tokens de marca.
+ *
+ * `tokens.css` declara un bloque `@theme`, que es lo que Tailwind lee para generar las utilidades
+ * de color y tipografía. Importarlo antes dejaría el bloque sin quien lo interprete.
+ */
 @import "tailwindcss";
+@import "@polo/ui/src/tokens.css";
+
+/*
+ * Tailwind rastrea las clases que encuentra en los archivos del proyecto. `packages/ui` está
+ * fuera de `apps/web`, así que hay que nombrarlo: sin esto, los componentes compartidos saldrían
+ * sin estilos y sólo en el build de producción, donde se descarta lo que no se ve usado.
+ */
+@source "../../../packages/ui/src";
 
 body {
   margin: 0;
+  font-family: var(--font-sans);
 }
