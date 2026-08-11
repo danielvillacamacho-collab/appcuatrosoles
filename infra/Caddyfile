@@ -1,14 +1,63 @@
-# docs/07-deployment-ec2.md §3. TLS automático por host — sin certbot, sin cron de renovación.
-# {$CLUB_DOMAIN} se define en el entorno de la EC2; localmente se usa localhost.
+# Caddy del servidor (`docs/07` §3). TLS automático, sin certbot ni cron de renovación.
+#
+# **Un bloque comodín y no uno por club.** Cada club entra por su propio subdominio
+# (`lospinos.dev.cuatrosoles.co`) y el servidor decide de qué club son los datos leyendo ese nombre
+# (`ADR-013`). Con un bloque por host habría que editar este archivo y recargar Caddy cada vez que
+# se da de alta un club — exactamente lo que el producto está diseñado para no necesitar.
+#
+# `BASE_DOMAIN` es el mismo valor que recibe el API: si los dos no coinciden, Caddy sirve el sitio y
+# el API responde 404 a todo, que es el fallo más desconcertante posible.
 
-{$CLUB_DOMAIN:localhost} {
+*.{$BASE_DOMAIN} {
+	# **El comodín obliga a validar por DNS.** Let's Encrypt no emite certificados comodín por
+	# validación HTTP, así que Caddy escribe un registro TXT temporal en Route 53, espera y lo
+	# borra. De ahí que la imagen lleve el módulo `route53` (ver `caddy.Dockerfile`) y que la
+	# instancia tenga permiso sobre la zona (`infra/terraform/iam.tf`).
+	#
+	# Las credenciales las toma del rol de la instancia: no hay llaves en ningún archivo.
+	tls {
+		dns route53 {
+			max_retries 5
+		}
+	}
+
+	# El API va primero: si estuviera después, `try_files` se quedaría con `/api/...` y devolvería
+	# el `index.html` de la aplicación con estado 200 — un fallo que parece un problema del
+	# frontend y está en el enrutado.
 	handle /api/* {
 		reverse_proxy api:3000
 	}
 
 	handle {
 		root * /srv/web
+		# El SPA resuelve sus rutas en el navegador: cualquier ruta que no sea un archivo devuelve
+		# el `index.html` para que el enrutador la atienda. Sin esto, recargar en `/me/profile`
+		# responde 404.
 		try_files {path} /index.html
 		file_server
 	}
+
+	# Cabeceras de seguridad. No reemplazan lo que hace el API —las cookies ya son `httpOnly` y
+	# `SameSite`— pero cierran lo que sólo se puede cerrar desde el servidor de estáticos.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "same-origin"
+		# Caddy la pone por su cuenta y delata la versión del servidor.
+		-Server
+	}
+
+	encode gzip zstd
+}
+
+# El dominio sin subdominio no pertenece a ningún club: no hay a qué tenant resolverlo. Responde
+# 404 en vez de servir la aplicación, que se quedaría en blanco preguntándole al API por un club
+# que no existe.
+{$BASE_DOMAIN} {
+	tls {
+		dns route53
+	}
+
+	respond "No encontramos ese club." 404
 }

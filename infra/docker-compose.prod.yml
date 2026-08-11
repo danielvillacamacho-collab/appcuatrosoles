@@ -1,0 +1,75 @@
+# La pila del servidor (`docs/07` §1). Se copia a la EC2 junto con el `.env`.
+#
+# Diferencias con el compose de desarrollo, y ninguna es cosmética:
+#   · PostgreSQL **no publica su puerto**. Sólo lo alcanzan los contenedores por la red interna.
+#   · Las credenciales salen del `.env` de la instancia, no van escritas aquí.
+#   · Los datos viven en el volumen EBS montado en `/var/lib/postgresql`, no en un volumen de Docker.
+#   · Las imágenes se traen etiquetadas, no se construyen en el servidor: desplegar es cambiar
+#     `IMAGE_TAG`, y volver atrás es cambiarla de vuelta (`infra/rollback.sh`).
+
+name: cuatrosoles
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      # El volumen EBS dedicado, montado por `user-data.sh`. `PGDATA` en un subdirectorio porque
+      # PostgreSQL se niega a inicializar sobre un punto de montaje que ya tiene `lost+found`.
+      - /var/lib/postgresql/datos:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: ghcr.io/${GITHUB_REPOSITORY}/api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "3000"
+    healthcheck:
+      # `/api/ready` y no `/api/health`: el primero comprueba además que la base responde. Un
+      # proceso vivo que no puede consultar nada no está listo para recibir tráfico.
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000/api/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  caddy:
+    image: ghcr.io/${GITHUB_REPOSITORY}/caddy:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      # El mismo valor que recibe el API. Si no coinciden, Caddy sirve el sitio y el API responde
+      # 404 a todo.
+      BASE_DOMAIN: ${BASE_DOMAIN}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Los certificados emitidos. Sin persistirlos, cada reinicio pide certificados nuevos y
+      # Let's Encrypt limita a cinco por semana por dominio: al sexto reinicio, el sitio se queda
+      # sin HTTPS durante días.
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_started
+
+# NOTA: no hay servicio `worker`. Hoy la bandeja de salida la vacía un temporizador dentro del
+# propio proceso del API (`OutboxScheduler`). El worker aparte entra con `pg-boss` (`ADR-012`), y
+# declararlo antes sería un contenedor que se reinicia en bucle buscando un archivo que no existe.
+
+volumes:
+  caddy_data:
+  caddy_config:

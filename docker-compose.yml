@@ -31,16 +31,10 @@ services:
     expose:
       - "3000"
 
-  worker:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    restart: unless-stopped
-    env_file: .env
-    command: ["node", "dist/worker.js"]
-    depends_on:
-      postgres:
-        condition: service_healthy
+  # NOTA: aquí había un servicio `worker` que corría `dist/worker.js` — un archivo que **nunca
+  # existió**. Hoy la bandeja de salida la vacía un temporizador dentro del propio proceso del API
+  # (`OutboxScheduler`); el worker aparte entra con `pg-boss` (`ADR-012`). Un servicio declarado que
+  # no puede arrancar es un contenedor reiniciándose en bucle y un despliegue que parece roto.
 
   caddy:
     # ADR-003: la SPA se compila a estáticos y Caddy los sirve directamente — no hay proceso

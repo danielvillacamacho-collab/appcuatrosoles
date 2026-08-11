@@ -7,12 +7,22 @@ receta, sin decisiones de diseño pendientes en el momento del despliegue.
 ## 1. Qué corre en la instancia
 
 ```
-docker compose services:
-├── caddy      # TLS automático, reverse proxy, sirve apps/web como estáticos
+infra/docker-compose.prod.yml:
+├── caddy      # TLS automático, reverse proxy, y la SPA compilada DENTRO de la imagen
 ├── api        # NestJS, puerto interno 3000
-├── worker     # procesa jobs de pg-boss, mismo build que api, entrypoint distinto
-└── postgres   # PostgreSQL 16, volumen EBS dedicado
+└── postgres   # PostgreSQL 16, sobre el volumen EBS dedicado
 ```
+
+> **No hay servicio `worker` todavía.** Lo hubo declarado en el compose, corriendo un
+> `dist/worker.js` que **nunca existió**: la bandeja de salida la vacía hoy un temporizador dentro
+> del propio proceso del API (`OutboxScheduler`). El worker aparte entra con `pg-boss` (`ADR-012`).
+> Un servicio declarado que no puede arrancar es un contenedor reiniciándose en bucle y un
+> despliegue que parece roto.
+
+> **La SPA va dentro de la imagen de Caddy**, no en un volumen del servidor. Así el frontend es un
+> artefacto único y con versión: desplegar es cambiar una etiqueta y volver atrás es cambiarla de
+> vuelta. Con un volumen, el HTML y el JavaScript pueden quedar de versiones distintas a mitad de
+> una copia — una pantalla en blanco que nadie sabe explicar.
 
 Sin Redis (`ADR-012`). Sin RDS por ahora (`ADR-009`) — la aplicación sólo conoce una
 `DATABASE_URL`, así que migrar a RDS el día que la plataforma cobre dinero real de terceros
