@@ -58,9 +58,18 @@ fi
 # `down` de una migración vieja saldría arrasando también con las posteriores. Se detectó
 # exactamente así en T-002: regenerar el down de T-001 producía DROPs de las tablas de T-002.
 # Por eso ambos extremos del diff se reconstruyen desde las carpetas de migración.
-DESDE="$MIGS/.down-desde"   # migraciones 1..N   (incluye la objetivo)
-HASTA="$MIGS/.down-hasta"   # migraciones 1..N-1 (el estado al que se quiere volver)
-rm -rf "$DESDE" "$HASTA"; mkdir -p "$DESDE" "$HASTA"
+#
+# Los directorios temporales van FUERA de `prisma/migrations`, y esto no es cosmético: Prisma
+# trata cada subdirectorio de esa carpeta como una migración, así que un temporal que sobreviva
+# —una interrupción con Ctrl-C, un error a mitad— hace que `prisma migrate deploy` falle con
+# «P3015: Could not find the migration file at migration.sql», sin decir de cuál habla. Es decir:
+# generar un down dejaba el despliegue roto hasta que alguien adivinara por qué. Pasó al generar
+# el down de T-201. Además hay `trap` para que se limpien aunque el script muera.
+TMP="$RAIZ/apps/api/.down-tmp"
+DESDE="$TMP/desde"   # migraciones 1..N   (incluye la objetivo)
+HASTA="$TMP/hasta"   # migraciones 1..N-1 (el estado al que se quiere volver)
+trap 'rm -rf "$TMP"' EXIT
+rm -rf "$TMP"; mkdir -p "$DESDE" "$HASTA"
 cp "$MIGS/migration_lock.toml" "$DESDE/"
 cp "$MIGS/migration_lock.toml" "$HASTA/"
 
@@ -79,20 +88,20 @@ if [ "$ANTERIORES" -eq 0 ]; then
   # Es la primera migración: revertirla es dejar la base vacía.
   ./node_modules/.bin/dotenv -e .env -- \
     pnpm --filter @polo/api exec prisma migrate diff \
-    --from-migrations "prisma/migrations/.down-desde" \
+    --from-migrations ".down-tmp/desde" \
     --to-empty \
     --shadow-database-url "$SOMBRA_URL" \
     --script > "$MIGS/$OBJETIVO/down.sql"
 else
   ./node_modules/.bin/dotenv -e .env -- \
     pnpm --filter @polo/api exec prisma migrate diff \
-    --from-migrations "prisma/migrations/.down-desde" \
-    --to-migrations "prisma/migrations/.down-hasta" \
+    --from-migrations ".down-tmp/desde" \
+    --to-migrations ".down-tmp/hasta" \
     --shadow-database-url "$SOMBRA_URL" \
     --script > "$MIGS/$OBJETIVO/down.sql"
 fi
 
-rm -rf "$DESDE" "$HASTA"
+rm -rf "$TMP"
 
 if [ ! -s "$MIGS/$OBJETIVO/down.sql" ]; then
   echo "ERROR: el down.sql salió vacío. No se acepta: revisa el error de prisma migrate diff." >&2

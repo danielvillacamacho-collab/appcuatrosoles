@@ -17,3 +17,6 @@ prisma/*.db
 
 # Informes intermedios de cobertura (se combinan unit + integración en test:cov)
 .vitest-reports/
+
+# Temporales de scripts/down-sql.sh (fuera de prisma/migrations a propósito)
+apps/api/.down-tmp/
