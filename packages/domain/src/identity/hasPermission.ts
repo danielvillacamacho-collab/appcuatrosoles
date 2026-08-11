@@ -36,6 +36,15 @@ export const PERMISSIONS = [
    * solo permiso, dárselo le habría dado también renombrar y archivar canchas.
    */
   "field.block",
+  /**
+   * Fijar el handicap de una persona (`specs/030` R-030-02).
+   *
+   * **Es el primer permiso que un `club_admin` NO tiene**, y por eso obligó a que la excepción de
+   * esa fila dejara de ser una resta suelta. En el polo el handicap lo fija el comisario y nadie
+   * más: «detrás puede haber un comité que decida, pero en la plataforma la única mano autorizada
+   * es la del comisario» (`docs/source` §5).
+   */
+  "handicap.edit",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -87,12 +96,37 @@ const NINGUNO = (): boolean => false;
  *
  * Los roles operativos —comisario, instructor, petisero, tesorero, jugador— **no aparecen con
  * permisos administrativos a propósito**: la autoridad deportiva del comisario es sobre handicaps
- * y resultados (los tendrá en `specs/030`), no sobre cuentas de usuario.
+ * y resultados, no sobre cuentas de usuario. Desde `specs/030` esa autoridad va en los dos
+ * sentidos: `handicap.edit` es suyo y **de nadie más**, ni siquiera del `superadmin`.
  */
+/**
+ * Permisos que son **autoridad deportiva**: los ejerce el comisario y nadie más.
+ *
+ * Existe porque las filas administrativas se definen **por resta** —«todos los permisos menos
+ * estos»—, así que un permiso nuevo queda concedido al administrador del club el día que se
+ * declara, sin que nadie lo decida. Para `field.edit` eso era correcto. Para `handicap.edit` es
+ * exactamente lo que `specs/030` R-030-02 prohíbe: en el polo el handicap lo fija el comisario, y
+ * un sistema donde el administrador puede tocarlo rompe la línea de autoridad que el club sí
+ * respeta en la cancha.
+ *
+ * **También queda fuera del `superadmin`**, que si no lo tendría por ser dueño de la plataforma.
+ * No es que no pueda: puede asignarse el rol de comisario, que para eso tiene `role.assign`. La
+ * diferencia es que así **queda registrado** — el cambio de rol se audita, y una autoridad que se
+ * toma deja rastro donde una autoridad que se tiene no deja ninguno.
+ */
+const AUTORIDAD_DEPORTIVA: readonly Permission[] = ["handicap.edit"];
+
+/** Ni la plataforma ni el deporte: lo que un administrador de club nunca ejerce por omisión. */
+const FUERA_DEL_ALCANCE_DEL_CLUB_ADMIN: readonly Permission[] = [
+  // Dar de alta o suspender clubes es de quien opera la plataforma; un club no administra a otro.
+  "platform.club.manage",
+  ...AUTORIDAD_DEPORTIVA,
+];
+
 const AUTORIDAD_POR_ROL: Record<RoleName, AutoridadDelRol> = {
   /** Único rol que actúa sobre cualquier club, y sobre la plataforma misma (`docs/06` §4). */
   superadmin: {
-    permisos: PERMISSIONS,
+    permisos: PERMISSIONS.filter((permiso) => !AUTORIDAD_DEPORTIVA.includes(permiso)),
     alcanza: (asignacion) => asignacion.scope === "platform",
   },
 
@@ -104,7 +138,7 @@ const AUTORIDAD_POR_ROL: Record<RoleName, AutoridadDelRol> = {
     // Todo lo suyo, menos administrar la plataforma: dar de alta o suspender clubes es de quien
     // opera la plataforma, no de un cliente — y un club que pudiera suspender clubes podría
     // suspender a otro.
-    permisos: PERMISSIONS.filter((permiso) => permiso !== "platform.club.manage"),
+    permisos: PERMISSIONS.filter((permiso) => !FUERA_DEL_ALCANCE_DEL_CLUB_ADMIN.includes(permiso)),
     alcanza: (asignacion, target) =>
       asignacion.scope === "club" && asignacion.scopeId === target.clubId,
   },
@@ -133,11 +167,11 @@ const AUTORIDAD_POR_ROL: Record<RoleName, AutoridadDelRol> = {
   },
 
   /**
-   * Autoridad **deportiva** dentro de su club: puede sacar una cancha de juego por sus condiciones,
-   * y nada más de la administración (`docs/06` §4).
+   * Autoridad **deportiva** dentro de su club: fija los handicaps y puede sacar una cancha de juego
+   * por sus condiciones. Nada de la administración (`docs/06` §4).
    */
   commissioner: {
-    permisos: ["field.block"],
+    permisos: ["field.block", "handicap.edit"],
     alcanza: (asignacion, target) =>
       asignacion.scope === "club" && asignacion.scopeId === target.clubId,
   },

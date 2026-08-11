@@ -38,22 +38,41 @@ function actor(...roles: RoleAssignmentRef[]): { roles: RoleAssignmentRef[] } {
 }
 
 describe("hasPermission · superadministrador", () => {
-  it("puede todo, en la plataforma, en cualquier club y en cualquier organización", () => {
-    for (const permiso of PERMISSIONS) {
+  it("puede todo lo administrativo, en la plataforma, en cualquier club y en cualquier organización", () => {
+    const administrativos = PERMISSIONS.filter((permiso) => permiso !== "handicap.edit");
+
+    for (const permiso of administrativos) {
       for (const ambito of [PLATAFORMA, EN_EL_CLUB, EN_OTRO_CLUB, EN_LA_ORG, EN_ORG_DE_OTRO_CLUB]) {
         expect(hasPermission(actor(SUPERADMIN), permiso, ambito).ok).toBe(true);
       }
     }
   });
+
+  it("NO fija handicaps, aunque sea dueño de la plataforma (`specs/030` R-030-02)", () => {
+    // No es que no pueda tocarlos nunca: puede asignarse el rol de comisario, que para eso tiene
+    // `role.assign`. La diferencia es que así **queda registrado** — una autoridad que se toma deja
+    // rastro donde una autoridad que se tiene no deja ninguno.
+    expect(hasPermission(actor(SUPERADMIN), "handicap.edit", EN_EL_CLUB).ok).toBe(false);
+    expect(hasPermission(actor(SUPERADMIN), "handicap.edit", PLATAFORMA).ok).toBe(false);
+  });
 });
 
 describe("hasPermission · administrador de club", () => {
-  it("puede todo dentro de su club, salvo administrar la plataforma", () => {
+  it("puede todo dentro de su club, salvo la plataforma y el deporte", () => {
     const negados = PERMISSIONS.filter(
       (permiso) => !hasPermission(actor(ADMIN_DEL_CLUB), permiso, EN_EL_CLUB).ok,
     );
 
-    expect(negados).toEqual(["platform.club.manage"]);
+    // Los dos con motivos distintos: la plataforma no es suya, y el handicap no es de nadie más
+    // que del comisario (`specs/030` R-030-02).
+    expect(negados).toEqual(["platform.club.manage", "handicap.edit"]);
+  });
+
+  it("NO fija handicaps: la autoridad deportiva no viene con la administrativa", () => {
+    // Es la regla que este rol hace fácil de romper. Su fila se define **por resta**, así que un
+    // permiso nuevo le llega solo — y si esto se hace mal no falla nada: el administrador puede
+    // tocar handicaps para siempre y nadie se entera hasta que lo haga.
+    expect(hasPermission(actor(ADMIN_DEL_CLUB), "handicap.edit", EN_EL_CLUB).ok).toBe(false);
   });
 
   it("no puede dar de alta ni suspender clubes: un club que pudiera hacerlo podría suspender a otro", () => {
@@ -151,7 +170,10 @@ describe("hasPermission · quién NO tiene autoridad administrativa", () => {
     // tiene `field.block` y nada más (`specs/040`, `docs/06` §4). Su autoridad es deportiva —sacar
     // una cancha de juego porque está impracticable— y sigue sin poder administrar nada.
     const OPERATIVOS = ["commissioner", "instructor", "groom", "treasurer", "player"] as const;
-    const DEPORTIVOS: string[] = ["commissioner/club → field.block"];
+    const DEPORTIVOS: string[] = [
+      "commissioner/club → field.block",
+      "commissioner/club → handicap.edit",
+    ];
     const infractores: string[] = [];
 
     for (const role of OPERATIVOS) {
@@ -174,12 +196,18 @@ describe("hasPermission · quién NO tiene autoridad administrativa", () => {
     expect(infractores).toEqual([]);
   });
 
-  it("el comisario puede bloquear una cancha y NADA más", () => {
-    // La otra cara del test de arriba: que tenga un permiso no puede volverse «tiene permisos».
+  it("el comisario tiene su autoridad deportiva y NADA más", () => {
+    // La otra cara del test de arriba: que tenga permisos no puede volverse «tiene todos».
     const comisario = actor({ role: "commissioner", scope: "club", scopeId: CLUB });
     const suyos = PERMISSIONS.filter((permiso) => hasPermission(comisario, permiso, EN_EL_CLUB).ok);
 
-    expect(suyos).toEqual(["field.block"]);
+    expect(suyos).toEqual(["field.block", "handicap.edit"]);
+  });
+
+  it("el comisario de un club no fija handicaps de otro", () => {
+    const comisario = actor({ role: "commissioner", scope: "club", scopeId: "otro-club" });
+
+    expect(hasPermission(comisario, "handicap.edit", EN_EL_CLUB).ok).toBe(false);
   });
 
   it("el comisario de un club no bloquea canchas de otro", () => {
@@ -259,10 +287,80 @@ describe("hasPermission · el catálogo de permisos", () => {
   });
 
   it("cada permiso del catálogo es ejercible por alguien — ninguno queda muerto", () => {
-    const huerfanos = PERMISSIONS.filter(
-      (permiso: Permission) => !hasPermission(actor(SUPERADMIN), permiso, PLATAFORMA).ok,
-    );
+    // **Recorre todos los roles, no sólo el superadministrador.** Hasta `specs/030` este test
+    // preguntaba «¿puede el superadmin?», porque el superadmin podía todo y servía de donante
+    // universal. `handicap.edit` rompió ese atajo —es del comisario y de nadie más— y el test
+    // falló señalando el permiso, que es lo correcto: la pregunta nunca fue «¿puede el superadmin?»
+    // sino «¿hay alguien que pueda?».
+    const huerfanos = PERMISSIONS.filter((permiso: Permission) => !loPuedeAlguien(permiso));
 
     expect(huerfanos).toEqual([]);
   });
+
+  it("cada rol administrativo tiene un conjunto EXACTO de permisos, escrito a mano", () => {
+    // **Este test es el que faltaba, y su ausencia es lo que hizo falta descubrir para escribirlo.**
+    //
+    // El recorrido de «quién NO tiene autoridad» sólo camina los roles operativos, así que un
+    // permiso concedido de más a un administrador era invisible: al agregar `handicap.edit` la
+    // suite entera pasó en verde, con el administrador del club pudiendo fijar handicaps.
+    //
+    // Las tres filas administrativas se definen por resta, así que sus permisos crecen solos. Con
+    // la lista escrita a mano, agregar un permiso obliga a decidir explícitamente qué pasa con cada
+    // rol: el test falla hasta que alguien lo escriba.
+    const esperado: Record<string, { ambito: PermissionTarget; permisos: Permission[] }> = {
+      superadmin: {
+        ambito: PLATAFORMA,
+        permisos: PERMISSIONS.filter((permiso) => permiso !== "handicap.edit"),
+      },
+      club_admin: {
+        ambito: EN_EL_CLUB,
+        permisos: PERMISSIONS.filter(
+          (permiso) => permiso !== "platform.club.manage" && permiso !== "handicap.edit",
+        ),
+      },
+      organization_admin: {
+        ambito: EN_LA_ORG,
+        permisos: [
+          "user.create",
+          "user.edit",
+          "user.suspend",
+          "user.archive",
+          "user.export",
+          "role.assign",
+          "audit.view",
+          "organization.manage",
+          "setting.edit",
+        ],
+      },
+    };
+
+    for (const [role, caso] of Object.entries(esperado)) {
+      const asignacion = {
+        role,
+        scope: caso.ambito.scope,
+        scopeId: caso.ambito.scopeId,
+      } as RoleAssignmentRef;
+      const suyos = PERMISSIONS.filter(
+        (permiso) => hasPermission(actor(asignacion), permiso, caso.ambito).ok,
+      );
+
+      expect(suyos, `los permisos de ${role} cambiaron sin que nadie lo decidiera`).toEqual(
+        caso.permisos,
+      );
+    }
+  });
 });
+
+/** ¿Existe algún rol, en algún ámbito válido, que ejerza este permiso? */
+function loPuedeAlguien(permiso: Permission): boolean {
+  return ROLE_NAMES.some((role) =>
+    ROLE_SCOPES[role].some((scope) => {
+      const scopeId = scope === "platform" ? null : scope === "organization" ? ORG : CLUB;
+      const asignacion = { role, scope, scopeId } as RoleAssignmentRef;
+
+      return [PLATAFORMA, EN_EL_CLUB, EN_LA_ORG].some(
+        (ambito) => hasPermission(actor(asignacion), permiso, ambito).ok,
+      );
+    }),
+  );
+}

@@ -48,7 +48,7 @@ Conviene que ocurra cuando no hay nada más a medio hacer.
 
 ## B — Permisos
 
-- [ ] **T-310** El permiso `handicap.edit`, la lista `FUERA_DEL_ALCANCE_DEL_CLUB_ADMIN` y el
+- [x] **T-310** El permiso `handicap.edit`, la lista `FUERA_DEL_ALCANCE_DEL_CLUB_ADMIN` y el
   comisario con su segunda autoridad (`plan.md` §6).
   Verificación: **el recorrido roles × ámbitos × permisos falla al agregar el permiso, y se
   actualiza agregando la excepción explícita, nunca sacando al rol del recorrido.** Además: el
@@ -59,6 +59,27 @@ Conviene que ocurra cuando no hay nada más a medio hacer.
   > hereda solo los permisos nuevos**. `handicap.edit` es el primero que tiene que quedar fuera, y
   > si esto se hace mal no falla nada: simplemente el administrador puede tocar handicaps para
   > siempre, y nadie se entera hasta que lo haga.
+  ✅ 2026-08-11 — **y la predicción de esta tarea era falsa, lo que resultó ser el hallazgo.**
+  El plan decía que el recorrido roles × permisos fallaría al agregar `handicap.edit`. Se agregó el
+  permiso solo, sin tocar nada más, para verlo: **la suite pasó entera en verde**, con el
+  administrador del club pudiendo fijar handicaps.
+  > El motivo: ese recorrido **sólo camina los roles operativos** —comisario, instructor, petisero,
+  > tesorero, jugador—. Los administrativos, que son los que se definen por resta y por lo tanto los
+  > únicos que pueden ganar un permiso solos, nunca se recorrían. La red que el plan daba por
+  > existente cubría justo la dirección contraria a la que importaba.
+  > Se arregló lo uno y lo otro: la lista `AUTORIDAD_DEPORTIVA`, y **un test nuevo que afirma el
+  > conjunto exacto de permisos de cada rol administrativo**, escrito a mano. Ahora agregar un
+  > permiso obliga a decidir explícitamente qué pasa con cada rol: el test falla hasta que alguien
+  > lo escriba. Verificado devolviéndole el permiso al `club_admin`: cuatro tests fallan, uno
+  > diciendo «los permisos de superadmin cambiaron sin que nadie lo decidiera».
+  > **El `superadmin` también queda fuera** (R-030-02). No es que no pueda: puede asignarse el rol
+  > de comisario, que para eso tiene `role.assign`. La diferencia es que así **queda registrado** —
+  > una autoridad que se toma deja rastro donde una autoridad que se tiene no deja ninguno.
+  > Y un test viejo cayó por buenas razones: «cada permiso es ejercible por alguien» preguntaba
+  > «¿puede el superadmin?», usándolo de donante universal. La pregunta nunca fue ésa. Ahora recorre
+  > todos los roles.
+
+> **Sección B cerrada el 2026-08-11.** 29 tests en `hasPermission`, 317 en el dominio.
 
 ## C — Datos
 
