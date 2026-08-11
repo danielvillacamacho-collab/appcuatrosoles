@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Alert } from "@polo/ui";
 import { useSesion } from "../features/session/api/useSesion.js";
 import { mensajeDeError } from "../lib/error-message.js";
+import { PantallaDeEntrada } from "../components/Pantalla.js";
 import { copy } from "../i18n/es-CO.js";
 
 /**
@@ -47,11 +48,9 @@ function Privado(): React.JSX.Element {
 
   if (sesion.isError) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-cream px-6 text-ink">
-        <div className="w-full max-w-sm">
+      <PantallaDeEntrada>
           <Alert>{mensajeDeError(sesion.error)}</Alert>
-        </div>
-      </main>
+      </PantallaDeEntrada>
     );
   }
 
@@ -60,7 +59,7 @@ function Privado(): React.JSX.Element {
 
 function PantallaDeEspera(): React.JSX.Element {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-cream text-muted">
+    <main className="flex min-h-screen items-center justify-center text-muted">
       {/* `role="status"` para que un lector de pantalla anuncie la espera en vez de quedarse mudo. */}
       <p role="status">{copy.comun.cargando}</p>
     </main>

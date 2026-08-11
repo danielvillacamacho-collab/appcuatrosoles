@@ -1,6 +1,7 @@
 import { Outlet, createRootRoute } from "@tanstack/react-router";
 import { Alert } from "@polo/ui";
 import { mensajeDeError } from "../lib/error-message.js";
+import { PantallaDeEntrada } from "../components/Pantalla.js";
 import { copy } from "../i18n/es-CO.js";
 
 /**
@@ -27,8 +28,7 @@ export const Route = createRootRoute({ component: Outlet, errorComponent: AlgoSe
  */
 function AlgoSeRompio({ error }: { error: Error }): React.JSX.Element {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-cream px-6 text-ink">
-      <div className="w-full max-w-sm">
+    <PantallaDeEntrada>
         <Alert>{mensajeDeError(error)}</Alert>
         <button
           type="button"
@@ -37,7 +37,6 @@ function AlgoSeRompio({ error }: { error: Error }): React.JSX.Element {
         >
           {copy.comun.recargar}
         </button>
-      </div>
-    </main>
+    </PantallaDeEntrada>
   );
 }

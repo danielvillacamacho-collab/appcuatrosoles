@@ -43,17 +43,18 @@ function Panel(): React.JSX.Element {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-8 bg-cream px-6 py-10 text-ink">
+    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
       <header>
         <p className="text-sm font-semibold uppercase tracking-[0.15em] text-muted">
           {club.data?.name ?? copy.app.title}
         </p>
-        <h1 className="mt-1 text-2xl font-bold">
+        <h1 className="mt-1 text-2xl font-bold sm:text-3xl">
           {copy.panel.saludo}, {usuario.fullName}
         </h1>
         <p className="text-muted">{usuario.email}</p>
       </header>
 
+      <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
       <section aria-labelledby="roles">
         <h2 id="roles" className="text-sm font-semibold uppercase tracking-[0.15em] text-muted">
           {copy.panel.tusRoles}
@@ -102,6 +103,9 @@ function Panel(): React.JSX.Element {
         </section>
       )}
 
+      </div>
+
+      <div className="grid gap-8 sm:grid-cols-2">
       <nav aria-labelledby="mis-cosas">
         <h2 id="mis-cosas" className="text-sm font-semibold uppercase tracking-[0.15em] text-muted">
           {copy.panel.misCosas}
@@ -138,7 +142,12 @@ function Panel(): React.JSX.Element {
         </nav>
       )}
 
-      <footer className="mt-auto">
+      </div>
+
+      {/* En el celular el botón se va al fondo de la pantalla, que es donde el pulgar lo espera. En
+          un monitor eso lo dejaría solo al final de mucho espacio vacío, así que ahí va detrás del
+          contenido. */}
+      <footer className="mt-auto pt-4 sm:mt-4">
         <Button variante="secundaria" onClick={() => void cerrar()} cargando={salir.isPending}>
           {copy.comun.salir}
         </Button>

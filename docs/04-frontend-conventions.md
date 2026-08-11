@@ -46,6 +46,24 @@ contraste WCAG AA antes de usarse en texto (no sólo en decoración). Esto tambi
 
 ## 2. Mobile-first, en serio
 
+> **Mobile-first no es mobile-only, y la diferencia costó una corrección entera.** La primera
+> versión de las pantallas se construyó y se revisó sólo en un teléfono: el fondo del club vivía en
+> el `<main>` de cada ruta y los contenedores estaban fijos en `max-w-2xl`. En un celular se veía
+> perfecto. En un monitor, el color terminaba a los 672 px —el resto lo pintaba el navegador con su
+> fondo por defecto— y un listado de usuarios quedaba encerrado en una columna angosta con media
+> pantalla vacía al lado.
+>
+> Lo que quedó de eso, y ahora está probado en `src/test/responsive.spec.ts`:
+>
+> - **El fondo lo pinta el documento** (`html` en `index.css`), nunca una pantalla.
+> - **El ancho lo decide un marco compartido** (`components/Pantalla.tsx`) por tramos, y no cada
+>   ruta a mano. Dos anchos: `lectura` para textos y formularios, `tabla` para listados.
+> - **Un listado cambia de forma, no sólo de ancho**: tarjetas en el celular, tabla con encabezados
+>   desde `md`. Una tabla de cinco columnas en un teléfono obliga a desplazar en horizontal; una
+>   pila de tarjetas en un monitor desperdicia el espacio que permite comparar de un vistazo.
+> - **Los formularios sin sesión se quedan estrechos también en escritorio.** Un formulario de dos
+>   campos estirado a 1400 px se lee peor, no mejor.
+
 - Se diseña y se construye para 375–430px de ancho primero; el layout de escritorio es una
   extensión (breakpoints `sm/md/lg` de Tailwind), no al revés.
 - Objetivos táctiles mínimo 44×44px. Ningún control interactivo por debajo de eso, sin

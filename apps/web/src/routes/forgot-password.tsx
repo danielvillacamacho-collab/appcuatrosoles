@@ -5,6 +5,7 @@ import { ForgotPasswordRequest } from "@polo/contracts";
 import { Alert, Button, TextField } from "@polo/ui";
 import { useOlvideMiContrasena } from "../features/auth/api/useOlvideMiContrasena.js";
 import { mensajeDeError } from "../lib/error-message.js";
+import { PantallaDeEntrada } from "../components/Pantalla.js";
 import { copy } from "../i18n/es-CO.js";
 
 /**
@@ -36,8 +37,7 @@ function Olvide(): React.JSX.Element {
   });
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-cream px-6 py-10 text-ink">
-      <div className="w-full max-w-sm">
+    <PantallaDeEntrada>
         <h1 className="text-2xl font-bold">{copy.olvide.titulo}</h1>
 
         {pedir.isSuccess ? (
@@ -72,7 +72,6 @@ function Olvide(): React.JSX.Element {
             {copy.olvide.volver}
           </Link>
         </p>
-      </div>
-    </main>
+    </PantallaDeEntrada>
   );
 }

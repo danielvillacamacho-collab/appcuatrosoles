@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { z } from "zod";
 import { Alert } from "@polo/ui";
-import { Pantalla } from "../../../features/me/components/Pantalla.js";
+import { Pantalla } from "../../../components/Pantalla.js";
 import { useConfirmarCambioDeCorreo } from "../../../features/me/api/usePerfil.js";
 import { mensajeDeError } from "../../../lib/error-message.js";
 import { copy } from "../../../i18n/es-CO.js";

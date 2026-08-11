@@ -5,7 +5,7 @@ import type { z } from "zod";
 import { CreateUserRequest } from "@polo/contracts";
 import { ROLE_SCOPES } from "@polo/domain";
 import { Alert, Button, TextField } from "@polo/ui";
-import { Pantalla } from "../../../features/me/components/Pantalla.js";
+import { Pantalla } from "../../../components/Pantalla.js";
 import { useSesion } from "../../../features/session/api/useSesion.js";
 import { useCategorias, useOrganizaciones } from "../../../features/club/api/useCatalogos.js";
 import { useCrearUsuario } from "../../../features/users/api/useUsuarios.js";
@@ -68,7 +68,7 @@ function NuevoUsuario(): React.JSX.Element {
   });
 
   return (
-    <Pantalla titulo={copy.nuevoUsuario.titulo} descripcion={copy.nuevoUsuario.descripcion}>
+    <Pantalla titulo={copy.nuevoUsuario.titulo} descripcion={copy.nuevoUsuario.descripcion} volverA="/users">
       <form onSubmit={enviar} noValidate className="flex flex-col gap-4">
         {crear.isError && <Alert>{mensajeDeError(crear.error)}</Alert>}
 

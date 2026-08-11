@@ -8,6 +8,7 @@ import { Alert, Button, TextField } from "@polo/ui";
 import { useAceptarInvitacion } from "../features/auth/api/useAceptarInvitacion.js";
 import { useClub } from "../features/club/api/useClub.js";
 import { mensajeDeError } from "../lib/error-message.js";
+import { PantallaDeEntrada } from "../components/Pantalla.js";
 import { copy } from "../i18n/es-CO.js";
 
 /**
@@ -160,11 +161,9 @@ function enBlancoEsNada(valor: unknown): string | undefined {
 
 function Marco({ titulo, children }: { titulo: string; children: React.ReactNode }): React.JSX.Element {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-cream px-6 py-10 text-ink">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold">{titulo}</h1>
-        {children}
-      </div>
-    </main>
+    <PantallaDeEntrada>
+      <h1 className="text-2xl font-bold">{titulo}</h1>
+      {children}
+    </PantallaDeEntrada>
   );
 }

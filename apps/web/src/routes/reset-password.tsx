@@ -7,6 +7,7 @@ import { validatePassword } from "@polo/domain";
 import { Alert, Button, TextField } from "@polo/ui";
 import { useRestablecerContrasena } from "../features/auth/api/useRestablecerContrasena.js";
 import { mensajeDeError } from "../lib/error-message.js";
+import { PantallaDeEntrada } from "../components/Pantalla.js";
 import { copy } from "../i18n/es-CO.js";
 
 /**
@@ -48,8 +49,7 @@ function Restablecer(): React.JSX.Element {
   });
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-cream px-6 py-10 text-ink">
-      <div className="w-full max-w-sm">
+    <PantallaDeEntrada>
         <h1 className="text-2xl font-bold">{copy.restablecer.titulo}</h1>
 
         {token === undefined || token === "" ? (
@@ -97,7 +97,6 @@ function Restablecer(): React.JSX.Element {
             </form>
           </>
         )}
-      </div>
-    </main>
+    </PantallaDeEntrada>
   );
 }

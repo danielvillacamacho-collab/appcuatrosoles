@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { SessionResponse } from "@polo/contracts";
 import { Alert, Button } from "@polo/ui";
-import { Pantalla } from "../../../features/me/components/Pantalla.js";
+import { Pantalla } from "../../../components/Pantalla.js";
 import {
   useCerrarSesion,
   useCerrarTodas,

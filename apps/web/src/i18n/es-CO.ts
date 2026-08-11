@@ -15,6 +15,7 @@ export const copy = {
     cargando: "Cargando…",
     salir: "Cerrar sesión",
     volverAlPanel: "← Volver al panel",
+    volverAUsuarios: "← Volver a usuarios",
     guardar: "Guardar",
     guardando: "Guardando…",
     guardado: "Guardado.",
@@ -65,6 +66,8 @@ export const copy = {
     } as Record<string, string>,
     invitadoDesde: "Invitación enviada el",
     sinCategoria: "Sin categoría",
+    columnaNombre: "Persona",
+    columnaCategoria: "Categoría",
   },
 
   nuevoUsuario: {
@@ -88,6 +91,7 @@ export const copy = {
 
   fichaUsuario: {
     volver: "← Volver a usuarios",
+    cargando: "Cargando…",
     estado: "Estado",
     correo: "Correo de acceso",
     telefono: "Teléfono",

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { DependentResponse } from "@polo/contracts";
 import { Alert } from "@polo/ui";
-import { Pantalla } from "../../../features/me/components/Pantalla.js";
+import { Pantalla } from "../../../components/Pantalla.js";
 import { useDependientes } from "../../../features/me/api/useDependientes.js";
 import { fechaDeCalendario } from "../../../lib/fechas.js";
 import { mensajeDeError } from "../../../lib/error-message.js";

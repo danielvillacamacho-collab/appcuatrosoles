@@ -1,6 +1,7 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import type { AuditEntryResponse, UserResponse } from "@polo/contracts";
 import { Alert, Button } from "@polo/ui";
+import { Pantalla } from "../../../components/Pantalla.js";
 import { useSesion } from "../../../features/session/api/useSesion.js";
 import {
   useAccionDeCuenta,
@@ -33,21 +34,14 @@ function Ficha(): React.JSX.Element {
   const sesion = useSesion();
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-6 bg-cream px-6 py-8 text-ink">
-      <Link
-        to="/users"
-        className="inline-flex min-h-tap items-center text-base font-medium text-brunswick underline underline-offset-4"
-      >
-        {copy.fichaUsuario.volver}
-      </Link>
-
+    <Pantalla titulo={usuario.data?.fullName ?? copy.fichaUsuario.cargando} volverA="/users">
       {usuario.isError && <Alert>{mensajeDeError(usuario.error)}</Alert>}
       {usuario.isPending && <p role="status">{copy.comun.cargando}</p>}
 
       {usuario.isSuccess && (
         <Contenido usuario={usuario.data} esMiCuenta={sesion.data?.userAccountId === usuario.data.id} />
       )}
-    </main>
+    </Pantalla>
   );
 }
 
@@ -82,8 +76,7 @@ function Contenido({
   return (
     <>
       <header>
-        <h1 className="text-2xl font-bold">{usuario.fullName}</h1>
-        <p className="mt-1 flex flex-wrap items-center gap-2">
+        <p className="flex flex-wrap items-center gap-2">
           <Estado estado={usuario.status} />
           <span className="text-muted">{usuario.email}</span>
         </p>
@@ -110,6 +103,7 @@ function Contenido({
         />
       </dl>
 
+      <div className="grid gap-6 md:grid-cols-2">
       <section aria-labelledby="roles">
         <h2 id="roles" className="text-sm font-semibold uppercase tracking-[0.15em] text-muted">
           {copy.fichaUsuario.roles}
@@ -169,6 +163,8 @@ function Contenido({
           </div>
         )}
       </section>
+
+      </div>
 
       <section aria-labelledby="historial">
         <h2 id="historial" className="text-sm font-semibold uppercase tracking-[0.15em] text-muted">

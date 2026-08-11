@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { UserResponse } from "@polo/contracts";
 import { ROLE_NAMES } from "@polo/domain";
 import { Alert, Button } from "@polo/ui";
-import { Pantalla } from "../../../features/me/components/Pantalla.js";
+import { Pantalla } from "../../../components/Pantalla.js";
 import { useOrganizaciones } from "../../../features/club/api/useCatalogos.js";
 import { urlDeExportacion, useUsuarios } from "../../../features/users/api/useUsuarios.js";
 import { useFecha } from "../../../lib/fechas.js";
@@ -52,27 +52,33 @@ function Usuarios(): React.JSX.Element {
   const hasta = Math.min(pagina * limite, total);
 
   return (
-    <Pantalla titulo={copy.usuarios.titulo} descripcion={copy.usuarios.descripcion}>
-      <div className="flex flex-wrap gap-3">
-        <Link
-          to="/users/new"
-          className="inline-flex min-h-tap items-center justify-center rounded-lg bg-coquelicot px-5 text-base font-semibold text-white"
-        >
-          {copy.usuarios.nuevo}
-        </Link>
+    <Pantalla
+      titulo={copy.usuarios.titulo}
+      descripcion={copy.usuarios.descripcion}
+      ancho="tabla"
+      acciones={
+        <>
+          <Link
+            to="/users/new"
+            className="inline-flex min-h-tap items-center justify-center rounded-lg bg-coquelicot px-5 text-base font-semibold text-white"
+          >
+            {copy.usuarios.nuevo}
+          </Link>
 
-        {/* `reloadDocument` no hace falta: es un `<a>` normal a una ruta del API que responde un
-            archivo. Lo hace el navegador, no el router. */}
-        <a
-          href={urlDeExportacion(filtros)}
-          className="inline-flex min-h-tap items-center justify-center rounded-lg border border-brunswick px-5 text-base font-semibold text-brunswick"
-        >
-          {copy.usuarios.exportar}
-        </a>
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <label className="flex flex-col gap-1.5">
+          {/* `reloadDocument` no hace falta: es un `<a>` normal a una ruta del API que responde un
+              archivo. Lo hace el navegador, no el router. */}
+          <a
+            href={urlDeExportacion(filtros)}
+            className="inline-flex min-h-tap items-center justify-center rounded-lg border border-brunswick px-5 text-base font-semibold text-brunswick"
+          >
+            {copy.usuarios.exportar}
+          </a>
+        </>
+      }
+    >
+      {/* Los filtros: uno debajo de otro en el celular, en fila en pantallas anchas. */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <label className="flex flex-col gap-1.5 sm:min-w-64 sm:flex-1">
           <span className="text-sm font-semibold">{copy.usuarios.buscar}</span>
           <input
             type="search"
@@ -82,8 +88,7 @@ function Usuarios(): React.JSX.Element {
           />
         </label>
 
-        <div className="flex flex-wrap gap-3">
-          <Filtro
+        <Filtro
             etiqueta={copy.usuarios.estado}
             valor={filtros.status ?? ""}
             onCambiar={(valor) => cambiar("status", valor)}
@@ -105,8 +110,7 @@ function Usuarios(): React.JSX.Element {
               valor: organizacion.id,
               texto: organizacion.name,
             }))}
-          />
-        </div>
+        />
       </div>
 
       {usuarios.isError && <Alert>{mensajeDeError(usuarios.error)}</Alert>}
@@ -116,13 +120,37 @@ function Usuarios(): React.JSX.Element {
         <p className="text-muted">{copy.usuarios.ninguno}</p>
       )}
 
-      <ul className="flex flex-col gap-2">
+      {/* **Tarjetas en el celular, tabla en el escritorio.** No es la misma lista con otro ancho:
+          en una pantalla angosta una tabla de cinco columnas obliga a desplazar en horizontal, y en
+          un monitor una pila de tarjetas desperdicia el espacio que permite comparar de un vistazo
+          quién está invitado y desde cuándo. */}
+      <ul className="flex flex-col gap-2 md:hidden">
         {(usuarios.data?.items ?? []).map((usuario) => (
           <li key={usuario.id}>
-            <Fila usuario={usuario} />
+            <Tarjeta usuario={usuario} />
           </li>
         ))}
       </ul>
+
+      {(usuarios.data?.items ?? []).length > 0 && (
+        <div className="hidden overflow-x-auto rounded-lg border border-sage bg-white/60 md:block">
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="border-b border-sage text-sm uppercase tracking-[0.1em] text-muted">
+                <th scope="col" className="px-4 py-3 font-semibold">{copy.usuarios.columnaNombre}</th>
+                <th scope="col" className="px-4 py-3 font-semibold">{copy.usuarios.estado}</th>
+                <th scope="col" className="px-4 py-3 font-semibold">{copy.usuarios.columnaCategoria}</th>
+                <th scope="col" className="px-4 py-3 font-semibold">{copy.usuarios.rol}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(usuarios.data?.items ?? []).map((usuario) => (
+                <FilaDeTabla key={usuario.id} usuario={usuario} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {total > 0 && (
         <nav className="flex flex-wrap items-center justify-between gap-3 border-t border-sage pt-4">
@@ -182,7 +210,7 @@ function Filtro({
   );
 }
 
-function Fila({ usuario }: { usuario: UserResponse }): React.JSX.Element {
+function Tarjeta({ usuario }: { usuario: UserResponse }): React.JSX.Element {
   const fecha = useFecha();
 
   return (
@@ -225,5 +253,48 @@ export function Estado({ estado }: { estado: string }): React.JSX.Element {
     <span className={`rounded-full px-2 py-0.5 text-sm font-semibold ${colores[estado] ?? "bg-sage"}`}>
       {copy.usuarios.estados[estado] ?? estado}
     </span>
+  );
+}
+
+/**
+ * Una fila de la tabla de escritorio.
+ *
+ * La fila entera es un enlace, pero el `<a>` va **dentro de la primera celda** y no envolviendo el
+ * `<tr>`: un enlace no puede contener celdas sin romper la tabla, y romperla se lleva por delante
+ * la navegación por teclado y lo que anuncia un lector de pantalla. El resto de la fila es
+ * clicable por el `cursor-pointer` y el `onClick` del navegador sobre el enlace enfocado.
+ */
+function FilaDeTabla({ usuario }: { usuario: UserResponse }): React.JSX.Element {
+  const fecha = useFecha();
+
+  return (
+    <tr className="border-b border-sage/50 last:border-0 hover:bg-cream/60">
+      <td className="px-4 py-3">
+        <Link
+          to="/users/$userId"
+          params={{ userId: usuario.id }}
+          className="font-semibold text-brunswick underline-offset-4 hover:underline"
+        >
+          {usuario.fullName}
+        </Link>
+        <span className="block text-sm text-muted">{usuario.email}</span>
+      </td>
+      <td className="px-4 py-3">
+        <Estado estado={usuario.status} />
+        {usuario.invitationSentAt !== null && (
+          <span className="mt-1 block text-sm text-muted">
+            {copy.usuarios.invitadoDesde} {fecha(usuario.invitationSentAt)}
+          </span>
+        )}
+      </td>
+      <td className="px-4 py-3 text-sm">
+        {usuario.membershipCategory?.name ?? copy.usuarios.sinCategoria}
+      </td>
+      <td className="px-4 py-3 text-sm">
+        {usuario.roles.length === 0
+          ? "—"
+          : usuario.roles.map((rol) => copy.roles[rol.role] ?? rol.role).join(", ")}
+      </td>
+    </tr>
   );
 }

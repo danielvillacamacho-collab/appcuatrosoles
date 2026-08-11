@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { fetchSimulado, montar, type RespuestaSimulada } from "../../test/montar.js";
 import { copy } from "../../i18n/es-CO.js";
@@ -71,11 +71,26 @@ describe("Listado de usuarios (T-134, HU-010-08)", () => {
     conApi({ "/api/users": pagina([usuario(), usuario({ id: "u-2", fullName: "Pedro", status: "invited" })]) });
     montar("/users");
 
-    expect(await screen.findByText("María Fernanda")).toBeDefined();
-    expect(screen.getByText("Pedro")).toBeDefined();
-    // «Invitado» aparece también como opción del filtro: se busca la insignia de la fila, que es
-    // la que dice el estado de esa persona.
+    // **Cada persona aparece dos veces en el DOM**: como tarjeta y como fila de tabla. En un
+    // navegador sólo se ve una —la otra está en `display:none` y ni siquiera llega al lector de
+    // pantalla— pero en jsdom no hay CSS que las esconda. Se comprueba que estén las dos formas
+    // porque las dos son la pantalla: la del celular y la del monitor.
+    expect((await screen.findAllByText("María Fernanda")).length).toBe(2);
+    expect(screen.getAllByText("Pedro").length).toBe(2);
     expect(screen.getAllByText(copy.usuarios.estados["invited"] ?? "").length).toBeGreaterThan(0);
+  });
+
+  it("en pantalla ancha es una tabla con encabezados, no una pila de tarjetas", async () => {
+    // Una tabla de cinco columnas en un celular obliga a desplazar en horizontal; una pila de
+    // tarjetas en un monitor desperdicia el espacio que permite comparar de un vistazo.
+    conApi({ "/api/users": pagina([usuario()]) });
+    montar("/users");
+
+    const tabla = await screen.findByRole("table");
+
+    expect(within(tabla).getByRole("columnheader", { name: copy.usuarios.columnaNombre })).toBeDefined();
+    expect(within(tabla).getByRole("columnheader", { name: copy.usuarios.rol })).toBeDefined();
+    expect(within(tabla).getByRole("link", { name: "María Fernanda" })).toBeDefined();
   });
 
   it("los filtros viajan en la URL, no en un estado interno", async () => {

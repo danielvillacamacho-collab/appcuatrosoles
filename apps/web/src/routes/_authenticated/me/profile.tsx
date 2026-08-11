@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { RequestEmailChangeRequest, UpdateMeRequest } from "@polo/contracts";
 import { Alert, Button, TextField } from "@polo/ui";
-import { Pantalla } from "../../../features/me/components/Pantalla.js";
+import { Pantalla } from "../../../components/Pantalla.js";
 import { useSesion } from "../../../features/session/api/useSesion.js";
 import { useEditarPerfil, usePedirCambioDeCorreo } from "../../../features/me/api/usePerfil.js";
 import { mensajeDeError } from "../../../lib/error-message.js";

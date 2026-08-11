@@ -14,7 +14,23 @@
  */
 @source "../../../packages/ui/src";
 
+/*
+ * **El fondo va en el documento, no en cada pantalla.**
+ *
+ * Estaba en el `<main>` de cada ruta, que tiene ancho máximo: en un monitor ancho, el color del
+ * club terminaba a los 672 px y el resto lo pintaba el navegador con su fondo por defecto —blanco
+ * o negro según el tema del sistema—. En un celular no se veía nunca, porque ahí el `<main>` ocupa
+ * todo el ancho. Es el fallo típico de un diseño que sólo se miró en un teléfono.
+ */
+html {
+  background: var(--color-cream);
+  color: var(--color-ink);
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans);
+  /* Con la barra de desplazamiento apareciendo y desapareciendo, el contenido centrado salta unos
+     píxeles al cambiar de pantalla. Reservarle el espacio siempre lo evita. */
+  scrollbar-gutter: stable;
 }

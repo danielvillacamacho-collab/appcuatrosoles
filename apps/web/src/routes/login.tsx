@@ -7,6 +7,7 @@ import { Alert, Button, TextField } from "@polo/ui";
 import { useClub } from "../features/club/api/useClub.js";
 import { useLogin } from "../features/auth/api/useLogin.js";
 import { mensajeDeError } from "../lib/error-message.js";
+import { PantallaDeEntrada } from "../components/Pantalla.js";
 import { copy } from "../i18n/es-CO.js";
 
 /**
@@ -52,8 +53,7 @@ function Ingreso(): React.JSX.Element {
   });
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-cream px-6 py-10 text-ink">
-      <div className="w-full max-w-sm">
+    <PantallaDeEntrada>
         <header className="mb-8 text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.15em] text-muted">
             {copy.app.title}
@@ -103,7 +103,6 @@ function Ingreso(): React.JSX.Element {
             {copy.ingreso.olvide}
           </Link>
         </p>
-      </div>
-    </main>
+    </PantallaDeEntrada>
   );
 }
