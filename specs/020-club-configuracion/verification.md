@@ -803,3 +803,42 @@ lo permitirían — la regla está en dos capas, como corresponde a las que impo
 
 - **Desarchivar no existe.** No estaba en el spec y no se inventó: si el club lo necesita, es una
   decisión suya y entra con su propia tarea. Hoy una organización archivada se queda así.
+
+---
+
+## T-242 — Temporadas
+
+**Fecha:** 2026-08-11 · 8 tests de integración (152 en total)
+
+### El solapamiento lo rechaza la base, y el servicio sólo traduce
+
+No hay comprobación previa a propósito. Con un `SELECT` antes del `INSERT`, dos solicitudes
+simultáneas leerían «no hay solapamiento» y las dos insertarían — que es exactamente la carrera que
+el `EXCLUDE` de T-201 existe para cerrar. El servicio atrapa el error del motor (`23P01`) y lo
+traduce a `409` con su código.
+
+Probado con sus tres caras: solapada → `409`, consecutiva (empieza al día siguiente) → `201`, y dos
+clubes con **las mismas fechas** → `201`, porque la restricción es por club (P-05).
+
+### Las fechas no se corren un día
+
+La columna es `date` y se serializa cortando el ISO, sin aplicarle zona horaria. Aplicarle una la
+correría un día — es la lección de T-014, ahora del lado de la salida. El test compara las cadenas
+exactas que se enviaron.
+
+El contrato exige `YYYY-MM-DD` y **rechaza un instante** (`2034-01-01T00:00:00Z`) con `400`: aceptar
+las dos formas es cómodo hasta que alguien manda una con hora y zona, y esa hora decide en qué día
+cae.
+
+### Una comprobación declarada y vacía, a propósito
+
+`spec.md` HU-020-06 pide que cerrar exija que no queden prácticas ni copas abiertas. Esas tablas las
+crean `specs/050` y `specs/060`. La comprobación existe **con su nombre**
+(`exigirQueNoQuedeActividadAbierta`) y hoy no hace nada: así quien construya prácticas la encuentra
+buscando, en vez de tener que acordarse de un comentario. Cerrar dos veces sí se rechaza (`409`).
+
+### Pendiente declarado
+
+- **No hay reapertura de temporada.** No estaba en el spec y no se inventó. Si el club cierra una
+  por error, hoy la corrección es de base de datos — conviene decidirlo antes de la primera
+  temporada real.

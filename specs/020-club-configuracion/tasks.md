@@ -156,9 +156,13 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
   > **Crear es de ámbito de club; editar y archivar, de la organización concreta.** Si crear fuera
   > de ámbito de organización, un `organization_admin` podría ampliarse el terreno creando otras.
 
-- [ ] **T-242** Temporadas: crear, listar, cerrar. Cerrar exige que no queden prácticas ni copas
+- [x] **T-242** Temporadas: crear, listar, cerrar. Cerrar exige que no queden prácticas ni copas
   abiertas (cuando existan; hoy la comprobación queda declarada y vacía). Verificación: crear una
-  temporada solapada es rechazado **por la base**, no sólo por el servicio.
+  temporada solapada es rechazado **por la base**, no sólo por el servicio. ✅ 2026-08-11 —
+  8 tests, ver `verification.md` §T-242.
+  > El servicio **no comprueba** el solapamiento antes de insertar: traduce el error del motor. Con
+  > la comprobación previa habría una carrera entre dos solicitudes simultáneas, que es justo lo
+  > que el `EXCLUDE` existe para cerrar.
 
 - [ ] **T-243** Categorías de membresía: crear, editar, desactivar. Verificación: cambiar la cuota
   no altera cobros ya emitidos (hoy sin módulo de pagos: se prueba que el valor histórico se
