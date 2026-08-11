@@ -517,6 +517,156 @@ model AuditLog {
   @@map("audit_log")
 }
 
+// ─── T-201 · Club, organizaciones, temporadas y configuración ───────────────────
+// docs/02-domain-model.md §A · specs/020-club-configuracion/plan.md §1
+
+/// La raíz del tenant. Todo dato de negocio pertenece a un club, y el club se resuelve por el
+/// **subdominio del host** (ADR-013, R-020-01): un `club_id` que llegue del cliente nunca lo
+/// determina. Es la frontera de seguridad número uno del producto (`docs/09` D-01).
+model Club {
+  id String @id @default(uuid(7))
+
+  /// Subdominio, único en toda la plataforma. Minúsculas y `[a-z0-9-]`, garantizado por CHECK en
+  /// la migración: un slug con mayúsculas o un punto rompería la resolución por host **en
+  /// silencio**, sirviendo el club equivocado o ninguno.
+  slug String @unique
+  name String
+
+  /// Identificador IANA. Define qué día es «hoy» para toda regla de calendario (R-020-13). No se
+  /// asume `America/Bogota` en ningún punto del código: el producto se vende a otros clubes y uno
+  /// en Buenos Aires no puede depender de que alguien recuerde cambiar una constante.
+  timezone String @default("America/Bogota")
+  /// ISO 4217. Informativa en v1: se opera en una sola moneda y el dinero se persiste en centavos
+  /// enteros (P-02, R-020-14).
+  currency String @default("COP")
+
+  status ClubStatus @default(active)
+  /// Cuándo y por qué se suspendió. Se conserva tras reactivar: la historia de un corte de
+  /// servicio es justo lo que se necesita cuando hay una discusión contractual.
+  suspendedAt     DateTime? @map("suspended_at") @db.Timestamptz(3)
+  suspendedReason String?   @map("suspended_reason")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organizations Organization[]
+  seasons       Season[]
+
+  @@index([status])
+  @@map("club")
+}
+
+enum ClubStatus {
+  active
+  suspended
+
+  @@map("club_status")
+}
+
+/// Una entidad que opera **dentro** de un club: la escuela, un equipo, un servicio. Hoy: Cuatro
+/// Soles dentro de Los Pinos.
+///
+/// Pertenece a exactamente un club (R-020-05, decisión D-020-01 del spec). Si la misma marca opera
+/// en otro club, allá es **otra** organización, con su propia gente y sus propias tarifas: una
+/// organización que cruzara clubes sería un camino de datos entre inquilinos, que es justo lo que
+/// P-05 existe para impedir.
+model Organization {
+  id     String @id @default(uuid(7))
+  clubId String @map("club_id")
+
+  name String
+  /// `school` | `team` | `service` (`docs/02` §A). Texto y no enum, como `membership_category.code`:
+  /// es un catálogo administrable y el club puede necesitar un tipo que hoy no existe (P-04).
+  type String
+
+  status     OrganizationStatus @default(active)
+  archivedAt DateTime?          @map("archived_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Restrict)
+
+  @@unique([clubId, name])
+  @@index([clubId, status])
+  @@map("organization")
+}
+
+enum OrganizationStatus {
+  active
+  archived
+
+  @@map("organization_status")
+}
+
+/// El período al que pertenece la actividad: prácticas, copas, handicaps y estadísticas se agrupan
+/// por temporada (`docs/02` §A, HU-020-06).
+model Season {
+  id     String @id @default(uuid(7))
+  clubId String @map("club_id")
+
+  name String
+
+  /// Fechas de calendario, no instantes: una temporada empieza un día, no a una hora. Mismo
+  /// criterio que `guardianship` — y la misma trampa evitada, porque comparar una columna `date`
+  /// contra un instante da por vencido lo que aún rige (ver `verification.md` de 010, §T-014).
+  startsOn DateTime @map("starts_on") @db.Date
+  /// Último día de la temporada, **inclusive**. Lo hace explícito el `EXCLUDE` de la migración,
+  /// que usa un rango cerrado `[]`.
+  endsOn   DateTime @map("ends_on") @db.Date
+
+  status   SeasonStatus @default(open)
+  closedAt DateTime?    @map("closed_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Restrict)
+
+  @@unique([clubId, name])
+  @@index([clubId, startsOn])
+  @@map("season")
+}
+
+enum SeasonStatus {
+  open
+  closed
+
+  @@map("season_status")
+}
+
+/// Un valor de configuración vigente desde una fecha (`docs/02` §A, `docs/08`).
+///
+/// **Nunca se actualiza en sitio** (R-020-08): cambiar un valor inserta una fila nueva, y el
+/// vigente es el de mayor `effective_from` menor o igual al instante consultado. Así una tarifa
+/// histórica sigue siendo consultable, que es lo que permite responder «cuánto costaba esto en
+/// marzo» sin preguntarle a nadie.
+///
+/// La **clave** no vive aquí sino en el catálogo tipado de `packages/domain/settings` (T-212,
+/// `plan.md` §0): agregar una clave es siempre un cambio de código, porque alguien tiene que
+/// leerla, y una clave sin código que la consuma es configuración que no aplica nada.
+model Setting {
+  id String @id @default(uuid(7))
+
+  /// Igual que en `role_assignment`: `scope` + `scope_id` **son** la frontera, y por eso esta
+  /// tabla tampoco lleva `club_id` aparte. Un ámbito de plataforma no cuelga de ningún club.
+  scope   ScopeKind
+  /// Nulo exactamente cuando `scope = platform`, garantizado por CHECK en la migración.
+  scopeId String?   @map("scope_id")
+
+  key   String
+  value Json
+
+  effectiveFrom DateTime @map("effective_from") @db.Timestamptz(3)
+  createdById   String?  @map("created_by_id")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  // Sin `updatedAt`: esta tabla no se actualiza nunca, se le agregan filas.
+  @@unique([scope, scopeId, key, effectiveFrom])
+  @@index([scope, scopeId, key, effectiveFrom])
+  @@map("setting")
+}
+
 // ─── Integridad pendiente (no es un olvido) ─────────────────────────────────────
 // `person.club_id`, `person_organization.club_id` / `.organization_id` y
 // `commissioner_delegation.club_id` son todavía TEXT sin llave foránea, porque las tablas

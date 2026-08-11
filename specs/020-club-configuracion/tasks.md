@@ -10,12 +10,17 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
 
 ## A — Esquema y migraciones
 
-- [ ] **T-201** Modelos `Club`, `Organization`, `Season`, `Setting` (`plan.md` §1) con sus
+- [x] **T-201** Modelos `Club`, `Organization`, `Season`, `Setting` (`plan.md` §1) con sus
   invariantes en SQL crudo: patrón del `slug`, coherencia `scope`/`scope_id`, `ends_on >=
   starts_on`, y el `EXCLUDE` sobre `(club_id, daterange(starts_on, ends_on, '[]'))` que impide
   temporadas solapadas (R-020-06), previa creación de `btree_gist`.
   Verificación: cada invariante probado **provocando su rechazo**, no asumiéndolo; migración `up`
-  y `down` contra Postgres real.
+  y `down` contra Postgres real. ✅ 2026-08-11 — 24 tests de integración, ver `verification.md`
+  §T-201.
+  > Apareció un invariante que el plan no había previsto: el índice único de `setting` **no
+  > protegía el ámbito de plataforma**, porque ahí `scope_id` es NULL y PostgreSQL considera
+  > distintos dos NULL. Se cubrió con un índice parcial. Y de paso hubo que reparar
+  > `pnpm db:down-sql`, cuyos temporales rompían `migrate deploy`.
 
 - [ ] **T-202** Llaves foráneas pendientes de `specs/010` hacia `club` y `organization`
   (`plan.md` §6). **Incluye migrar los datos existentes**, no sólo agregar la restricción: hoy el
