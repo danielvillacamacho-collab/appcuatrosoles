@@ -9,20 +9,9 @@ import { Reflector } from "@nestjs/core";
 import type { RoleName as RoleNameDb, ScopeKind as ScopeKindDb } from "@prisma/client";
 import { hasPermission, type Permission, type RoleName, type ScopeKind } from "@polo/domain";
 import { PrismaService } from "../prisma/prisma.service.js";
+import type { ConTenant } from "../../tenant/tenant-context.js";
 import type { ConSessionUser } from "./current-user.js";
 import { PERMISO_REQUERIDO } from "./require-permission.js";
-
-/**
- * El club de la solicitud, resuelto por subdominio.
- *
- * **Lo llena `TenantGuard` (T-020), que hoy no existe** porque depende de la tabla `club` del
- * módulo 020 — ver la nota de esa tarea en `tasks.md`. El contrato se declara aquí, y no se
- * improvisa después, para que la dependencia sea visible en el código en vez de vivir en la
- * cabeza de alguien: sin tenant, este guard **no adivina** y no deja pasar.
- */
-export interface ConTenant {
-  tenant?: { clubId: string };
-}
 
 /**
  * Exige el permiso que la ruta declaró con `@RequirePermission()` (`docs/03` §6).

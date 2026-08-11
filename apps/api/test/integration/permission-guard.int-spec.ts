@@ -14,7 +14,7 @@ import type { NextFunction, Request, Response } from "express";
 import type { Clock, RoleName, ScopeKind } from "@polo/domain";
 import { AuthModule } from "../../src/common/auth/auth.module.js";
 import { CLOCK, ClockModule } from "../../src/common/clock/clock.module.js";
-import type { ConTenant } from "../../src/common/auth/permission.guard.js";
+import type { ConTenant } from "../../src/tenant/tenant-context.js";
 import { PermissionGuard } from "../../src/common/auth/permission.guard.js";
 import { RequirePermission } from "../../src/common/auth/require-permission.js";
 import { SessionGuard } from "../../src/common/auth/session.guard.js";

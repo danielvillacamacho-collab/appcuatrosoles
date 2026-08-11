@@ -4,7 +4,7 @@ import type { Prisma } from "@prisma/client";
 import type { Request } from "express";
 import { concatMap, type Observable } from "rxjs";
 import type { ConSessionUser } from "../auth/current-user.js";
-import type { ConTenant } from "../auth/permission.guard.js";
+import type { ConTenant } from "../../tenant/tenant-context.js";
 import { leerRequestId, type ConRequestId } from "../http/request-id.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AUDITABLE, sinDatosSensibles, type AuditableMetadata, type ConAuditoria } from "./auditable.js";

@@ -96,10 +96,13 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
   > consultas idénticas — el arranque de un proceso es exactamente ese momento) y **no servir la
   > copia vieja cuando la base falla**, porque esa copia puede contener un club recién suspendido.
 
-- [ ] **T-221** `TenantGuard` — **cierra `T-020` de `specs/010`**. Resuelve el club por host antes
+- [x] **T-221** `TenantGuard` — **cierra `T-020` de `specs/010`**. Resuelve el club por host antes
   que cualquier otro guard, `404` para host desconocido, suspendido o malformado, sin distinguir
   entre ellos (R-020-02). Verificación: host desconocido → `404` **sin consultar la tabla de
   usuarios**; y el test de dos clubes simultáneos que exige que ninguno vea al otro.
+  ✅ 2026-08-11 — 13 tests, ver `verification.md` §T-221. **Cierra T-020 de `specs/010`.**
+  > El token del dominio base tuvo que salir del módulo a su propio archivo: el guard necesita el
+  > token y el módulo necesita el guard, y NestJS detecta la dependencia circular al arrancar.
 
 - [ ] **T-222** Permisos nuevos en `hasPermission` y en la matriz de `docs/06` §4: `club.edit`,
   `organization.manage`, `season.manage`, `membership.manage`, `setting.edit`,

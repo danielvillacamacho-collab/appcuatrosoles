@@ -22,7 +22,7 @@ import { AuthModule } from "../../src/common/auth/auth.module.js";
 import { RequirePermission } from "../../src/common/auth/require-permission.js";
 import { CLOCK, ClockModule } from "../../src/common/clock/clock.module.js";
 import type { ConSessionUser } from "../../src/common/auth/current-user.js";
-import type { ConTenant } from "../../src/common/auth/permission.guard.js";
+import type { ConTenant } from "../../src/tenant/tenant-context.js";
 import { PrismaModule } from "../../src/common/prisma/prisma.module.js";
 import { PrismaService } from "../../src/common/prisma/prisma.service.js";
 import { configurarApp } from "../../src/configure-app.js";

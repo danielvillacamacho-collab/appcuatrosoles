@@ -471,3 +471,66 @@ que dependiera del reloj del sistema tardaría un minuto o sería inestable.
   invalidación de T-231 sólo alcanza al proceso que la ejecuta; los demás tardan hasta un minuto.
   Hoy hay un solo proceso (`docs/07`), así que no es un problema, pero **deja de no serlo el día
   que se escale horizontalmente**, y ese día hay que resolverlo antes de escalar, no después.
+
+---
+
+## T-221 — `TenantGuard`: la solicitud sabe a qué club pertenece antes de tocar nada
+
+**Fecha:** 2026-08-11 · 13 tests de integración (95 en total) · **cierra T-020 de `specs/010`**
+
+T-020 estaba bloqueada desde el 2026-08-10: «ningún club activo» exigía la tabla `club`, que crea
+este módulo. Se escribió `specs/020` completo y el guard salió de ahí. La consecuencia práctica es
+que **`req.tenant` deja de ser un contrato que sólo llenan dos middlewares de test**: `PermissionGuard`
+(T-022b) y `AuditInterceptor` (T-023) ya tienen quién se lo llene de verdad.
+
+### El orden de los guards es parte de la garantía
+
+`TenantGuard` corre **antes** que `SessionGuard`, y no es una preferencia de estilo: `SessionGuard`
+consulta la tabla de sesiones y `PermissionGuard` la de roles. Si el tenant se resolviera después,
+un host desconocido llegaría a tocar datos de usuarios antes de ser rechazado — y averiguar si una
+cuenta existe sería tan fácil como preguntar desde un subdominio inventado.
+
+El criterio literal de la tarea está probado así: con un host desconocido, un espía sobre
+`prisma.session.findUnique` **no se llama** y la respuesta es `404`; con un host válido y la misma
+cookie inventada, el espía se llama una vez y la respuesta es `401`. Las dos mitades importan: la
+primera prueba que no se consulta, la segunda que sí se consultaba y por eso la primera significa
+algo.
+
+### Seis formas de no resolver, una sola respuesta
+
+Subdominio inexistente, apex sin subdominio, host de otro dominio, subdominio de más nivel, `www`
+y club suspendido: **`404` idéntico byte a byte**, comparado en un test que recorre los seis. Si el
+cuerpo delatara el motivo, un competidor podría averiguar desde afuera qué clubes son clientes
+nuestros y cuáles dejaron de pagar (R-020-02, P-12). El motivo real va al log, con el host y el
+`requestId`, que es donde sirve.
+
+### El host se lee del `Host`, nunca de un `X-Forwarded-Host`
+
+Cualquiera puede escribir ese encabezado; aceptarlo sería dejar que el cliente elija su propio
+tenant, que es exactamente lo que R-020-01 prohíbe. Caddy conserva el `Host` original al hacer
+proxy (`docs/07`), así que no hace falta nada más — y si algún día hiciera falta, será una decisión
+explícita con su ADR, no un `??` agregado de paso.
+
+### Un `Host` ausente no rompe ni concede
+
+HTTP/1.1 lo exige, pero un cliente puede omitirlo. Tiene su test: `404`, como todo lo demás.
+
+### Dos cosas que costaron un test en rojo cada una
+
+1. **Dependencia circular.** El token `BASE_DOMAIN` vivía en `tenant.module.ts`, el guard lo
+   importaba de ahí y el módulo importaba el guard. NestJS lo detecta al arrancar, con un mensaje
+   claro. El token vive ahora en su propio archivo, y la razón quedó escrita ahí para que nadie lo
+   «ordene» de vuelta.
+2. **`vi.spyOn` sobre un delegado de Prisma no llama al método real**: el delegado es un proxy, y
+   el espía devolvía `undefined`, lo que hacía fallar al `SessionGuard` por una razón ajena a lo
+   que se estaba probando. Se ata explícitamente al original.
+
+### Pendiente declarado
+
+- **El guard no se aplica solo**: va con `@UseGuards(TenantGuard, …)`. Cuando exista el primer
+  controlador de negocio conviene registrarlo como `APP_GUARD` global con una excepción explícita
+  para `/health` y para la ruta pública del club (T-240) — y ahí la garantía pasa a ser completa,
+  en vez de depender de que cada controlador lo recuerde.
+- **`BASE_DOMAIN` tiene default `localhost`** para que un clon recién hecho funcione sin
+  configurar nada. En el despliegue es obligatorio, y su ausencia se nota de inmediato porque
+  ningún subdominio real resolvería; queda anotado en `.env.example`.

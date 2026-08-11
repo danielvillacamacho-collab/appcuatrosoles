@@ -89,17 +89,14 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 
 ## C — Infraestructura transversal (guards, decoradores, interceptor)
 
-- [ ] **T-020** `TenantGuard`: resuelve club por subdominio del host, `404` si no coincide con
+- [x] **T-020** `TenantGuard`: resuelve club por subdominio del host, `404` si no coincide con
   ningún club activo, antes de tocar cualquier otro guard. Verificación: test con host
   desconocido → `404` sin llegar a consultar usuario.
-  > ⛔ **Bloqueada por dependencia, no por dificultad (detectado 2026-08-10).** «Ningún club
-  > activo» exige la tabla `club`, y `schema.prisma` la declara explícitamente como entregable del
-  > **módulo 020**, que todavía no tiene `spec.md`. Escribirla desde aquí sería código de
-  > producción sin spec (`CLAUDE.md`, Spec Driven Development). Dos salidas posibles, a decidir:
-  > **(a)** escribir `specs/020` y crear ahí `club` antes de volver a esta tarea — es el orden del
-  > roadmap; **(b)** implementar el guard contra un puerto `ClubDirectory` con un adaptador falso,
-  > y dejar el adaptador de Prisma para 020. La función pura `resolveTenant(host, clubs)` ya está
-  > especificada en `specs/140` §9 y puede escribirse en el dominio sin esperar a la tabla.
+  ✅ 2026-08-11 — **implementada en `specs/020` como T-221**, 13 tests de integración.
+  > Estuvo bloqueada desde el 2026-08-10: «ningún club activo» exigía la tabla `club`, que crea el
+  > módulo 020. Se escribió `specs/020` entero (spec, plan, tareas) y el guard salió de ahí. La
+  > consecuencia práctica: `req.tenant` deja de ser un contrato que sólo llenan middlewares de
+  > test, y `PermissionGuard` y `AuditInterceptor` ya tienen quién se lo llene de verdad.
 - [x] **T-021** `SessionGuard`: valida cookie de sesión, adjunta `CurrentUser` al request.
   Verificación: sin cookie → `401`; cookie de sesión revocada → `401`. ✅ 2026-08-10 — 10 tests de
   integración, ver `verification.md` §T-021.
