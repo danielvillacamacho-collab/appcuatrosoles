@@ -193,11 +193,17 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
 
 ## G — Cierre de módulo
 
-- [ ] **T-260** E2E: crear un club nuevo, entrar por su subdominio, configurarlo y dejarlo
-  operativo. Es la medida de HU-020-02 («horas, no días»).
+- [x] **T-260** E2E: crear un club nuevo, entrar por su subdominio, configurarlo y dejarlo
+  operativo. Es la medida de HU-020-02 («horas, no días»). ✅ 2026-08-11 — 2 tests, ver
+  `verification.md` §T-260.
+  > Es E2E **de API, no de navegador**: `apps/web` todavía no tiene estas pantallas. El de
+  > navegador que pide `docs/05` §7 entra cuando exista la interfaz.
 
-- [ ] **T-261** `pnpm check:isolation` cubre las rutas nuevas: dos clubes simultáneos, ninguna ruta
-  filtra nada del otro.
+- [x] **T-261** `pnpm check:isolation` cubre las rutas nuevas: dos clubes simultáneos, ninguna ruta
+  filtra nada del otro. ✅ 2026-08-11 — 3 tests, ver `verification.md` §T-261.
+  > **Encontró una fuga real**: `GET /organizations/:id/settings` no comprobaba que la organización
+  > fuera del club, así que devolvía la configuración de una organización ajena. Las rutas que
+  > escriben ya estaban cubiertas por `PermissionGuard`; las de lectura no pasan por él.
 
 - [ ] **T-262** `verification.md`: cada criterio de aceptación de `spec.md` §12 con su test
   (archivo + nombre). Cualquier criterio sin test identificado se resuelve antes de cerrar.

@@ -36,6 +36,7 @@ export class SettingsService {
    * pantalla en la que no se puede descubrir qué se puede configurar.
    */
   async listar(ambito: AmbitoDeConsulta, asOf?: Date): Promise<SettingResponse[]> {
+    await this.exigirAmbitoPropio(ambito);
     const filas = await this.filasRelevantes(ambito);
     const instante = asOf ?? this.clock.now();
 
@@ -49,6 +50,7 @@ export class SettingsService {
       throw new NotFoundException();
     }
 
+    await this.exigirAmbitoPropio(ambito);
     const filas = await this.filasRelevantes(ambito);
 
     return aRespuesta(
@@ -94,6 +96,8 @@ export class SettingsService {
       throw new NotFoundException();
     }
 
+    await this.exigirAmbitoPropio(ambito);
+
     const filas = await this.prisma.setting.findMany({
       where: { scope: ambito.scope, scopeId: identificadorDe(ambito), key },
       orderBy: { effectiveFrom: "desc" },
@@ -104,6 +108,30 @@ export class SettingsService {
       effectiveFrom: fila.effectiveFrom.toISOString(),
       createdAt: fila.createdAt.toISOString(),
     }));
+  }
+
+  /**
+   * Una organización de **otro club** no es un ámbito válido desde aquí, y responde `404`.
+   *
+   * Lo encontró la prueba de aislamiento de T-261: sin esta comprobación, `GET
+   * /organizations/:id/settings` con el identificador de una organización ajena devolvía sus
+   * valores — la consulta de filas relevantes incluye el ámbito de organización tal como se lo
+   * pasan, así que traía configuración de otro inquilino. Las rutas que **escriben** ya estaban
+   * cubiertas por `PermissionGuard`; las de lectura no pasan por él, y por eso hacía falta aquí.
+   */
+  private async exigirAmbitoPropio(ambito: AmbitoDeConsulta): Promise<void> {
+    if (ambito.scope !== "organization" || ambito.organizationId === null) {
+      return;
+    }
+
+    const existe = await this.prisma.organization.findFirst({
+      where: { id: ambito.organizationId, clubId: ambito.clubId ?? "" },
+      select: { id: true },
+    });
+
+    if (existe === null) {
+      throw new NotFoundException();
+    }
   }
 
   /**

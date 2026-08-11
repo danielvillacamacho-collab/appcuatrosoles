@@ -941,3 +941,62 @@ dejó abierto para los servicios.
   cumple en el diseño, no en el comportamiento.
 - **`asOf` inválido se ignora en silencio** y se usa «ahora». Es lo más benigno para una pantalla,
   pero conviene revisarlo cuando exista un consumidor real que dependa de la fecha.
+
+---
+
+## T-260 — Un club nuevo, de cero a operativo
+
+**Fecha:** 2026-08-11 · 2 tests (`pnpm test:e2e`)
+
+El recorrido completo en un solo test: alta del club → el subdominio resuelve en el acto → el
+administrador entra → el club ya trae sus cinco categorías y su temporada → crea su organización →
+ajusta una cuota y una regla de configuración → todo queda auditado, cada acción una sola vez → y
+nada de eso se ve desde otro club.
+
+**La medida de HU-020-02 («horas, no días») está escrita como regla del test**: cada paso que este
+archivo necesite hacer *a mano* contra la base de datos es un paso que en la vida real alguien
+tendría que hacer por fuera de la plataforma. Hoy hay **uno**, y está marcado: armar la sesión,
+porque `POST /auth/login` es T-030 de `specs/010` y todavía no existe. Cuando exista, ese bloque se
+reemplaza por la llamada real y el recorrido deja de tocar la base.
+
+**No es el E2E de navegador** que pide `docs/05` §7: `apps/web` no tiene todavía estas pantallas.
+Está dicho en el propio archivo para que nadie lo dé por cubierto.
+
+El segundo test cierra el ciclo: suspender el club corta el acceso por su subdominio.
+
+---
+
+## T-261 — Aislamiento por ruta, y la fuga que encontró
+
+**Fecha:** 2026-08-11 · 3 tests (`pnpm check:isolation`)
+
+### El mecanismo, no sólo las pruebas
+
+ADR-014 punto 3 pide «una prueba de aislamiento por cada ruta registrada». Este archivo **enumera
+las rutas que la aplicación tiene montadas** y exige que cada una esté declarada, con lo que se
+espera de ella cuando la llama alguien de otro club. Una ruta nueva sin su caso hace fallar la
+suite; una declaración que sobra —de una ruta borrada— también, porque una lista llena de rutas
+inexistentes deja de decir nada sobre la aplicación real.
+
+Las categorías son tres: `ajeno` (recibe el identificador de un recurso de otro club → `404`, nunca
+`403`), `vacio` (listado → ni un dato ajeno) y `propio` (opera sobre el club del subdominio → su
+respuesta no puede contener nada del otro).
+
+### La fuga que encontró
+
+**`GET /organizations/:id/settings` devolvía la configuración de una organización de otro club.** La
+consulta de filas relevantes incluye el ámbito de organización tal como se lo pasan, así que traía
+valores de otro inquilino. Las rutas que **escriben** ya estaban cubiertas por `PermissionGuard`
+—que resuelve el ámbito y rechaza con `404`—, pero las de **lectura** no pasan por él, y ahí no
+había nadie comprobando.
+
+Corregido en el servicio, con la razón escrita en el código. Es exactamente el tipo de hueco que
+esta suite existe para encontrar: no lo habría atrapado ningún test de la ruta escrito por quien la
+escribió, porque quien la escribe prueba lo que quiso hacer.
+
+### Pendiente declarado
+
+- La comprobación de rutas es **por lo que declara el decorador**, no por lo que hace el servicio.
+  Una ruta declarada como `propio` que internamente aceptara un identificador ajeno pasaría. Cubrir
+  eso exigiría analizar el cuerpo de cada handler; lo que sí queda cubierto es que **ninguna ruta
+  puede existir sin decisión explícita**.
