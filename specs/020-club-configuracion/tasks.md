@@ -37,9 +37,13 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
   > la migración repara los datos creando clubes en vez de actualizar filas, que es lo que lo hace
   > posible.
 
-- [ ] **T-203** El seed (`pnpm db:seed`) crea también la **organización** y la **temporada
+- [x] **T-203** El seed (`pnpm db:seed`) crea también la **organización** y la **temporada
   abierta** del club de ejemplo. El `club` en sí ya lo crea desde T-202, que tuvo que adelantarlo
-  para no dejar el seed roto; las categorías ya existían desde T-006. Verificación: sigue siendo idempotente
+  para no dejar el seed roto; las categorías ya existían desde T-006. ✅ 2026-08-11 — 2 tests nuevos, ver `verification.md`
+  §T-203.
+  > Se agregó además el vínculo `person_organization` de las tres personas: sin ningún vínculo, un
+  > administrador de organización no tiene sobre qué actuar y R-010-04 no se puede probar con
+  > datos reales. Verificación: sigue siendo idempotente
   (`test/integration/seed.int-spec.ts` ya lo comprueba) y ahora satisface las llaves foráneas.
 
 ## B — Dominio puro (`packages/domain`)

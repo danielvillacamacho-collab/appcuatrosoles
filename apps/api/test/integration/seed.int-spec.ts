@@ -21,6 +21,10 @@ describe("Seed del club de ejemplo", () => {
     categorias: await prisma.membershipCategory.count({ where: { clubId: CLUB_ID } }),
     membresias: await prisma.membershipAssignment.count({ where: { clubId: CLUB_ID } }),
     waivers: await prisma.waiverVersion.count({ where: { clubId: CLUB_ID } }),
+    clubes: await prisma.club.count({ where: { id: CLUB_ID } }),
+    organizaciones: await prisma.organization.count({ where: { clubId: CLUB_ID } }),
+    temporadas: await prisma.season.count({ where: { clubId: CLUB_ID } }),
+    vinculos: await prisma.personOrganization.count({ where: { clubId: CLUB_ID } }),
   });
 
   beforeAll(async () => {
@@ -39,6 +43,27 @@ describe("Seed del club de ejemplo", () => {
     expect(conteos.roles).toBe(3);
     expect(conteos.categorias).toBe(5);
     expect(conteos.waivers).toBe(1);
+    expect(conteos.clubes).toBe(1);
+    expect(conteos.organizaciones).toBe(1);
+    expect(conteos.temporadas).toBe(1);
+    // Las tres personas quedan vinculadas a la organización: sin vínculos, un administrador de
+    // organización no tendría sobre qué actuar y R-010-04 no se podría probar con datos reales.
+    expect(conteos.vinculos).toBe(3);
+  });
+
+  it("el club queda activo y con su subdominio propio, no como los que migró T-202", async () => {
+    const club = await prisma.club.findUniqueOrThrow({ where: { id: CLUB_ID } });
+
+    expect(club.status).toBe("active");
+    expect(club.slug).toBe("club-demo");
+  });
+
+  it("la temporada tiene fechas reales y está abierta (D-020-03)", async () => {
+    const temporada = await prisma.season.findFirstOrThrow({ where: { clubId: CLUB_ID } });
+
+    expect(temporada.status).toBe("open");
+    expect(temporada.startsOn.toISOString()).toContain("2026-01-01");
+    expect(temporada.endsOn.toISOString()).toContain("2026-12-31");
   });
 
   it("las tres cuentas quedan activas y con un rol distinto cada una", async () => {

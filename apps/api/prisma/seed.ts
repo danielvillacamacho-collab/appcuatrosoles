@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
 import argon2 from "argon2";
-import { PrismaClient, type RoleName } from "@prisma/client";
+import { PrismaClient, type OrgRelationship, type RoleName } from "@prisma/client";
 
 /**
  * Datos de ejemplo para desarrollo (`pnpm db:seed`).
@@ -20,6 +20,23 @@ export const CLUB_ID = "club-demo";
 const CLUB_SLUG = "club-demo";
 
 /**
+ * La organización de ejemplo. El club opera con al menos una —la escuela— porque casi todo lo que
+ * viene después (clases, coaches, bolsas) cuelga de una organización, no del club.
+ */
+const ORGANIZACION = { name: "Escuela de ejemplo", type: "school" } as const;
+
+/**
+ * Temporada de ejemplo, con fechas reales (D-020-03: el club opera por temporadas). Es el año
+ * calendario completo, que es lo más parecido a lo que hace un club que todavía no decidió otra
+ * cosa. No se solapa con ninguna otra: la base lo impide (T-201).
+ */
+const TEMPORADA = {
+  name: "Temporada 2026",
+  startsOn: new Date("2026-01-01"),
+  endsOn: new Date("2026-12-31"),
+} as const;
+
+/**
  * Contraseña de las cuentas de ejemplo. No es un secreto: son cuentas de un club ficticio en
  * una base de datos de desarrollo. Aun así, el seed se niega a correr en producción (abajo),
  * porque crear cuentas con una contraseña conocida sí sería un problema si eso pasara.
@@ -31,6 +48,8 @@ interface PersonaDemo {
   fullName: string;
   role: RoleName;
   categoria: string;
+  /** Cómo se relaciona con la organización de ejemplo. */
+  relacion: OrgRelationship;
 }
 
 const PERSONAS: PersonaDemo[] = [
@@ -39,18 +58,21 @@ const PERSONAS: PersonaDemo[] = [
     fullName: "Administradora del club",
     role: "club_admin",
     categoria: "partner",
+    relacion: "staff",
   },
   {
     email: "comisario@club-demo.test",
     fullName: "Comisario de polo",
     role: "commissioner",
     categoria: "partner",
+    relacion: "staff",
   },
   {
     email: "jugador@club-demo.test",
     fullName: "Jugador de ejemplo",
     role: "player",
     categoria: "student",
+    relacion: "student",
   },
 ];
 
@@ -115,6 +137,22 @@ export async function sembrarClubDemo(
     update: { slug: CLUB_SLUG, name: "Club de ejemplo", status: "active" },
   });
   log(`  1 club (${CLUB_SLUG})`);
+
+  // ── Organización y temporada ────────────────────────────────────────────────
+  // `upsert` sobre (club_id, name), que es único en ambas tablas: correrlo de nuevo no duplica.
+  const organizacion = await prisma.organization.upsert({
+    where: { clubId_name: { clubId: CLUB_ID, name: ORGANIZACION.name } },
+    create: { clubId: CLUB_ID, ...ORGANIZACION },
+    update: { type: ORGANIZACION.type, status: "active", archivedAt: null },
+  });
+  log(`  1 organización (${ORGANIZACION.name})`);
+
+  await prisma.season.upsert({
+    where: { clubId_name: { clubId: CLUB_ID, name: TEMPORADA.name } },
+    create: { clubId: CLUB_ID, ...TEMPORADA },
+    update: { startsOn: TEMPORADA.startsOn, endsOn: TEMPORADA.endsOn },
+  });
+  log(`  1 temporada (${TEMPORADA.name})`);
 
   // ── Categorías de membresía ─────────────────────────────────────────────────
   // `upsert` sobre (club_id, code), que es único: correrlo de nuevo actualiza en vez de duplicar.
@@ -207,6 +245,24 @@ export async function sembrarClubDemo(
           membershipCategoryId: categoria.id,
           effectiveFrom: new Date("2026-01-01T00:00:00.000Z"),
           assignedById: cuenta.id,
+        },
+      });
+    }
+
+    // Vínculo con la organización. Existe para que el seed ejercite la llave foránea de T-202 y
+    // para que haya datos con los que probar el aislamiento por organización (R-010-04): sin
+    // ningún `person_organization`, un administrador de organización no tiene sobre qué actuar.
+    const yaVinculada = await prisma.personOrganization.findFirst({
+      where: { personId: registro.id, organizationId: organizacion.id, leftOn: null },
+    });
+    if (!yaVinculada) {
+      await prisma.personOrganization.create({
+        data: {
+          clubId: CLUB_ID,
+          personId: registro.id,
+          organizationId: organizacion.id,
+          relationship: persona.relacion,
+          joinedOn: new Date("2026-01-01"),
         },
       });
     }

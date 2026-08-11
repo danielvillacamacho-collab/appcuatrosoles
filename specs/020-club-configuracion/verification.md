@@ -166,3 +166,31 @@ crear un club de verdad no es un costo: es que se parecen un poco más a la real
   arnés no se justifica todavía; si aparece una segunda migración de datos, sí.
 - `person_organization.organization_id` quedó con llave foránea, pero **no hay ninguna
   organización** en el seed: entra con T-203.
+
+---
+
+## T-203 — El seed deja un club de ejemplo completo
+
+**Fecha:** 2026-08-11 · 2 tests nuevos (73 de integración en total)
+
+T-202 ya había adelantado la fila `club` por necesidad —sin ella el seed fallaba en la primera
+categoría—. Esta tarea completa lo que faltaba: **una organización** (`Escuela de ejemplo`), **una
+temporada abierta con fechas reales** (2026, año calendario, D-020-03) y el **vínculo de cada
+persona con la organización**.
+
+El vínculo no estaba pedido explícitamente y se agregó por una razón concreta: sin ninguna fila en
+`person_organization`, un `organization_admin` no tiene sobre qué actuar, y R-010-04 —la regla de
+que no puede salirse de su organización— no se puede probar contra datos reales. Ahora el seed deja
+el escenario armado para T-223.
+
+Todo con `upsert` sobre claves únicas reales (`(club_id, name)` en ambas tablas), así que la
+idempotencia que exige T-006 se mantiene: el test cuenta clubes, organizaciones, temporadas y
+vínculos antes y después de una segunda corrida, y exige que no cambien.
+
+Dos comprobaciones nuevas que no son de conteo:
+
+- **El club de ejemplo queda `active` y con slug propio** (`club-demo`), a diferencia de los clubes
+  que T-202 creó para datos huérfanos, que quedan suspendidos y con slug generado. El test lo fija
+  para que la distinción no se pierda.
+- **La temporada está abierta y tiene fechas reales**, no una ventana ficticia permanente: es la
+  decisión D-020-03 del spec, y se comprueba en la fila, no en la intención.
