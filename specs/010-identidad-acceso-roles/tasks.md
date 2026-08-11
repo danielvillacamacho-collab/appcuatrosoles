@@ -263,19 +263,25 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 
 ## H — Familias, membresía y waivers
 
-- [ ] **T-070** `POST /guardianships`: crea vínculo, cierra automáticamente el `endsOn` de un
+- [x] **T-070** `POST /guardianships`: crea vínculo, cierra automáticamente el `endsOn` de un
   payer anterior si el nuevo se marca `isPrimaryPayer=true` (mantiene el invariante "exactamente
   uno vigente", `plan.md` §7).
-- [ ] **T-071** Job `identity.check-primary-payer-integrity` (cron diario): detecta
+- [x] **T-071** Job `identity.check-primary-payer-integrity` (cron diario): detecta
   dependientes activos sin payer vigente, notifica al administrador. Test: fixture con el caso
   roto, confirma que el job lo detecta.
-- [ ] **T-072** `MembershipAssignment`: alta y consulta de categoría vigente por persona
+- [x] **T-072** `MembershipAssignment`: alta y consulta de categoría vigente por persona
   (histórico, nunca se sobreescribe — sólo se agrega fila nueva).
-- [ ] **T-073** `POST /waivers` (`club_admin`): publica nueva versión.
-- [ ] **T-074** `POST /waivers/current/accept`: acepta en nombre propio o, si la persona es
+- [x] **T-073** `POST /waivers` (`club_admin`): publica nueva versión.
+- [x] **T-074** `POST /waivers/current/accept`: acepta en nombre propio o, si la persona es
   menor, registrado por el acudiente (`acceptedByPersonId`).
-- [ ] **T-075** Guard/helper reutilizable `assertWaiverAccepted(personId)` para que otros
-  módulos (prácticas, clases) lo llamen sin reimplementar la regla (R-010-12).
+- [x] **T-075** Guard/helper reutilizable `assertWaiverAccepted(personId)` para que otros
+  módulos (prácticas, clases) lo llamen sin reimplementar la regla (R-010-12). ✅ 2026-08-11 —
+  11 tests para toda la sección H, ver `verification.md` §H. **Cierra la sección H.**
+  > Se llama `WaiversService.exigirWaiverVigente` y su módulo es **global**, para que ningún módulo
+  > futuro tenga que importarlo — y para que nadie, por no hacerlo, escriba la comprobación por su
+  > cuenta.
+  > **T-072 quedó cubierta por la sección F**: el cambio de categoría con historia se implementó al
+  > editar usuarios, con su regla del mismo día.
 
 ## I — Auditoría
 

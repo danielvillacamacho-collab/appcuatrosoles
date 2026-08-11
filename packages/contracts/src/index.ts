@@ -7,3 +7,4 @@ export * from "./setting.js";
 export * from "./auth.js";
 export * from "./me.js";
 export * from "./user.js";
+export * from "./family.js";

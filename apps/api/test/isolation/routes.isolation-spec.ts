@@ -83,6 +83,13 @@ const CON_TEST_PROPIO = [
   // nunca viaja en el cuerpo». El aislamiento de estas dos es por ámbito del rol, no por recurso.
   "POST /users/:id/roles",
   "DELETE /users/:id/roles/:roleAssignmentId",
+  // `family.int-spec` → «una persona de otro club responde 404» y «alguien que no es su acudiente
+  // no acepta por el menor». El waiver vigente es por club y la aceptación es por persona.
+  "POST /guardianships",
+  "GET /guardianships/:dependentPersonId",
+  "GET /waivers/current",
+  "POST /waivers",
+  "POST /waivers/current/accept",
 ];
 
 /** Rutas que no operan dentro de un club y por lo tanto no tienen tenant que aislar. */

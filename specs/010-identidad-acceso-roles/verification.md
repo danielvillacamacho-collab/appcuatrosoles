@@ -1751,3 +1751,63 @@ impide que el único administrador del club se quede afuera por un clic.
 
 Un `organization_admin` intentando `role.assign` con ámbito de club recibe `403`, y con ámbito de su
 propia organización, `201`. Los dos en la misma prueba, porque lo que importa es el contraste.
+
+---
+
+## Sección H — Familias, membresía y waivers (T-070 a T-075)
+
+**Fecha:** 2026-08-11 · 11 tests de integración (303 en total)
+
+### El pagador principal se cierra solo al llegar el nuevo
+
+El invariante «exactamente uno vigente» **no cabe en un `CHECK`** —depende de la fecha— así que lo
+sostienen dos cosas juntas: esta operación, que cierra el anterior en la misma transacción, y el
+índice único parcial de T-003, que impide dos vigentes a la vez. Sin lo primero, la segunda
+inserción falla contra el índice: la base no deja pasar el error, pero el mensaje no le diría nada
+a nadie.
+
+### El job de integridad no corrige nada (T-071)
+
+Detecta dependientes activos cuyo pagador no se puede resolver, con su motivo. Son **dos** casos, no
+uno —lo dejó anotado T-014—: ninguno vigente, o dos distintos vigentes a la vez. No corrige: un job
+que decide quién paga estaría decidiendo por una persona.
+
+Usa `resolvePrimaryPayer` del dominio (T-014) y `toLocalDate` con la zona del club, que es lo que
+hace que «hoy» signifique hoy en el club y no en UTC.
+
+### Aceptar el waiver es un acto personal
+
+`POST /waivers/current/accept` **no exige permiso**: nadie necesita autorización para firmar por sí
+mismo. Aceptar por otra persona sí exige ser su **acudiente vigente**, y eso lo comprueba el
+servicio — la aceptación es evidencia legal, y sin esa comprobación cualquiera podría firmar por
+cualquiera. Los dos casos tienen test.
+
+Aceptar dos veces no falla ni duplica: un doble clic en el celular es un caso real, y el índice
+único de `schema.prisma` ya garantizaba una sola fila; el `upsert` evita que el usuario vea un error
+que no le dice nada.
+
+### Publicar una versión nueva descubre a todo el mundo
+
+Es HU-010-11 y está probado en el mismo test: alguien acepta, queda cubierto, el club publica una
+versión nueva y **deja de estarlo**. La decisión vive en el dominio desde T-013 —comparación por
+identificador de versión, no por número— y aquí sólo se le dan los datos.
+
+### El ayudante que pide T-075
+
+`WaiversService.exigirWaiverVigente(clubId, personId)` y su hermano que devuelve booleano. Su módulo
+es **global** para que ningún módulo futuro tenga que importarlo — y, sobre todo, para que nadie
+escriba la comprobación por su cuenta por no hacerlo.
+
+Devuelve «sí» cuando el club **no tiene waiver publicado**: sin waiver no hay nada que aceptar, y
+bloquear a todo el mundo por una tabla vacía sería el sistema estorbando.
+
+### T-072 quedó cubierta antes
+
+El cambio de categoría con historia se implementó al editar usuarios (sección F), incluida la regla
+del mismo día que impuso la base. No se duplicó aquí.
+
+### Pendiente declarado
+
+- **El job de integridad no está programado.** La función existe y tiene test, pero nadie la corre
+  a diario: eso es `pg-boss` (ADR-012), que sigue sin montarse. Es la misma dependencia que la
+  purga de sesiones y la de mensajes enviados; conviene resolverlas juntas.
