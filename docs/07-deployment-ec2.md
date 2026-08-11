@@ -31,8 +31,14 @@ es cambiar una variable de entorno, no un rediseño.
 - **Cuenta AWS**: ya existe (confirmado 2026-08-10). Falta: región definitiva, IAM del
   usuario/rol que despliega, y salir del sandbox de SES (`ADR-008` — trámite de 1-2 días, se
   hace en la semana 1, no al final).
-- **Dominio**: pendiente (`docs/09` T-04). Bloquea el despliegue público, no el desarrollo —
-  Caddy puede servir localmente y en staging con un dominio temporal o IP mientras se resuelve.
+- **Dominio**: `cuatrosoles.co` (decidido 2026-08-11, `docs/09` T-04). El ambiente de desarrollo
+  vive bajo `*.dev.cuatrosoles.co`. Las instrucciones para montarlo están en
+  `docs/11-brief-infraestructura-dev.md`, escritas para pasárselas a un equipo de infraestructura.
+- **Certificado comodín**: el club se resuelve por subdominio (`ADR-013`), así que hace falta un
+  certificado para `*.dev.cuatrosoles.co`. Let's Encrypt **no emite comodines por validación HTTP**:
+  hay que validar por DNS, lo que obliga a compilar Caddy con el módulo de Route 53 y a darle a la
+  instancia permiso para escribir en la zona. Es el detalle que más tiempo hace perder si se
+  descubre en el momento del despliegue (`docs/11` §7).
 
 ## 3. Caddy
 

@@ -41,7 +41,7 @@ revisión de código humana; y hay un manual de operación en `docs/10-operating
 | Q-02b | Llaves de Wompi sandbox y producción | adaptador real de pagos | inicio Fase 3 |
 | Q-03b | ¿El club también tendrá su propia cuenta Wompi, o todo se recauda por Cuatro Soles? | diseño de liquidación (ver `specs/105` §Riesgos) | inicio Fase 3 |
 | Q-03c | ¿Existe un acuerdo escrito de recaudo entre Cuatro Soles y el club? | no bloquea el código, sí la operación real | antes de cobrar plata real |
-| T-04 | Dominio definitivo y quién administra el DNS | despliegue | Fase 1 |
+| T-04 | Dominio definitivo y quién administra el DNS | despliegue | **Decidido 2026-08-11**: `cuatrosoles.co`, comprado y administrado en Route 53. Ver `docs/11`. |
 | T-05 | ¿Quién atiende soporte del día a día del club? | operación | Fase 2 |
 
 ## Parámetros con default vigente (no bloquean, se cambian sin desplegar)
