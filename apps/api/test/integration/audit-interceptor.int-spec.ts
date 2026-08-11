@@ -26,9 +26,9 @@ import type { ConTenant } from "../../src/common/auth/permission.guard.js";
 import { PrismaModule } from "../../src/common/prisma/prisma.module.js";
 import { PrismaService } from "../../src/common/prisma/prisma.service.js";
 import { configurarApp } from "../../src/configure-app.js";
-import { etiqueta } from "../db.js";
+import { crearClubDePrueba, etiqueta } from "../db.js";
 
-const CLUB = etiqueta("club-auditoria");
+let CLUB = "";  // se llena en beforeAll: desde T-202 el club es una fila real
 
 /**
  * Declara `@RequirePermission()` en el controlador entero **porque si no, la aplicación no
@@ -138,6 +138,7 @@ describe("AuditInterceptor (T-023, docs/03 §9, R-010-11)", () => {
     await app.init();
     prisma = app.get(PrismaService);
 
+    CLUB = await crearClubDePrueba(prisma, "club-auditoria");
     const persona = await prisma.person.create({
       data: { clubId: CLUB, fullName: "Administradora de prueba" },
     });

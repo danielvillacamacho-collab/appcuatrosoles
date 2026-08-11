@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import type { PrismaClient } from "@prisma/client";
-import { crearClienteDePrueba, etiqueta } from "../db.js";
+import { crearClienteDePrueba, crearClubDePrueba, etiqueta } from "../db.js";
 
 /**
  * T-005 · El correo de una persona es único dentro de su club, pero puede estar vacío.
@@ -18,7 +18,7 @@ describe("Persona · unicidad del correo dentro del club", () => {
   });
 
   it("dos personas del mismo club pueden tener el correo vacío", async () => {
-    const club = etiqueta("club");
+    const club = await crearClubDePrueba(prisma);
 
     await prisma.person.create({ data: { clubId: club, fullName: "Petisero sin correo" } });
     await prisma.person.create({ data: { clubId: club, fullName: "Invitada sin correo" } });
@@ -28,7 +28,7 @@ describe("Persona · unicidad del correo dentro del club", () => {
   });
 
   it("dos personas del mismo club NO pueden repetir el mismo correo", async () => {
-    const club = etiqueta("club");
+    const club = await crearClubDePrueba(prisma);
 
     await prisma.person.create({
       data: { clubId: club, fullName: "Primera", email: "repetido@ejemplo.com" },
@@ -42,8 +42,8 @@ describe("Persona · unicidad del correo dentro del club", () => {
   });
 
   it("el mismo correo sí puede existir en dos clubes distintos", async () => {
-    const clubA = etiqueta("club-a");
-    const clubB = etiqueta("club-b");
+    const clubA = await crearClubDePrueba(prisma, "club-a");
+    const clubB = await crearClubDePrueba(prisma, "club-b");
 
     await prisma.person.create({
       data: { clubId: clubA, fullName: "Misma persona en A", email: "compartido@ejemplo.com" },
@@ -56,8 +56,8 @@ describe("Persona · unicidad del correo dentro del club", () => {
   });
 
   it("el correo de acceso, en cambio, es único en toda la plataforma (docs/09 D-05)", async () => {
-    const clubA = etiqueta("club-a");
-    const clubB = etiqueta("club-b");
+    const clubA = await crearClubDePrueba(prisma, "club-a");
+    const clubB = await crearClubDePrueba(prisma, "club-b");
     const correoDeAcceso = `${etiqueta("acceso")}@ejemplo.com`;
 
     const personaA = await prisma.person.create({

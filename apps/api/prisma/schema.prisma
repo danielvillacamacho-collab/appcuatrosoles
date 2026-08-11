@@ -63,6 +63,9 @@ model Person {
   waiverAcceptances    WaiverAcceptance[] @relation("WaiverSubject")
   waiversAcceptedOnBehalf WaiverAcceptance[] @relation("WaiverAcceptedBy")
 
+  /// T-202: la llave foránea que 010 dejó anotada como deuda. Ver `specs/020` §T-202.
+  club Club @relation(fields: [clubId], references: [id], onDelete: Restrict)
+
   @@unique([clubId, email])
   @@index([clubId, status])
   @@map("person")
@@ -121,6 +124,8 @@ model UserAccount {
   membershipsAssigned MembershipAssignment[]   @relation("MembershipsAssigned")
   auditEntries        AuditLog[]               @relation("AuditActor")
   auditEntriesOnBehalf AuditLog[]              @relation("AuditOnBehalfOf")
+
+  settingsCreated Setting[]
 
   @@map("user_account")
 }
@@ -192,6 +197,12 @@ model PersonOrganization {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   person Person @relation(fields: [personId], references: [id])
+
+  /// T-202: la llave foránea que 010 dejó anotada como deuda. Ver `specs/020` §T-202.
+  club Club @relation(fields: [clubId], references: [id], onDelete: Restrict)
+
+  /// T-202: idem para la organización. Ya no puede apuntar a una que no existe.
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   @@index([clubId, organizationId, relationship])
   @@index([personId])
@@ -298,6 +309,9 @@ model CommissionerDelegation {
   delegator UserAccount @relation("DelegationsGiven", fields: [delegatorId], references: [id])
   delegate  UserAccount @relation("DelegationsReceived", fields: [delegateId], references: [id])
 
+  /// T-202: la llave foránea que 010 dejó anotada como deuda. Ver `specs/020` §T-202.
+  club Club @relation(fields: [clubId], references: [id], onDelete: Restrict)
+
   @@index([clubId, delegateId, revokedAt])
   @@map("commissioner_delegation")
 }
@@ -350,6 +364,9 @@ model MembershipCategory {
 
   assignments MembershipAssignment[]
 
+  /// T-202: la llave foránea que 010 dejó anotada como deuda. Ver `specs/020` §T-202.
+  club Club @relation(fields: [clubId], references: [id], onDelete: Restrict)
+
   @@unique([clubId, code])
   @@index([clubId, active])
   @@map("membership_category")
@@ -377,6 +394,9 @@ model MembershipAssignment {
   person     Person             @relation(fields: [personId], references: [id])
   category   MembershipCategory @relation(fields: [membershipCategoryId], references: [id])
   assignedBy UserAccount        @relation("MembershipsAssigned", fields: [assignedById], references: [id])
+
+  /// T-202: la llave foránea que 010 dejó anotada como deuda. Ver `specs/020` §T-202.
+  club Club @relation(fields: [clubId], references: [id], onDelete: Restrict)
 
   @@index([clubId, personId, effectiveFrom])
   @@index([membershipCategoryId])
@@ -408,6 +428,9 @@ model Guardianship {
   guardian  Person @relation("Guardian", fields: [guardianPersonId], references: [id])
   dependent Person @relation("Dependent", fields: [dependentPersonId], references: [id])
 
+  /// T-202: la llave foránea que 010 dejó anotada como deuda. Ver `specs/020` §T-202.
+  club Club @relation(fields: [clubId], references: [id], onDelete: Restrict)
+
   @@index([clubId, dependentPersonId])
   @@index([guardianPersonId])
   @@map("guardianship")
@@ -433,6 +456,9 @@ model WaiverVersion {
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   acceptances WaiverAcceptance[]
+
+  /// T-202: la llave foránea que 010 dejó anotada como deuda. Ver `specs/020` §T-202.
+  club Club @relation(fields: [clubId], references: [id], onDelete: Restrict)
 
   @@unique([clubId, version])
   @@index([clubId, publishedAt])
@@ -465,6 +491,9 @@ model WaiverAcceptance {
   version    WaiverVersion @relation(fields: [waiverVersionId], references: [id])
 
   /// Una persona acepta una versión una sola vez; aceptarla dos veces no significa nada.
+  /// T-202: la llave foránea que 010 dejó anotada como deuda. Ver `specs/020` §T-202.
+  club Club @relation(fields: [clubId], references: [id], onDelete: Restrict)
+
   @@unique([personId, waiverVersionId])
   @@index([clubId, personId])
   @@map("waiver_acceptance")
@@ -511,6 +540,11 @@ model AuditLog {
   onBehalfOf UserAccount? @relation("AuditOnBehalfOf", fields: [onBehalfOfId], references: [id], onDelete: Restrict)
 
   // No hay `updated_at`: esta tabla no se actualiza nunca.
+  /// T-202: sí lleva llave foránea, aunque la tabla sea append-only. Agregar la restricción
+  /// es un ALTER que **lee** las filas para validarlas; los triggers de P-07 bloquean UPDATE,
+  /// DELETE y TRUNCATE, no la validación. Ver el razonamiento completo en `verification.md`.
+  club Club? @relation(fields: [clubId], references: [id], onDelete: Restrict)
+
   @@index([clubId, entityType, entityId])
   @@index([occurredAt])
   @@index([actorUserId, occurredAt])
@@ -552,6 +586,17 @@ model Club {
   organizations Organization[]
   seasons       Season[]
 
+  // T-202 · Todo lo que cuelga del club, ahora con integridad referencial de verdad.
+  people                 Person[]
+  peopleOrganizations    PersonOrganization[]
+  commissionerDelegations CommissionerDelegation[]
+  membershipCategories   MembershipCategory[]
+  membershipAssignments  MembershipAssignment[]
+  guardianships          Guardianship[]
+  waiverVersions         WaiverVersion[]
+  waiverAcceptances      WaiverAcceptance[]
+  auditEntries           AuditLog[]
+
   @@index([status])
   @@map("club")
 }
@@ -585,7 +630,8 @@ model Organization {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  club Club @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  club    Club                 @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  members PersonOrganization[]
 
   @@unique([clubId, name])
   @@index([clubId, status])
@@ -662,6 +708,9 @@ model Setting {
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   // Sin `updatedAt`: esta tabla no se actualiza nunca, se le agregan filas.
+  /// Quién fijó el valor. Nulo cuando lo puso el sistema (el arranque, una migración).
+  createdBy UserAccount? @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
   @@unique([scope, scopeId, key, effectiveFrom])
   @@index([scope, scopeId, key, effectiveFrom])
   @@map("setting")

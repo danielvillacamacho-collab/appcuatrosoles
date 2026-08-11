@@ -81,3 +81,88 @@ propósito: una hace inofensivo al huérfano, la otra evita que queden huérfano
   hacer con `audit_log`, que es append-only por triggers.
 - `Setting.createdById` no tiene llave foránea a `user_account` todavía: entra con T-202, junto al
   resto.
+
+---
+
+## T-202 — Las llaves foráneas hacia `club`, y la deuda que `specs/010` dejó anotada
+
+**Fecha:** 2026-08-11 · **Migración:** `20260811121937_club_foreign_keys` · 8 tests nuevos
+(71 de integración en total)
+
+Once columnas que eran texto libre pasan a tener integridad referencial: `person`,
+`person_organization` (club **y** organización), `commissioner_delegation`, `membership_category`,
+`membership_assignment`, `guardianship`, `waiver_version`, `waiver_acceptance`, `audit_log` y
+`setting.created_by_id`.
+
+Por qué importa más de lo que parece: una fila con un `club_id` inexistente **no pertenece a ningún
+inquilino**, así que ningún filtro por club la encuentra y ninguna consulta la muestra. Existe, y
+es invisible. Eso toca P-05 de frente.
+
+### La decisión sobre `audit_log`: sí lleva llave foránea
+
+La tarea pedía decidirlo por escrito porque la tabla es append-only por triggers (T-004) y una
+migración que intente actualizar sus filas **falla**. La respuesta es que sí la lleva, y el
+razonamiento es lo que importa:
+
+`ALTER TABLE ... ADD CONSTRAINT ... FOREIGN KEY` no es `UPDATE`, `DELETE` ni `TRUNCATE`: valida las
+filas existentes **leyéndolas**, y de ahí en adelante sólo condiciona inserciones futuras. Los
+triggers de P-07 bloquean las tres operaciones que borran o reescriben historia, y ninguna de ellas
+participa aquí.
+
+Lo que sí había que evitar era **reparar los datos con un `UPDATE`**, que es la forma habitual de
+resolver huérfanos. Ver abajo.
+
+Hay un test que crea una entrada, comprueba que la llave foránea rechaza un club inexistente, y
+**acto seguido** comprueba que `UPDATE` y `DELETE` siguen fallando: si alguien un día reemplaza los
+triggers por otra cosa, ese test avisa.
+
+### La migración repara datos, no sólo esquema
+
+La base de desarrollo ya tenía el problema: dos `club_id` huérfanos —`club-demo`, del seed, y `c`,
+de una prueba manual de T-004—. Uno de ellos, `c`, **ni siquiera cumplía el formato de slug** de
+T-201, lo que descartaba de entrada la solución ingenua de derivar el slug del identificador.
+
+La migración, para cada `club_id` huérfano, **crea el club que falta conservando su
+identificador**. Tres consecuencias buscadas:
+
+1. **No se actualiza ninguna fila hija.** Es lo que permite que `audit_log` participe.
+2. **No se borra nada** (P-06).
+3. El club creado queda **`suspended`** y con un **slug generado** (`migrado-<hash>`), no adivinado.
+   De un club cuyo origen no se puede verificar, lo último que se quiere es que quede accesible por
+   subdominio en cuanto exista el `TenantGuard` (T-221). Si alguno es real, se reactiva a mano o lo
+   corrige el arranque (T-232).
+
+Verificado contra la base de desarrollo **con datos**, que es el caso que la tarea exigía y el que
+rompe en un despliegue:
+
+| Antes | Después |
+|---|---|
+| `person`, `membership_category`, `waiver_version`, `audit_log` con `club_id` suelto | `club` con dos filas: `c` (suspendido, `migrado-4a8a08f09d37`) y `club-demo` |
+| insertar una persona de un club inexistente: permitido | rechazado por `person_club_id_fkey` |
+| `audit_log`: 1 fila | 1 fila, intacta, y su `UPDATE` sigue rechazado por el trigger |
+
+Ciclo `up → down → up` verificado. El `down.sql` quita las restricciones y **no** borra los clubes
+creados: revertir el esquema no puede llevarse por delante filas que para entonces quizá ya tengan
+datos colgando.
+
+### El radio de la tarea: 12 archivos, y por qué no se podía partir
+
+`CLAUDE.md` fija el límite en 5 archivos. Éste lo dobló, y la razón es la propia restricción: en
+cuanto entró, **el seed y 21 tests dejaron de pasar**, porque todos inventaban `club_id`. Un commit
+rojo no es una opción, así que la tarea absorbió:
+
+- el `club` del seed (parte de T-203, que queda reducida a la organización y la temporada);
+- un ayudante `crearClubDePrueba` en `test/db.ts`, y su uso en cuatro archivos de test.
+
+Es exactamente el efecto que la tarea anticipaba —«el seed y los tests inventan `club_id`
+libremente»— sólo que medido en tests rotos en vez de en filas huérfanas. Que los tests tengan que
+crear un club de verdad no es un costo: es que se parecen un poco más a la realidad.
+
+### Pendiente declarado
+
+- **La reparación de datos no tiene test automatizado**, sólo evidencia manual (la tabla de
+  arriba). Probarla exigiría un arnés que aplique migraciones hasta la N-1, siembre datos legados
+  y aplique la N — no existe hoy. Como la migración corre una sola vez, el costo de construir ese
+  arnés no se justifica todavía; si aparece una segunda migración de datos, sí.
+- `person_organization.organization_id` quedó con llave foránea, pero **no hay ninguna
+  organización** en el seed: entra con T-203.

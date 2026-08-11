@@ -14,8 +14,10 @@ import { PrismaClient, type RoleName } from "@prisma/client";
  * lo hace útil — un seed que hay que borrar antes de volver a correr no se usa.
  */
 
-/** Mientras no exista la tabla `club` (módulo 020), el club es un identificador fijo. */
+/** El club de ejemplo. Desde T-202 es una fila real de `club`, no un identificador suelto. */
 export const CLUB_ID = "club-demo";
+/** Subdominio del club de ejemplo: en desarrollo se entra por `club-demo.localhost`. */
+const CLUB_SLUG = "club-demo";
 
 /**
  * Contraseña de las cuentas de ejemplo. No es un secreto: son cuentas de un club ficticio en
@@ -102,6 +104,17 @@ export async function sembrarClubDemo(
   };
 
   log(`Sembrando el club de ejemplo «${CLUB_ID}»…`);
+
+  // ── El club ─────────────────────────────────────────────────────────────────
+  // Va primero porque desde T-202 todo lo demás tiene llave foránea hacia él: sin esta fila, el
+  // seed falla en la primera categoría. Se crea `active` y con su slug propio, a diferencia de
+  // los clubes que la migración de T-202 haya creado para datos huérfanos, que quedan suspendidos.
+  await prisma.club.upsert({
+    where: { id: CLUB_ID },
+    create: { id: CLUB_ID, slug: CLUB_SLUG, name: "Club de ejemplo", status: "active" },
+    update: { slug: CLUB_SLUG, name: "Club de ejemplo", status: "active" },
+  });
+  log(`  1 club (${CLUB_SLUG})`);
 
   // ── Categorías de membresía ─────────────────────────────────────────────────
   // `upsert` sobre (club_id, code), que es único: correrlo de nuevo actualiza en vez de duplicar.

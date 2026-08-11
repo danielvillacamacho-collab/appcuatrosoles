@@ -15,7 +15,7 @@ import {
 import { PrismaModule } from "../../src/common/prisma/prisma.module.js";
 import { PrismaService } from "../../src/common/prisma/prisma.service.js";
 import { configurarApp } from "../../src/configure-app.js";
-import { etiqueta } from "../db.js";
+import { crearClubDePrueba, etiqueta } from "../db.js";
 
 @Controller("protegido")
 @UseGuards(SessionGuard)
@@ -44,8 +44,10 @@ describe("SessionGuard (T-021, docs/06 §1)", () => {
     } = {},
   ): Promise<{ token: string; userAccountId: string; personId: string }> {
     const marca = etiqueta("sesion");
+    // El club es una fila real desde T-202: `person.club_id` tiene llave foránea.
+    const clubId = await crearClubDePrueba(prisma);
     const persona = await prisma.person.create({
-      data: { clubId: marca, fullName: "Jugadora de prueba" },
+      data: { clubId, fullName: "Jugadora de prueba" },
     });
     const cuenta = await prisma.userAccount.create({
       data: {

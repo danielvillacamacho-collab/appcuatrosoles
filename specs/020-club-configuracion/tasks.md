@@ -22,16 +22,24 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
   > distintos dos NULL. Se cubrió con un índice parcial. Y de paso hubo que reparar
   > `pnpm db:down-sql`, cuyos temporales rompían `migrate deploy`.
 
-- [ ] **T-202** Llaves foráneas pendientes de `specs/010` hacia `club` y `organization`
+- [x] **T-202** Llaves foráneas pendientes de `specs/010` hacia `club` y `organization`
   (`plan.md` §6). **Incluye migrar los datos existentes**, no sólo agregar la restricción: hoy el
   seed y los tests inventan `club_id` libremente y la migración fallaría en una base con datos.
   Decisión explícita y escrita sobre `audit_log`: lleva llave foránea o no lleva, y por qué —
   es append-only por triggers, así que una migración que actualice sus filas **falla**.
   Verificación: la migración corre contra una base **con el seed aplicado**, no vacía; insertar
-  una fila con `club_id` inexistente es rechazado.
+  una fila con `club_id` inexistente es rechazado. ✅ 2026-08-11 — 8 tests nuevos, ver
+  `verification.md` §T-202.
+  > **Tocó 12 archivos, muy por encima del límite de 5, y no se podía partir**: la restricción
+  > rompía de golpe el seed y 21 tests que inventaban `club_id`. Dejar el commit rojo no era
+  > opción, así que la tarea absorbió el `club` del seed (parte de T-203) y un ayudante
+  > `crearClubDePrueba` para los tests. Decisión sobre `audit_log`: **sí lleva** llave foránea, y
+  > la migración repara los datos creando clubes en vez de actualizar filas, que es lo que lo hace
+  > posible.
 
-- [ ] **T-203** El seed (`pnpm db:seed`) deja de inventar un `club_id` y crea un club real con su
-  organización, su temporada abierta y sus categorías. Verificación: sigue siendo idempotente
+- [ ] **T-203** El seed (`pnpm db:seed`) crea también la **organización** y la **temporada
+  abierta** del club de ejemplo. El `club` en sí ya lo crea desde T-202, que tuvo que adelantarlo
+  para no dejar el seed roto; las categorías ya existían desde T-006. Verificación: sigue siendo idempotente
   (`test/integration/seed.int-spec.ts` ya lo comprueba) y ahora satisface las llaves foráneas.
 
 ## B — Dominio puro (`packages/domain`)

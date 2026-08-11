@@ -26,7 +26,7 @@ import {
 import { PrismaModule } from "../../src/common/prisma/prisma.module.js";
 import { PrismaService } from "../../src/common/prisma/prisma.service.js";
 import { configurarApp } from "../../src/configure-app.js";
-import { etiqueta } from "../db.js";
+import { crearClubDePrueba, etiqueta } from "../db.js";
 
 @Controller("usuarios")
 @UseGuards(SessionGuard, PermissionGuard)
@@ -75,8 +75,9 @@ describe("PermissionGuard (T-022b, docs/03 §6)", () => {
     opciones: { revocados?: boolean } = {},
   ): Promise<string> {
     const marca = etiqueta("permiso");
+    const clubId = await crearClubDePrueba(prisma);
     const persona = await prisma.person.create({
-      data: { clubId: marca, fullName: "Actor de prueba" },
+      data: { clubId, fullName: "Actor de prueba" },
     });
     const cuenta = await prisma.userAccount.create({
       data: {
