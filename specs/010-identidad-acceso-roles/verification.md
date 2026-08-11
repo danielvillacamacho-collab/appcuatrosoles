@@ -2286,3 +2286,61 @@ raíz del árbol de rutas ahora tiene `errorComponent`: dice que algo se rompió
   con la edición en línea de la categoría de membresía.
 - **Otorgar un rol desde la ficha** está pendiente: se pueden retirar, pero para agregar uno hoy hay
   que crear la cuenta con él. El endpoint existe (`POST /users/:id/roles`).
+
+---
+
+## T-128 — El E2E de navegador, y el bug que sólo él podía encontrar
+
+**Fecha:** 2026-08-11 · 3 recorridos en `apps/web/e2e`
+
+### Lo que cubre, y por qué no lo cubría nada
+
+Los E2E de `apps/api/test/e2e` ya recorrían este camino, pero contra `supertest`: leían el token
+**del correo** y llamaban al endpoint. Nunca abrían la dirección. Probaban que el servidor responde
+lo correcto, no que una persona pueda usarlo.
+
+Estos tres abren un navegador de verdad, entran por el subdominio del club sembrado
+(`club-demo.localhost:5173`) y cubren: el alta completa —el club invita, llega el correo, la persona
+define su contraseña, entra y ve su panel—, que el error de credenciales sea el mismo exista o no la
+cuenta (R-010-07 y P-12, comprobado donde el usuario lo ve), y el restablecimiento **con dos
+contextos de navegador**, que es la única forma de comprobar de verdad que la sesión del *otro*
+dispositivo muere (R-010-09).
+
+### El bug: el enlace del correo no llevaba puerto
+
+`http://club-demo.localhost/accept-invitation?token=…`. En producción está bien —`https` va por el
+443 y no se escribe— pero en desarrollo la aplicación web está en el 5173 y ese enlace no lleva a
+ninguna parte. **Quien probara el producto en local nunca habría podido aceptar una invitación.**
+
+La función que armaba la dirección estaba **copiada en tres controladores** —invitación,
+restablecimiento y cambio de correo— y las tres copias tenían el mismo error, que es lo que suele
+pasar con el código duplicado. Ahora vive en `club/url-del-club.ts`, es un proveedor global, y el
+puerto sale de `WEB_PORT` (definido sólo en desarrollo).
+
+Es el segundo bug de enlaces que aparece en este módulo: el primero fue la ruta en español
+(`/aceptar-invitacion` contra `/accept-invitation`), que también se descubrió construyendo la
+pantalla. **Los dos vivían en el pegamento entre el API y la interfaz**, que es exactamente lo que
+ningún test de un lado solo puede ver.
+
+### Dos fallos del propio arnés, que también enseñan
+
+1. **Navegar justo después de presionar «Entrar»** cancela la petición en curso: la sesión no llega
+   a abrirse y el guard devuelve al ingreso. El síntoma era un test esperando un botón que no
+   existía, sin nada que sugiriera que el problema fue la prisa. Por eso `entrar()` **espera a estar
+   dentro**.
+2. **«El último correo» no distingue un correo de otro.** Pedir el enlace de restablecimiento
+   devolvía el de la invitación, que ya estaba en el buzón. El ayudante ahora recibe la ruta
+   esperada y busca hacia atrás hasta encontrarla.
+
+### Cómo se corren
+
+`pnpm test:e2e` corre las dos suites: la de API con Testcontainers y la de navegador con Playwright.
+En local reusa los servidores que ya estén levantados; en CI los arranca limpios, con su PostgreSQL
+de servicio, sus migraciones y `pnpm db:seed` — el club de ejemplo de `docs/05` §8, porque un E2E
+con fixtures propios termina probando su propio andamiaje.
+
+### Pendiente declarado
+
+- **Corren contra el servidor de desarrollo de Vite**, no contra el build de producción. La
+  diferencia que importaría —código dividido por rutas, minificación— la cubre `check:bundle`; si
+  algún día un fallo se escapa por ahí, se cambia el `webServer` para servir `dist`.

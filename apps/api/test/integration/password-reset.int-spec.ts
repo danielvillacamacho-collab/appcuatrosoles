@@ -116,7 +116,27 @@ describe("Restablecimiento de contraseña (T-035, T-036)", () => {
       expect(await prisma.oneTimeToken.findUnique({ where: { tokenHash: token } })).toBeNull();
     });
 
-    it("el enlace apunta al subdominio del club, no al Host de la solicitud", async () => {
+    it("el enlace lleva el puerto de la aplicación web cuando está configurado", async () => {
+    // En producción no se escribe —`https` va por el 443— pero en desarrollo la web está en otro
+    // puerto que el API, y sin él el correo lleva a una dirección que no responde. Las tres copias
+    // de `urlDelClub` tenían el mismo error; lo destapó el E2E de navegador (T-128).
+    process.env.WEB_PORT = "5173";
+
+    await pedir(correo);
+
+    const mensaje = await prisma.outboxMessage.findFirstOrThrow({
+      where: { payload: { path: ["email"], equals: correo } },
+      orderBy: { createdAt: "desc" },
+    });
+
+    expect((mensaje.payload as { link: string }).link).toBe(
+      `http://${club.slug}.${BASE}:5173/reset-password?token=${await ultimoEnlace(correo)}`,
+    );
+
+    delete process.env.WEB_PORT;
+  });
+
+  it("el enlace apunta al subdominio del club, no al Host de la solicitud", async () => {
       // Un `Host` falsificado convertiría el correo en un enlace al sitio del atacante con el token
       // de la víctima adentro.
       await request(app.getHttpServer())

@@ -100,6 +100,30 @@ jobs:
     runs-on: ubuntu-latest
     needs: quality-gates
     if: github.ref == 'refs/heads/main'
+    services:
+      # Para los E2E de **navegador**: Playwright levanta el API de verdad, y ése necesita una base
+      # a la que conectarse. Los E2E de API no lo usan — traen su propio PostgreSQL con
+      # Testcontainers (`docs/05` §5).
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: polo
+          POSTGRES_PASSWORD: polo
+          POSTGRES_DB: polo_e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://polo:polo@localhost:5432/polo_e2e
+      BASE_DOMAIN: localhost
+      # El puerto de Vite: sin él los enlaces de los correos apuntan a una dirección sin puerto que
+      # en desarrollo no responde. Ver `club/url-del-club.ts`.
+      WEB_PORT: "5173"
+      SESSION_SECRET: secreto-de-ci
+      CSRF_SECRET: secreto-de-ci
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -110,8 +134,21 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # `pnpm test:e2e` recorre hoy flujos completos **de API** contra un PostgreSQL real que
-      # levanta Testcontainers (`apps/api/test/e2e`). Playwright se instalará cuando existan las
-      # pantallas: instalar navegadores para una suite que todavía no los usa son cuatro minutos
-      # de CI por corrida a cambio de nada.
+
+      # `pnpm test:e2e` recorre los flujos completos: los de **API** contra un PostgreSQL de
+      # Testcontainers (`apps/api/test/e2e`) y los de **navegador** con Playwright
+      # (`apps/web/e2e`, T-128).
+      - name: Navegador para Playwright
+        run: pnpm --filter @polo/web exec playwright install --with-deps chromium
+
+      # Los E2E de navegador usan el club de ejemplo (`docs/05` §8): un E2E con fixtures propios
+      # termina probando su propio andamiaje.
+      - name: Base de datos con el club de ejemplo
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          sed -i "s|^DATABASE_URL=.*|DATABASE_URL=$DATABASE_URL|" .env
+          pnpm db:migrate:deploy
+          pnpm db:seed
+
       - run: pnpm test:e2e

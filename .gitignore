@@ -24,3 +24,7 @@ apps/api/.down-tmp/
 # Correos escritos a disco por el adaptador local de desarrollo (T-026)
 .correos/
 .correos-de-prueba/
+
+# Playwright: navegadores descargados, resultados e informes de las corridas locales.
+apps/web/test-results/
+apps/web/playwright-report/

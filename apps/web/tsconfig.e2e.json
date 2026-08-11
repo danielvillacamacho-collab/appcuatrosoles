@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Los E2E corren en Node, no en el navegador: necesitan `import.meta.dirname` y `node:fs`,
+    // que los tipos de Vite no traen.
+    "types": ["node"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
+  },
+  "include": ["e2e", "playwright.config.ts"]
+}

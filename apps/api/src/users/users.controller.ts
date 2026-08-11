@@ -5,7 +5,6 @@ import {
   Get,
   Header,
   HttpCode,
-  Inject,
   Param,
   Patch,
   Post,
@@ -33,9 +32,8 @@ import { RequirePermission, SinPermiso } from "../common/auth/require-permission
 import { SessionGuard } from "../common/auth/session.guard.js";
 import { ZodValidationPipe } from "../common/http/zod-validation.pipe.js";
 import { clubDeLaSolicitud } from "../club/tenant-de-la-solicitud.js";
+import { UrlDelClub } from "../club/url-del-club.js";
 import { PrismaService } from "../common/prisma/prisma.service.js";
-import { BASE_DOMAIN } from "../tenant/base-domain.js";
-import { ClubDirectory } from "../tenant/club-directory.js";
 import { TenantGuard } from "../tenant/tenant.guard.js";
 import type { ConTenant } from "../tenant/tenant-context.js";
 import { UsersService, type Actor } from "./users.service.js";
@@ -49,8 +47,7 @@ export class UsersController {
   constructor(
     private readonly servicio: UsersService,
     private readonly prisma: PrismaService,
-    private readonly clubes: ClubDirectory,
-    @Inject(BASE_DOMAIN) private readonly baseDomain: string,
+    private readonly urlDelClub: UrlDelClub,
   ) {}
 
   @Get()
@@ -129,7 +126,7 @@ export class UsersController {
   ): Promise<UserResponse> {
     const clubId = clubDeLaSolicitud(req);
 
-    return this.servicio.crear(await this.actor(req), clubId, cuerpo, await this.urlDelClub(clubId));
+    return this.servicio.crear(await this.actor(req), clubId, cuerpo, await this.urlDelClub.para(clubId));
   }
 
   @Patch(":id")
@@ -154,7 +151,7 @@ export class UsersController {
   async reenviar(@Req() req: Solicitud, @Param("id") id: string): Promise<{ mensaje: string }> {
     const clubId = clubDeLaSolicitud(req);
 
-    await this.servicio.reenviarInvitacion(clubId, id, await this.urlDelClub(clubId));
+    await this.servicio.reenviarInvitacion(clubId, id, await this.urlDelClub.para(clubId));
 
     return { mensaje: "Invitación reenviada. El enlace anterior dejó de servir." };
   }
@@ -261,12 +258,6 @@ export class UsersController {
     return { userAccountId: usuario.userAccountId, roles: roles as RoleAssignmentRef[] };
   }
 
-  private async urlDelClub(clubId: string): Promise<string> {
-    const club = (await this.clubes.all()).find((candidato) => candidato.id === clubId);
-    const esquema = process.env.NODE_ENV === "production" ? "https" : "http";
-
-    return `${esquema}://${club?.slug ?? ""}.${this.baseDomain}`;
-  }
 }
 
 /**

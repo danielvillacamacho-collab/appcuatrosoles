@@ -490,8 +490,20 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > dice qué hacer. Un espacio en blanco ahí parece un error de la plataforma.
   > **Verificado contra el API real** con el club sembrado (`pnpm db:seed`), entrando por
   > `club-demo.localhost:5173`: ingreso, sesión y panel con sus roles y su organización.
-- [ ] **T-128** E2E de navegador (Playwright) del recorrido completo: el club invita → la persona
+- [x] **T-128** E2E de navegador (Playwright) del recorrido completo: el club invita → la persona
   define su contraseña → entra → ve su panel. **Es el pendiente que dejó `verification.md` §K.**
+  ✅ 2026-08-11 — 3 recorridos en `apps/web/e2e`, contra el API y la aplicación de verdad, entrando
+  por el subdominio del club sembrado. **Cierra la sección M.2 y el pendiente de §K.**
+  > **Encontró un bug que ningún test de API podía encontrar**: el enlace del correo apuntaba a
+  > `club-demo.localhost` **sin puerto**, así que en desarrollo no llevaba a ninguna parte. La
+  > función que lo armaba estaba copiada en tres controladores y las tres copias tenían el mismo
+  > error — se unificó en `club/url-del-club.ts` y el puerto sale de `WEB_PORT`. En producción no se
+  > escribe: la web va en el 443 detrás del proxy inverso de `docs/07` §4.
+  > El E2E abre el enlace **tal como llega**, que es exactamente lo que ningún test de API hacía:
+  > los de `apps/api/test/e2e` leían el token del correo y llamaban al endpoint, sin pasar nunca por
+  > la dirección.
+  > El recorrido de R-010-09 usa **dos contextos de navegador**: es la única forma de comprobar de
+  > verdad que la sesión del *otro* dispositivo muere al restablecer.
 
 ### M.3 — Lo propio de cada quien
 

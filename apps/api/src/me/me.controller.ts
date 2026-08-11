@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   HttpCode,
-  Inject,
   Param,
   Patch,
   Post,
@@ -29,8 +28,7 @@ import { SinPermiso } from "../common/auth/require-permission.js";
 import { SessionGuard } from "../common/auth/session.guard.js";
 import { ZodValidationPipe } from "../common/http/zod-validation.pipe.js";
 import { clubDeLaSolicitud } from "../club/tenant-de-la-solicitud.js";
-import { BASE_DOMAIN } from "../tenant/base-domain.js";
-import { ClubDirectory } from "../tenant/club-directory.js";
+import { UrlDelClub } from "../club/url-del-club.js";
 import { TenantGuard } from "../tenant/tenant.guard.js";
 import type { ConTenant } from "../tenant/tenant-context.js";
 import { MeService } from "./me.service.js";
@@ -50,8 +48,7 @@ type Solicitud = ConTenant & ConSessionUser & ConAuditoria;
 export class MeController {
   constructor(
     private readonly servicio: MeService,
-    private readonly clubes: ClubDirectory,
-    @Inject(BASE_DOMAIN) private readonly baseDomain: string,
+    private readonly urlDelClub: UrlDelClub,
   ) {}
 
   @Get()
@@ -91,7 +88,7 @@ export class MeController {
       clubId,
       cuerpo.newEmail,
       cuerpo.currentPassword,
-      await this.urlDelClub(clubId),
+      await this.urlDelClub.para(clubId),
     );
 
     return { mensaje: "Te enviamos un correo al nuevo buzón para confirmar el cambio." };
@@ -153,13 +150,6 @@ export class MeController {
     return this.servicio.actualizarPreferencias(usuario(req).userAccountId, cuerpo.preferences);
   }
 
-  /** Ver la nota de `AuthController.urlDelClub`: se arma con el slug, nunca con el `Host`. */
-  private async urlDelClub(clubId: string): Promise<string> {
-    const club = (await this.clubes.all()).find((candidato) => candidato.id === clubId);
-    const esquema = process.env.NODE_ENV === "production" ? "https" : "http";
-
-    return `${esquema}://${club?.slug ?? ""}.${this.baseDomain}`;
-  }
 }
 
 function usuario(req: ConSessionUser): { userAccountId: string; sessionId: string } {

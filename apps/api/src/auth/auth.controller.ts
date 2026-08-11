@@ -14,12 +14,10 @@ import type { ConSessionUser } from "../common/auth/current-user.js";
 import { COOKIE_DE_SESION } from "../common/auth/session-token.js";
 import { ZodValidationPipe } from "../common/http/zod-validation.pipe.js";
 import { clubDeLaSolicitud } from "../club/tenant-de-la-solicitud.js";
+import { UrlDelClub } from "../club/url-del-club.js";
 import { TenantGuard } from "../tenant/tenant.guard.js";
 import { AuthService } from "./auth.service.js";
 import { PasswordResetService } from "./password-reset.service.js";
-import { BASE_DOMAIN } from "../tenant/base-domain.js";
-import { Inject } from "@nestjs/common";
-import { ClubDirectory } from "../tenant/club-directory.js";
 
 @Controller("auth")
 @UseGuards(TenantGuard)
@@ -27,8 +25,7 @@ export class AuthController {
   constructor(
     private readonly servicio: AuthService,
     private readonly restablecimiento: PasswordResetService,
-    private readonly clubes: ClubDirectory,
-    @Inject(BASE_DOMAIN) private readonly baseDomain: string,
+    private readonly urlDelClub: UrlDelClub,
   ) {}
 
   /**
@@ -139,7 +136,7 @@ export class AuthController {
     await this.restablecimiento.pedir(
       cuerpo.email,
       clubDeLaSolicitud(req),
-      await this.urlDelClub(clubDeLaSolicitud(req)),
+      await this.urlDelClub.para(clubDeLaSolicitud(req)),
     );
 
     return {
@@ -157,19 +154,6 @@ export class AuthController {
     await this.restablecimiento.restablecer(cuerpo.token, cuerpo.newPassword);
   }
 
-  /**
-   * La dirección pública del club, para armar el enlace del correo.
-   *
-   * Se construye desde el **slug del club y el dominio de la instalación**, nunca desde el `Host`
-   * de la solicitud: un `Host` falsificado convertiría el correo de restablecimiento en un enlace
-   * al sitio del atacante, con el token de la víctima adentro.
-   */
-  private async urlDelClub(clubId: string): Promise<string> {
-    const club = (await this.clubes.all()).find((candidato) => candidato.id === clubId);
-    const esquema = esProduccion() ? "https" : "http";
-
-    return `${esquema}://${club?.slug ?? ""}.${this.baseDomain}`;
-  }
 
   private borrarCookies(res: Response): void {
     for (const nombre of [COOKIE_DE_SESION, COOKIE_CSRF]) {

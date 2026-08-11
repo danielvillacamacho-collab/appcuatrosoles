@@ -90,7 +90,7 @@ imprescindible. Lee `docs/10-operating-manual-solo.md`.
 pnpm dev            # api + web + worker en watch
 pnpm test           # unit + integration
 pnpm test:cov       # con umbrales de cobertura
-pnpm test:e2e       # Playwright, flujos críticos
+pnpm test:e2e       # flujos críticos: API (Testcontainers) + navegador (Playwright)
 pnpm lint && pnpm typecheck
 pnpm db:migrate:dev
 pnpm db:seed        # datos demo de un club de ejemplo
