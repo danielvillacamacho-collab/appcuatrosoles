@@ -842,3 +842,40 @@ buscando, en vez de tener que acordarse de un comentario. Cerrar dos veces sí s
 - **No hay reapertura de temporada.** No estaba en el spec y no se inventó. Si el club cierra una
   por error, hoy la corrección es de base de datos — conviene decidirlo antes de la primera
   temporada real.
+
+---
+
+## T-243 — Categorías de membresía
+
+**Fecha:** 2026-08-11 · 8 tests de integración (160 en total) · **cierra la sección E**
+
+Un catálogo administrable, no un enum del código: el club crea las suyas, les cambia la cuota y
+desactiva las que no usa, sin desplegar nada (P-04).
+
+### El dinero es entero en las tres capas
+
+El contrato exige `monthlyFeeCents` **entero y no negativo**; el servicio lo convierte a `BigInt`; la
+columna es `BigInt` (P-02). Una cuota con decimales responde `400` y una negativa también — con sus
+tests. En ningún punto del camino hay un número con coma.
+
+La conversión de vuelta a `Number` para la respuesta es segura y está anotada: el entero seguro de
+JavaScript llega a 9·10¹⁵, que en pesos colombianos son noventa billones.
+
+### No hay ruta para eliminar
+
+Se desactiva, ni siquiera se distingue si está en uso. Era más simple que separar los dos casos, y
+el caso «no está en uso» es justamente el que no importa: quien tenga esa categoría asignada la
+conserva, y su historia también (R-020-07, P-06).
+
+### Cambiar la cuota no reescribe el pasado
+
+`monthly_fee_cents` es el valor **vigente**; los importes ya emitidos quedarán congelados en su
+propio cobro (`docs/02` §A) cuando exista `specs/100`. Hoy se prueba la mitad que existe: la
+categoría sigue siendo la misma fila y el valor nuevo rige de ahí en adelante. Está anotado en el
+test para que quien construya pagos complete la otra mitad.
+
+### Pendiente declarado
+
+- **`membership.category_change_proration` no se aplica** (`docs/08` §7): qué pasa con el mes en
+  curso cuando alguien cambia de categoría es una regla de cobro, y vive en `specs/100`. La clave ni
+  siquiera está en el catálogo de T-212 todavía, por lo mismo.

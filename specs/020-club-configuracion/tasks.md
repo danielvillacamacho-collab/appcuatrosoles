@@ -164,9 +164,12 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
   > la comprobación previa habría una carrera entre dos solicitudes simultáneas, que es justo lo
   > que el `EXCLUDE` existe para cerrar.
 
-- [ ] **T-243** Categorías de membresía: crear, editar, desactivar. Verificación: cambiar la cuota
+- [x] **T-243** Categorías de membresía: crear, editar, desactivar. Verificación: cambiar la cuota
   no altera cobros ya emitidos (hoy sin módulo de pagos: se prueba que el valor histórico se
-  conserva); una categoría en uso no se puede eliminar.
+  conserva); una categoría en uso no se puede eliminar. ✅ 2026-08-11 — 8 tests, ver
+  `verification.md` §T-243. **Cierra la sección E.**
+  > **No hay ruta para eliminar una categoría**, ni siquiera si no está en uso: se desactiva. Era
+  > más simple que distinguir los dos casos, y el caso «no está en uso» es el que no importa.
 
 ## F — Configuración
 
