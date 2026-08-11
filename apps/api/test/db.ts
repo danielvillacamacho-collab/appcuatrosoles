@@ -1,5 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { inject } from "vitest";
+import type { Test } from "supertest";
+import { CABECERA_CSRF, tokenCsrfParaSesion } from "../src/common/auth/csrf.js";
+import { COOKIE_DE_SESION } from "../src/common/auth/session-token.js";
 
 /**
  * Cliente Prisma apuntado al PostgreSQL efímero de los tests. La URL la publica
@@ -34,4 +37,18 @@ export async function crearClubDePrueba(prisma: PrismaClient, nombre = "club"): 
   const club = await prisma.club.create({ data: { slug: marca, name: `Club ${marca}` } });
 
   return club.id;
+}
+
+/**
+ * Autentica una petición de prueba: cookie de sesión **y** token de CSRF.
+ *
+ * Las dos cosas juntas, porque desde T-025 una mutación con sesión y sin token de CSRF se rechaza
+ * con `403` — que es lo que hace un navegador de verdad. Un ayudante que pusiera sólo la cookie
+ * haría que cada test tuviera que acordarse de la otra mitad, y los que se olvidaran fallarían por
+ * una razón que no tiene nada que ver con lo que están probando.
+ */
+export function conSesion(peticion: Test, token: string): Test {
+  return peticion
+    .set("Cookie", `${COOKIE_DE_SESION}=${token}`)
+    .set(CABECERA_CSRF, tokenCsrfParaSesion(token));
 }

@@ -202,8 +202,15 @@ describe("configurarApp", () => {
 
     expect(() => configurarApp(appFalsa)).not.toThrow();
     // El orden es parte del contrato: el `requestId` tiene que existir antes que nada para que
-    // cualquier error posterior tenga identificador que reportar, y el filtro va al final.
-    expect(montados).toEqual(["requestIdMiddleware", "cookieParser", "filtro"]);
+    // cualquier error posterior tenga identificador que reportar; la protección CSRF va después de
+    // `cookieParser`, porque necesita leer la cookie de sesión; y el filtro va al final, para que
+    // el rechazo de cualquiera de ellos salga con la forma de error de siempre.
+    expect(montados).toEqual([
+      "requestIdMiddleware",
+      "cookieParser",
+      "csrfMiddleware",
+      "filtro",
+    ]);
   });
 
   it("tampoco si el adaptador no expone servidor alguno", () => {

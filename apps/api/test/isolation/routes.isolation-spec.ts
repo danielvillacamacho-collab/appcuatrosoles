@@ -14,6 +14,7 @@ import {
   crearTokenDeSesion,
   hashDeTokenDeSesion,
 } from "../../src/common/auth/session-token.js";
+import { CABECERA_CSRF, tokenCsrfParaSesion } from "../../src/common/auth/csrf.js";
 import { PrismaService } from "../../src/common/prisma/prisma.service.js";
 import { BASE_DOMAIN } from "../../src/tenant/base-domain.js";
 import { ClubDirectory } from "../../src/tenant/club-directory.js";
@@ -197,6 +198,7 @@ describe("Aislamiento de tenant por ruta (T-261, ADR-014 punto 3)", () => {
         // El host es el del club **propio** del actor; los identificadores son del club víctima.
         .set("Host", `${clubAjeno.slug}.${BASE}`)
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenDelClubAjeno}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenDelClubAjeno))
         .send({ value: 17, name: "Intento", type: "team", startsOn: "2040-01-01", endsOn: "2040-06-30", code: "x", monthlyFeeCents: 0 });
 
       const ajenos = [organizacionAjena.id, temporadaAjena.id, categoriaAjena.id, victima.id];

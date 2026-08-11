@@ -1,6 +1,7 @@
 import type { INestApplication } from "@nestjs/common";
 import cookieParser from "cookie-parser";
 import { ApiExceptionFilter } from "./common/errors/api-exception.filter.js";
+import { csrfMiddleware } from "./common/auth/csrf.js";
 import { requestIdMiddleware } from "./common/http/request-id.js";
 
 /**
@@ -31,6 +32,9 @@ export function configurarApp(app: INestApplication): INestApplication {
   // tabla `session` (ADR-005). Firmarla protegería contra manipulación de un valor que no
   // significa nada por sí mismo, y agregaría un secreto más que rotar.
   app.use(cookieParser());
+  // Después de `cookieParser` —necesita leer la cookie de sesión— y antes del filtro, para que su
+  // rechazo salga con la forma de error de siempre.
+  app.use(csrfMiddleware);
   app.useGlobalFilters(new ApiExceptionFilter());
 
   return app;

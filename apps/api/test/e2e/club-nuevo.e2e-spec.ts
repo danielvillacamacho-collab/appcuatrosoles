@@ -11,6 +11,7 @@ import {
   crearTokenDeSesion,
   hashDeTokenDeSesion,
 } from "../../src/common/auth/session-token.js";
+import { CABECERA_CSRF, tokenCsrfParaSesion } from "../../src/common/auth/csrf.js";
 import { PrismaService } from "../../src/common/prisma/prisma.service.js";
 import { BASE_DOMAIN } from "../../src/tenant/base-domain.js";
 import { configurarApp } from "../../src/configure-app.js";
@@ -95,10 +96,9 @@ describe("Un club nuevo queda operativo (T-260, HU-020-02)", () => {
 
   it("de cero a operativo: alta, subdominio, organización, temporada, categoría y configuración", async () => {
     const comoSuperadmin = (metodo: "post" | "get", ruta: string) =>
-      request(app.getHttpServer())[metodo](ruta).set(
-        "Cookie",
-        `${COOKIE_DE_SESION}=${tokenSuperadmin}`,
-      );
+      request(app.getHttpServer())[metodo](ruta)
+        .set("Cookie", `${COOKIE_DE_SESION}=${tokenSuperadmin}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenSuperadmin));
 
     // 1. Alta del club.
     const alta = await comoSuperadmin("post", "/platform/clubs").send({
@@ -138,7 +138,8 @@ describe("Un club nuevo queda operativo (T-260, HU-020-02)", () => {
     const comoAdmin = (metodo: "get" | "post" | "patch" | "put", ruta: string) =>
       request(app.getHttpServer())[metodo](ruta)
         .set("Host", `${slugNuevo}.${BASE}`)
-        .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`);
+        .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin));
 
     // 4. El club nace con sus categorías y su temporada: no hay que crearlas.
     expect((await comoAdmin("get", "/membership-categories")).body).toHaveLength(5);
@@ -187,7 +188,8 @@ describe("Un club nuevo queda operativo (T-260, HU-020-02)", () => {
     const orgsDesdeElVecino = await request(app.getHttpServer())
       .get("/organizations")
       .set("Host", `${otroSlug}.${BASE}`)
-      .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`);
+      .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin));
 
     // La cookie es válida, pero el club del subdominio es otro: el permiso se evalúa contra ése.
     expect(orgsDesdeElVecino.body).toEqual([]);
@@ -199,6 +201,7 @@ describe("Un club nuevo queda operativo (T-260, HU-020-02)", () => {
     await request(app.getHttpServer())
       .post(`/platform/clubs/${club.id}/suspend`)
       .set("Cookie", `${COOKIE_DE_SESION}=${tokenSuperadmin}`)
+      .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenSuperadmin))
       .send({ reason: "Fin de la prueba" });
 
     const publico = await request(app.getHttpServer())

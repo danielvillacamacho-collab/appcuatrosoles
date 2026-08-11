@@ -12,6 +12,7 @@ import {
   crearTokenDeSesion,
   hashDeTokenDeSesion,
 } from "../../src/common/auth/session-token.js";
+import { CABECERA_CSRF, tokenCsrfParaSesion } from "../../src/common/auth/csrf.js";
 import { PrismaService } from "../../src/common/prisma/prisma.service.js";
 import { ClubDirectory } from "../../src/tenant/club-directory.js";
 import { configurarApp } from "../../src/configure-app.js";
@@ -67,6 +68,7 @@ describe("Alta y suspensión de clubes (T-230, T-231)", () => {
     return request(app.getHttpServer())
       .post("/platform/clubs")
       .set("Cookie", `${COOKIE_DE_SESION}=${token}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(token))
       .send(cuerpo);
   }
 
@@ -233,6 +235,7 @@ describe("Alta y suspensión de clubes (T-230, T-231)", () => {
       return request(app.getHttpServer())
         .post(`/platform/clubs/${clubId}/suspend`)
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenSuperadmin}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenSuperadmin))
         .send({ reason: "Terminó el contrato" });
     }
 
@@ -268,6 +271,7 @@ describe("Alta y suspensión de clubes (T-230, T-231)", () => {
       await request(app.getHttpServer())
         .post(`/platform/clubs/${clubId}/reactivate`)
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenSuperadmin}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenSuperadmin))
         .send({});
 
       const reactivado = await prisma.club.findUniqueOrThrow({ where: { id: clubId } });

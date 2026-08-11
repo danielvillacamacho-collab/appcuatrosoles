@@ -13,6 +13,7 @@ import {
   crearTokenDeSesion,
   hashDeTokenDeSesion,
 } from "../../src/common/auth/session-token.js";
+import { CABECERA_CSRF, tokenCsrfParaSesion } from "../../src/common/auth/csrf.js";
 import { PrismaService } from "../../src/common/prisma/prisma.service.js";
 import { BASE_DOMAIN } from "../../src/tenant/base-domain.js";
 import { ClubDirectory } from "../../src/tenant/club-directory.js";
@@ -71,12 +72,14 @@ describe("Configuración (T-250 a T-253)", () => {
         request(app.getHttpServer())
           .get(ruta)
           .set("Host", `${club.slug}.${BASE}`)
-          .set("Cookie", `${COOKIE_DE_SESION}=${token}`),
+          .set("Cookie", `${COOKIE_DE_SESION}=${token}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(token)),
       put: (ruta: string) =>
         request(app.getHttpServer())
           .put(ruta)
           .set("Host", `${club.slug}.${BASE}`)
-          .set("Cookie", `${COOKIE_DE_SESION}=${token}`),
+          .set("Cookie", `${COOKIE_DE_SESION}=${token}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(token)),
     };
   }
 

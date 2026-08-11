@@ -12,6 +12,7 @@ import {
   crearTokenDeSesion,
   hashDeTokenDeSesion,
 } from "../../src/common/auth/session-token.js";
+import { CABECERA_CSRF, tokenCsrfParaSesion } from "../../src/common/auth/csrf.js";
 import { PrismaService } from "../../src/common/prisma/prisma.service.js";
 import { BASE_DOMAIN } from "../../src/tenant/base-domain.js";
 import { ClubDirectory } from "../../src/tenant/club-directory.js";
@@ -141,7 +142,8 @@ describe("Datos del club (T-240)", () => {
       const respuesta = await request(app.getHttpServer())
         .get("/clubs/current")
         .set("Host", host(club.slug))
-        .set("Cookie", `${COOKIE_DE_SESION}=${tokenJugador}`);
+        .set("Cookie", `${COOKIE_DE_SESION}=${tokenJugador}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenJugador));
 
       expect(respuesta.status).toBe(200);
       expect(ClubResponse.safeParse(respuesta.body).success).toBe(true);
@@ -161,6 +163,7 @@ describe("Datos del club (T-240)", () => {
         .patch("/clubs/current")
         .set("Host", host(club.slug))
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin))
         .send({ name: "Club Renombrado", timezone: "America/Argentina/Buenos_Aires" });
 
       expect(respuesta.status).toBe(200);
@@ -175,6 +178,7 @@ describe("Datos del club (T-240)", () => {
         .patch("/clubs/current")
         .set("Host", host(club.slug))
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin))
         .send({ name: "Nombre Nuevo" });
 
       const publico = await request(app.getHttpServer())
@@ -189,6 +193,7 @@ describe("Datos del club (T-240)", () => {
         .patch("/clubs/current")
         .set("Host", host(club.slug))
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenJugador}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenJugador))
         .send({ name: "Intento" });
 
       expect(respuesta.status).toBe(403);
@@ -200,6 +205,7 @@ describe("Datos del club (T-240)", () => {
         .patch("/clubs/current")
         .set("Host", host(otroClub.slug))
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin))
         .send({ name: "Intento cruzado" });
 
       expect(respuesta.status).toBe(403);
@@ -210,6 +216,7 @@ describe("Datos del club (T-240)", () => {
         .patch("/clubs/current")
         .set("Host", host(club.slug))
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin))
         .send({ timezone: "America/Polo" });
 
       expect(respuesta.status).toBe(422);
@@ -222,6 +229,7 @@ describe("Datos del club (T-240)", () => {
         .patch("/clubs/current")
         .set("Host", host(club.slug))
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin))
         .send({ slug: "secuestrado" });
 
       expect(respuesta.status).toBe(200);
@@ -237,6 +245,7 @@ describe("Datos del club (T-240)", () => {
         .patch("/clubs/current")
         .set("Host", host(club.slug))
         .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin))
         .send({ name: "Otro nombre" });
 
       expect(

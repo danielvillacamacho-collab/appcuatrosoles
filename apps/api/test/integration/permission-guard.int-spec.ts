@@ -24,6 +24,7 @@ import {
   hashDeTokenDeSesion,
 } from "../../src/common/auth/session-token.js";
 import { PrismaModule } from "../../src/common/prisma/prisma.module.js";
+import { CABECERA_CSRF, tokenCsrfParaSesion } from "../../src/common/auth/csrf.js";
 import { PrismaService } from "../../src/common/prisma/prisma.service.js";
 import { configurarApp } from "../../src/configure-app.js";
 import { crearClubDePrueba, etiqueta } from "../db.js";
@@ -133,7 +134,8 @@ describe("PermissionGuard (T-022b, docs/03 §6)", () => {
   function crear(token: string | null, club: string | null): request.Test {
     let peticion = request(app.getHttpServer()).post("/usuarios");
 
-    if (token !== null) peticion = peticion.set("Cookie", `${COOKIE_DE_SESION}=${token}`);
+    if (token !== null) peticion = peticion.set("Cookie", `${COOKIE_DE_SESION}=${token}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(token));
     if (club !== null) peticion = peticion.set("x-club-de-prueba", club);
 
     return peticion;
@@ -178,6 +180,7 @@ describe("PermissionGuard (T-022b, docs/03 §6)", () => {
       const respuesta = await request(app.getHttpServer())
         .get("/usuarios")
         .set("Cookie", `${COOKIE_DE_SESION}=${token}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(token))
         .set("x-club-de-prueba", "club-x");
 
       expect(respuesta.status).toBe(200);
@@ -245,6 +248,7 @@ describe("PermissionGuard (T-022b, docs/03 §6)", () => {
       return request(app.getHttpServer())
         .post(`/organizaciones/${organizacionId}/algo`)
         .set("Cookie", `${COOKIE_DE_SESION}=${token}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(token))
         .set("x-club-de-prueba", club);
     }
 

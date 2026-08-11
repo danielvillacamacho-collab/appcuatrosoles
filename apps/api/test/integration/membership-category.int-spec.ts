@@ -12,6 +12,7 @@ import {
   crearTokenDeSesion,
   hashDeTokenDeSesion,
 } from "../../src/common/auth/session-token.js";
+import { CABECERA_CSRF, tokenCsrfParaSesion } from "../../src/common/auth/csrf.js";
 import { PrismaService } from "../../src/common/prisma/prisma.service.js";
 import { BASE_DOMAIN } from "../../src/tenant/base-domain.js";
 import { ClubDirectory } from "../../src/tenant/club-directory.js";
@@ -65,6 +66,7 @@ describe("Categorías de membresía (T-243, HU-020-07)", () => {
       .post("/membership-categories")
       .set("Host", `${club.slug}.${BASE}`)
       .set("Cookie", `${COOKIE_DE_SESION}=${token}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(token))
       .send(cuerpo);
   }
 
@@ -150,6 +152,7 @@ describe("Categorías de membresía (T-243, HU-020-07)", () => {
       .patch(`/membership-categories/${creada.body.id}`)
       .set("Host", `${club.slug}.${BASE}`)
       .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin))
       .send({ monthlyFeeCents: 12000000 });
 
     expect(actualizada.status).toBe(200);
@@ -169,6 +172,7 @@ describe("Categorías de membresía (T-243, HU-020-07)", () => {
       .patch(`/membership-categories/${creada.body.id}`)
       .set("Host", `${club.slug}.${BASE}`)
       .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin))
       .send({ active: false });
 
     expect(desactivada.body.active).toBe(false);
@@ -186,6 +190,7 @@ describe("Categorías de membresía (T-243, HU-020-07)", () => {
       .patch(`/membership-categories/${ajena.id}`)
       .set("Host", `${club.slug}.${BASE}`)
       .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin))
       .send({ name: "Intento" });
 
     expect(respuesta.status).toBe(404);
@@ -197,7 +202,8 @@ describe("Categorías de membresía (T-243, HU-020-07)", () => {
     const lista = await request(app.getHttpServer())
       .get("/membership-categories")
       .set("Host", `${club.slug}.${BASE}`)
-      .set("Cookie", `${COOKIE_DE_SESION}=${tokenJugador}`);
+      .set("Cookie", `${COOKIE_DE_SESION}=${tokenJugador}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenJugador));
 
     expect(lista.status).toBe(200);
   });

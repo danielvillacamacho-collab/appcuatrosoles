@@ -12,6 +12,7 @@ import {
   crearTokenDeSesion,
   hashDeTokenDeSesion,
 } from "../../src/common/auth/session-token.js";
+import { CABECERA_CSRF, tokenCsrfParaSesion } from "../../src/common/auth/csrf.js";
 import { PrismaService } from "../../src/common/prisma/prisma.service.js";
 import { BASE_DOMAIN } from "../../src/tenant/base-domain.js";
 import { ClubDirectory } from "../../src/tenant/club-directory.js";
@@ -65,6 +66,7 @@ describe("Temporadas (T-242, HU-020-06)", () => {
       .post("/seasons")
       .set("Host", `${club.slug}.${BASE}`)
       .set("Cookie", `${COOKIE_DE_SESION}=${token}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(token))
       .send(cuerpo);
   }
 
@@ -172,7 +174,8 @@ describe("Temporadas (T-242, HU-020-06)", () => {
     const cerrada = await request(app.getHttpServer())
       .post(`/seasons/${creada.body.id}/close`)
       .set("Host", `${club.slug}.${BASE}`)
-      .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`);
+      .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin));
 
     expect(cerrada.status).toBe(200);
     expect(cerrada.body.status).toBe("closed");
@@ -180,7 +183,8 @@ describe("Temporadas (T-242, HU-020-06)", () => {
     const otraVez = await request(app.getHttpServer())
       .post(`/seasons/${creada.body.id}/close`)
       .set("Host", `${club.slug}.${BASE}`)
-      .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`);
+      .set("Cookie", `${COOKIE_DE_SESION}=${tokenAdmin}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenAdmin));
 
     expect(otraVez.status).toBe(409);
     expect(await prisma.season.count({ where: { id: creada.body.id } })).toBe(1);
@@ -202,6 +206,7 @@ describe("Temporadas (T-242, HU-020-06)", () => {
       .post("/seasons")
       .set("Host", `${otro.slug}.${BASE}`)
       .set("Cookie", `${COOKIE_DE_SESION}=${tokenDelOtro}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenDelOtro))
       .send({ name: `Compartida ${etiqueta("y")}`, startsOn: "2036-01-01", endsOn: "2036-12-31" });
 
     expect(enElOtro.status).toBe(201);
@@ -216,7 +221,8 @@ describe("Temporadas (T-242, HU-020-06)", () => {
     const lista = await request(app.getHttpServer())
       .get("/seasons")
       .set("Host", `${club.slug}.${BASE}`)
-      .set("Cookie", `${COOKIE_DE_SESION}=${tokenJugador}`);
+      .set("Cookie", `${COOKIE_DE_SESION}=${tokenJugador}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenJugador));
 
     expect(lista.status).toBe(200);
   });

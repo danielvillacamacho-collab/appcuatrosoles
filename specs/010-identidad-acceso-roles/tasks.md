@@ -127,7 +127,7 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > El montaje quedó en `src/configure-app.ts`, compartido por `main.ts` y los tests, para que no
   > se repita lo de T-005 (probar algo distinto de lo que corre en producción).
 
-- [ ] **T-025** Protección CSRF por doble envío de token en toda mutación (`docs/06` §1).
+- [x] **T-025** Protección CSRF por doble envío de token en toda mutación (`docs/06` §1).
   > **Tarea agregada el 2026-08-10, al cerrar T-021.** No estaba en el plan y el requisito sí:
   > `docs/06` §1 la exige para toda mutación. Hoy no hay agujero abierto porque el API todavía no
   > tiene ninguna, pero **la primera es T-030 (login)**, así que esta tarea va antes de la sección

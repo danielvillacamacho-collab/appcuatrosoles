@@ -12,6 +12,7 @@ import {
   crearTokenDeSesion,
   hashDeTokenDeSesion,
 } from "../../src/common/auth/session-token.js";
+import { CABECERA_CSRF, tokenCsrfParaSesion } from "../../src/common/auth/csrf.js";
 import { PrismaService } from "../../src/common/prisma/prisma.service.js";
 import { BASE_DOMAIN } from "../../src/tenant/base-domain.js";
 import { ClubDirectory } from "../../src/tenant/club-directory.js";
@@ -72,7 +73,8 @@ describe("Organizaciones del club (T-241, HU-020-05)", () => {
 
     return agente[metodo](ruta)
       .set("Host", `${slug}.${BASE}`)
-      .set("Cookie", `${COOKIE_DE_SESION}=${token}`);
+      .set("Cookie", `${COOKIE_DE_SESION}=${token}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(token));
   }
 
   beforeAll(async () => {

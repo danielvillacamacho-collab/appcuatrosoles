@@ -13,6 +13,7 @@ import {
   hashDeTokenDeSesion,
 } from "../../src/common/auth/session-token.js";
 import { PrismaModule } from "../../src/common/prisma/prisma.module.js";
+import { CABECERA_CSRF, tokenCsrfParaSesion } from "../../src/common/auth/csrf.js";
 import { PrismaService } from "../../src/common/prisma/prisma.service.js";
 import { configurarApp } from "../../src/configure-app.js";
 import { crearClubDePrueba, etiqueta } from "../db.js";
@@ -77,7 +78,8 @@ describe("SessionGuard (T-021, docs/06 §1)", () => {
   function pedirCon(token: string | null): request.Test {
     const peticion = request(app.getHttpServer()).get("/protegido");
 
-    return token === null ? peticion : peticion.set("Cookie", `${COOKIE_DE_SESION}=${token}`);
+    return token === null ? peticion : peticion.set("Cookie", `${COOKIE_DE_SESION}=${token}`)
+        .set(CABECERA_CSRF, tokenCsrfParaSesion(token));
   }
 
   beforeAll(async () => {

@@ -1087,3 +1087,65 @@ decorativo: alcanza a todo el que registre una ruta mutante, incluidos los tests
 - **El interceptor no se aplica solo**: va con `@UseInterceptors(AuditInterceptor)`. Cuando los
   guards pasen a ser globales (ver T-022b), este debería acompañarlos — y ahí T-081 (cada acción de
   R-010-11 deja exactamente una fila) se vuelve comprobable de punta a punta.
+
+---
+
+## T-025 — CSRF: doble envío **firmado**
+
+**Fecha:** 2026-08-11 · 7 tests de integración · tarea agregada al cerrar T-021
+
+### Por qué no alcanzaba el doble envío de siempre
+
+El patrón habitual —una cookie legible y la misma cadena en una cabecera, comparadas entre sí— se
+cae con nuestra topología. Un subdominio por club (ADR-013) significa que `otro-club.polo.app` puede
+**escribir** una cookie para `.polo.app`, que el navegador enviará también a `mi-club.polo.app`. Al
+atacante le basta con poner el mismo valor en la cookie y en la cabecera: la comparación pasa y la
+mutación se ejecuta con la sesión de la víctima.
+
+El token se deriva de la sesión: `HMAC(secreto, sha256(token de sesión))`. Para calcular uno válido
+hay que conocer el token de sesión, que viaja en una cookie `httpOnly` y **no se puede leer desde
+otro subdominio**. Si el atacante sobreescribe la cookie de CSRF, deja de coincidir con la sesión y
+la solicitud se rechaza. Ese caso tiene su test, escrito como el ataque: cookie de sesión legítima
++ cookie de CSRF elegida por el atacante + cabecera con ese mismo valor → `403`.
+
+### Middleware global, no guard
+
+Un guard hay que acordarse de poner en cada controlador, y **una protección que depende de que
+alguien se acuerde no es una protección**. Como middleware cubre todo lo que se monte de aquí en
+adelante, incluido lo que todavía no existe. Va después de `cookie-parser` —necesita leer la cookie
+de sesión— y antes del filtro de errores, para que su rechazo salga con la forma de siempre.
+
+### Qué no toca, y por qué
+
+- **Los `GET`**: no cambian nada.
+- **Las mutaciones sin sesión**: sin cookie de sesión no hay autoridad que un tercero pueda usar
+  desde el navegador de la víctima, que es exactamente lo que CSRF explota. Esas rutas responden
+  `401` por su cuenta.
+
+### Detalles con consecuencia
+
+- La comparación es en **tiempo constante**. Con `===`, lo que tarda en fallar filtra cuántos
+  caracteres iniciales acertó quien está probando, y aquí lo comparado es un secreto.
+- Responde `403` y no `401`: la sesión es válida; lo que falta es la prueba de que la petición la
+  originó nuestra aplicación.
+- El token de **otra sesión** no sirve, y tiene test: es la mitad que el doble envío simple no
+  cubre.
+
+### El costo, que conviene tener escrito
+
+Al entrar, **56 tests de integración se pusieron en rojo**: todos hacían mutaciones con sesión y sin
+token. Es la mejor señal posible de que la protección es real y global. Se agregó un ayudante
+`conSesion(peticion, token)` en `test/db.ts` que pone las dos cosas juntas, porque un ayudante que
+pusiera sólo la cookie dejaría a cada test la mitad del trabajo — y los que se olvidaran fallarían
+por una razón que no tiene que ver con lo que prueban.
+
+### Pendientes declarados
+
+- **Nadie emite todavía la cookie `polo_csrf`**: la pone el login (T-030), que es la tarea
+  siguiente. Hoy el token se calcula en los tests. Sin esa cookie, un frontend real no podría
+  mandar la cabecera — así que **T-030 tiene que emitirla o el sistema queda inusable**.
+- **El secreto tiene un default de desarrollo.** Que sea público no rompe la protección —forjar un
+  token exige además el token de sesión de la víctima, que es `httpOnly`— pero quita la segunda
+  capa. En el despliegue es obligatorio (`.env.example`, `docs/07`).
+- **La cookie de sesión debe emitirse sin atributo `Domain`** para que no la comparta el resto de
+  los subdominios. Es responsabilidad de T-030, y es la otra mitad de esta defensa.
