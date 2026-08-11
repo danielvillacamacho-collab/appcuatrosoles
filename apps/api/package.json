@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "dotenv -e ../../.env -- nest start --watch",
     "build": "nest build -p tsconfig.build.json",
     "start": "node dist/main.js",
