@@ -65,7 +65,7 @@ describe("Gestión de usuarios (sección F)", () => {
   }
 
   function con(token: string, slug = club.slug) {
-    const base = (metodo: "get" | "post" | "patch", ruta: string) => {
+    const base = (metodo: "get" | "post" | "patch" | "delete", ruta: string) => {
       const agente = request(app.getHttpServer());
 
       return agente[metodo](ruta)
@@ -78,6 +78,7 @@ describe("Gestión de usuarios (sección F)", () => {
       get: (ruta: string) => base("get", ruta),
       post: (ruta: string) => base("post", ruta),
       patch: (ruta: string) => base("patch", ruta),
+      delete: (ruta: string) => base("delete", ruta),
     };
   }
 
@@ -416,6 +417,110 @@ describe("Gestión de usuarios (sección F)", () => {
 
       expect(acciones.filter((a) => a === "user.created")).toHaveLength(1);
       expect(acciones.filter((a) => a === "user.suspended")).toHaveLength(1);
+    });
+  });
+
+  describe("roles (sección G: T-060 a T-062)", () => {
+    it("otorgar un rol lo deja vigente y auditado (T-060, R-010-11)", async () => {
+      const creado = await con(tokenAdmin).post("/users").send(datosDeUsuario());
+
+      const respuesta = await con(tokenAdmin)
+        .post(`/users/${creado.body.id}/roles`)
+        .send({ role: "commissioner", scope: "club" });
+
+      expect(respuesta.status).toBe(201);
+      expect(respuesta.body.roles.map((r: { role: string }) => r.role)).toContain("commissioner");
+
+      const auditoria = await prisma.auditLog.count({
+        where: { entityId: creado.body.id as string, action: "role.assigned" },
+      });
+      expect(auditoria).toBe(1);
+    });
+
+    it("retirar un rol tiene efecto en la siguiente petición (T-061)", async () => {
+      // Se le da club_admin a alguien, se comprueba que manda, se le retira y se comprueba que ya
+      // no. Sin efecto inmediato, quien acaba de perder autoridad seguiría usándola.
+      const marca = etiqueta("efimero");
+      const persona = await prisma.person.create({
+        data: { clubId: club.id, fullName: "Administrador efímero" },
+      });
+      const cuenta = await prisma.userAccount.create({
+        data: {
+          personId: persona.id,
+          email: `${marca}@ejemplo.test`,
+          passwordHash: "argon2id$falso",
+          status: "active",
+        },
+      });
+      const token = crearTokenDeSesion();
+      await prisma.session.create({
+        data: {
+          userAccountId: cuenta.id,
+          tokenHash: hashDeTokenDeSesion(token),
+          expiresAt: new Date(app.get<Clock>(CLOCK).now().getTime() + 86_400_000),
+        },
+      });
+
+      const otorgado = await con(tokenAdmin)
+        .post(`/users/${cuenta.id}/roles`)
+        .send({ role: "club_admin", scope: "club" });
+      expect((await con(token).get("/users")).status).toBe(200);
+
+      const asignacion = otorgado.body.roles.find((r: { role: string }) => r.role === "club_admin");
+      await con(tokenAdmin).delete(`/users/${cuenta.id}/roles/${asignacion.id}`);
+
+      expect((await con(token).get("/users")).status).toBe(403);
+    });
+
+    it("un administrador de organización no otorga roles de club (T-062, R-010-04)", async () => {
+      const { token } = await crearActor(club.id, "organization_admin", "organization", organizacionId);
+      const creado = await con(tokenAdmin)
+        .post("/users")
+        .send(datosDeUsuario({ roles: ["instructor"], organizationId: organizacionId }));
+
+      const deClub = await con(token)
+        .post(`/users/${creado.body.id}/roles`)
+        .send({ role: "club_admin", scope: "club" });
+      const deSuOrganizacion = await con(token)
+        .post(`/users/${creado.body.id}/roles`)
+        .send({ role: "groom", scope: "organization", organizationId: organizacionId });
+
+      expect(deClub.status).toBe(403);
+      expect(deSuOrganizacion.status).toBe(201);
+    });
+
+    it("nadie se retira roles a sí mismo (R-010-05)", async () => {
+      const yo = await con(tokenAdmin).get(`/users/${cuentaAdminId}`);
+      const suRol = yo.body.roles[0];
+
+      const respuesta = await con(tokenAdmin).delete(`/users/${cuentaAdminId}/roles/${suRol.id}`);
+
+      expect(respuesta.status).toBe(403);
+    });
+
+    it("el club nunca viaja en el cuerpo: mandarlo no cambia nada (R-020-01)", async () => {
+      // El ámbito de club es siempre el del subdominio. Un `clubId` en el cuerpo se descarta al
+      // validar el contrato, así que no hay forma de otorgar un rol en el club de al lado.
+      const creado = await con(tokenAdmin).post("/users").send(datosDeUsuario());
+
+      const respuesta = await con(tokenAdmin)
+        .post(`/users/${creado.body.id}/roles`)
+        .send({ role: "commissioner", scope: "club", clubId: otroClub.id, scopeId: otroClub.id });
+
+      expect(respuesta.status).toBe(201);
+      expect(
+        respuesta.body.roles.find((r: { role: string }) => r.role === "commissioner").scopeId,
+      ).toBe(club.id);
+    });
+
+    it("un rol de organización sin decir cuál se rechaza por contrato", async () => {
+      const creado = await con(tokenAdmin).post("/users").send(datosDeUsuario());
+
+      const respuesta = await con(tokenAdmin)
+        .post(`/users/${creado.body.id}/roles`)
+        .send({ role: "instructor", scope: "organization" });
+
+      expect(respuesta.status).toBe(400);
     });
   });
 

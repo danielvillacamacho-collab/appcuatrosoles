@@ -390,6 +390,100 @@ export class UsersService {
   }
 
   /**
+   * Otorgar un rol (T-060, R-010-11).
+   *
+   * La regla exacta la decide `canAssignRole` en el dominio: quién puede otorgar qué, y dónde. El
+   * guard ya dejó pasar «este actor administra usuarios aquí»; esto decide «puede otorgar **este**
+   * rol».
+   */
+  async otorgarRol(
+    actor: Actor,
+    clubId: string,
+    id: string,
+    rol: RoleName,
+    scope: ScopeKind,
+    scopeId: string,
+  ): Promise<UserResponse> {
+    const cuenta = await this.buscarDelClub(clubId, id);
+
+    this.exigirQuePuedaOtorgar(actor, rol, clubId, scope === "organization" ? scopeId : undefined);
+
+    if (scope === "organization") {
+      const organizacion = await this.prisma.organization.findFirst({
+        where: { id: scopeId, clubId },
+        select: { id: true },
+      });
+
+      // Una organización de otro club no existe desde aquí (P-05).
+      if (organizacion === null) {
+        throw new NotFoundException();
+      }
+    }
+
+    const yaLoTiene = await this.prisma.roleAssignment.findFirst({
+      where: { userAccountId: cuenta.id, role: rol, scope, scopeId, revokedAt: null },
+    });
+
+    if (yaLoTiene !== null) {
+      throw new ConflictException({ code: "ya_tiene_ese_rol" });
+    }
+
+    await this.prisma.roleAssignment.create({
+      data: {
+        userAccountId: cuenta.id,
+        role: rol,
+        scope,
+        scopeId,
+        grantedById: actor.userAccountId,
+      },
+    });
+
+    return this.detalle(clubId, id);
+  }
+
+  /**
+   * Retirar un rol (T-061). **Efecto inmediato**: se revoca la asignación, y `PermissionGuard`
+   * consulta las vigentes en cada solicitud, así que la siguiente petición ya no pasa.
+   *
+   * No se borra la fila (P-06): `revoked_at` y `revoked_by_id` son la respuesta a «¿quién le quitó
+   * el rol y cuándo?», que es justo lo que se pregunta cuando algo salió mal.
+   */
+  async retirarRol(actor: Actor, clubId: string, id: string, roleAssignmentId: string): Promise<UserResponse> {
+    const cuenta = await this.buscarDelClub(clubId, id);
+
+    if (actor.userAccountId === cuenta.id) {
+      // R-010-05: nadie se retira roles a sí mismo, ni siquiera un superadministrador. Es lo que
+      // evita que el único administrador del club se quede afuera por un clic.
+      throw new ForbiddenException({ code: "no_puedes_hacerte_esto_a_ti_mismo" });
+    }
+
+    const asignacion = await this.prisma.roleAssignment.findFirst({
+      where: { id: roleAssignmentId, userAccountId: cuenta.id, revokedAt: null },
+      select: { id: true, role: true, scope: true, scopeId: true },
+    });
+
+    if (asignacion === null) {
+      throw new NotFoundException();
+    }
+
+    // Quien puede otorgar un rol es quien puede retirarlo: la simetría evita que alguien retire lo
+    // que no podría volver a poner.
+    this.exigirQuePuedaOtorgar(
+      actor,
+      aRolDeDominio(asignacion.role),
+      clubId,
+      asignacion.scope === "organization" ? (asignacion.scopeId ?? undefined) : undefined,
+    );
+
+    await this.prisma.roleAssignment.update({
+      where: { id: asignacion.id },
+      data: { revokedAt: this.clock.now(), revokedById: actor.userAccountId },
+    });
+
+    return this.detalle(clubId, id);
+  }
+
+  /**
    * Auto-protección (R-010-05, T-058): nadie se suspende, archiva ni se retira roles a sí mismo,
    * **ni siquiera un superadministrador**.
    *
@@ -523,6 +617,10 @@ function filtroDeOrganizacion(
   }
 
   return { organizations: { some: { leftOn: null, organizationId: pedida } } };
+}
+
+function aRolDeDominio(rol: string): RoleName {
+  return rol as RoleName;
 }
 
 /** Compara **días de calendario**, no instantes: las columnas de vigencia son `date` (T-014). */

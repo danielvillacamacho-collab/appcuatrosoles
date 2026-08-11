@@ -251,12 +251,15 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 
 ## G — Roles (`roles/`)
 
-- [ ] **T-060** `POST /users/:id/roles`: usa `canAssignRole`; registra en `audit_log` con
+- [x] **T-060** `POST /users/:id/roles`: usa `canAssignRole`; registra en `audit_log` con
   quién/a quién/qué rol/cuándo (R-010-11).
-- [ ] **T-061** `DELETE /users/:id/roles/:roleAssignmentId`: retiro de rol, efecto inmediato
+- [x] **T-061** `DELETE /users/:id/roles/:roleAssignmentId`: retiro de rol, efecto inmediato
   (test: una request inmediatamente posterior con ese rol ya no pasa el `PermissionGuard`).
-- [ ] **T-062** Test de integración específico de R-010-04: administrador de organización
-  intentando `role.assign` con `scope=club` → `403`.
+- [x] **T-062** Test de integración específico de R-010-04: administrador de organización
+  intentando `role.assign` con `scope=club` → `403`. ✅ 2026-08-11 — 6 tests, ver
+  `verification.md` §G. **Cierra la sección G.**
+  > El contrato tuvo que cambiar: un `scopeId` que a veces era un club y a veces una organización
+  > hacía imposible que el guard resolviera el ámbito **antes** de entrar al controlador.
 
 ## H — Familias, membresía y waivers
 

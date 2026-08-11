@@ -66,11 +66,26 @@ export const AcceptInvitationRequest = z
 
 export type AcceptInvitationRequest = z.infer<typeof AcceptInvitationRequest>;
 
-export const AssignRoleRequest = z.object({
-  role: RolAsignable,
-  scope: z.enum(["club", "organization"]),
-  /** El club o la organización. Para `club` debe ser el club del subdominio. */
-  scopeId: z.string().min(1),
-});
+/**
+ * Otorgar un rol.
+ *
+ * La organización va en **su propio campo** y no en un `scopeId` genérico, y la razón es que el
+ * guard de permisos tiene que poder leerla *antes* de entrar al controlador: con un campo que a
+ * veces trae un club y a veces una organización, resolver el ámbito exigiría interpretar el
+ * `scope` desde el guard — o, peor, tratar el club como si fuera una organización, que es lo que
+ * pasaba y devolvía `404`.
+ *
+ * El club nunca viaja en el cuerpo: es el del subdominio (R-020-01).
+ */
+export const AssignRoleRequest = z
+  .object({
+    role: RolAsignable,
+    scope: z.enum(["club", "organization"]),
+    organizationId: z.string().min(1).optional(),
+  })
+  .refine((datos) => datos.scope !== "organization" || datos.organizationId !== undefined, {
+    message: "Un rol de organización necesita saber en cuál.",
+    path: ["organizationId"],
+  });
 
 export type AssignRoleRequest = z.infer<typeof AssignRoleRequest>;

@@ -79,6 +79,10 @@ const CON_TEST_PROPIO = [
   "POST /users/:id/archive",
   "POST /users/:id/restore",
   "POST /auth/invitation/accept",
+  // `users.int-spec` §roles → «un administrador de organización no otorga roles de club» y «el club
+  // nunca viaja en el cuerpo». El aislamiento de estas dos es por ámbito del rol, no por recurso.
+  "POST /users/:id/roles",
+  "DELETE /users/:id/roles/:roleAssignmentId",
 ];
 
 /** Rutas que no operan dentro de un club y por lo tanto no tienen tenant que aislar. */

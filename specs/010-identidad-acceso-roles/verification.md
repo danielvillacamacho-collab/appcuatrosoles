@@ -1713,3 +1713,41 @@ pasa a `active` y entra. El test lo recorre entero, incluido el login final.
 - **`treasurer` se asume de ámbito de club** al crear. Es el único rol que vive en dos ámbitos
   (`docs/06` §4); asignarlo a la tesorería de una organización necesita decirlo explícitamente, y
   hoy la ruta no tiene cómo.
+
+---
+
+## Sección G — Roles (T-060 a T-062)
+
+**Fecha:** 2026-08-11 · 6 tests de integración (292 en total)
+
+### Un contrato que tuvo que cambiar, y por qué
+
+`AssignRoleRequest` traía un `scopeId` genérico: a veces un club, a veces una organización. El guard
+de permisos tiene que resolver el ámbito **antes** de entrar al controlador, así que ese campo lo
+obligaba a tratar un identificador de club como si fuera de organización — y devolvía `404` en el
+camino feliz.
+
+Ahora la organización va en **su propio campo** y el club **no viaja en el cuerpo**: es el del
+subdominio (R-020-01). Hay un test que manda `clubId` y `scopeId` del club vecino y comprueba que el
+rol queda otorgado en el club correcto: el contrato descarta lo que no declara.
+
+### Retirar un rol tiene efecto en la siguiente petición
+
+El test lo recorre como se vive: se le da `club_admin` a alguien, se comprueba que **manda**, se le
+retira y se comprueba que **ya no**. `PermissionGuard` consulta las asignaciones vigentes en cada
+solicitud, así que no hay ventana. Sin eso, quien acaba de perder autoridad seguiría usándola hasta
+que su sesión venciera.
+
+No se borra la fila: `revoked_at` y `revoked_by_id` responden «¿quién le quitó el rol y cuándo?»,
+que es justo lo que se pregunta cuando algo salió mal (P-06).
+
+### Quien puede otorgar es quien puede retirar
+
+La simetría evita que alguien retire lo que después no podría volver a poner. Y R-010-05 vale
+también aquí: **nadie se retira roles a sí mismo**, ni siquiera un superadministrador — es lo que
+impide que el único administrador del club se quede afuera por un clic.
+
+### T-062, el test que la tarea pedía por su nombre
+
+Un `organization_admin` intentando `role.assign` con ámbito de club recibe `403`, y con ámbito de su
+propia organización, `201`. Los dos en la misma prueba, porque lo que importa es el contraste.

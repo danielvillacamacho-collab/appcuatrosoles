@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Header,
   HttpCode,
@@ -16,6 +17,7 @@ import {
 import type { UserAccountStatus } from "@prisma/client";
 import {
   AcceptInvitationRequest,
+  AssignRoleRequest,
   CreateUserRequest,
   UpdateUserRequest,
   UserResponse,
@@ -175,6 +177,48 @@ export class UsersController {
   @Auditable({ action: "user.restored", entityType: "user_account" })
   async restaurar(@Req() req: Solicitud, @Param("id") id: string): Promise<UserResponse> {
     return this.cambiarEstado(req, id, "active");
+  }
+
+  @Post(":id/roles")
+  @HttpCode(201)
+  // El ámbito sale del cuerpo cuando el rol es de organización: así un administrador de
+  // organización otorga en la suya, y sólo en la suya (T-060, R-010-04).
+  @RequirePermission("role.assign", { organizacion: { desde: "body", campo: "organizationId", opcional: true } })
+  @Auditable({ action: "role.assigned", entityType: "user_account" })
+  async otorgarRol(
+    @Req() req: Solicitud,
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(AssignRoleRequest)) cuerpo: AssignRoleRequest,
+  ): Promise<UserResponse> {
+    const clubId = clubDeLaSolicitud(req);
+
+    anotarEstadoPrevio(req, await this.servicio.detalle(clubId, id), id);
+
+    return this.servicio.otorgarRol(
+      await this.actor(req),
+      clubId,
+      id,
+      cuerpo.role,
+      cuerpo.scope,
+      // El club sale del subdominio, nunca del cuerpo (R-020-01).
+      cuerpo.scope === "organization" ? (cuerpo.organizationId ?? "") : clubId,
+    );
+  }
+
+  @Delete(":id/roles/:roleAssignmentId")
+  @HttpCode(200)
+  @RequirePermission("role.assign", { ambitoAmplio: true })
+  @Auditable({ action: "role.revoked", entityType: "user_account" })
+  async retirarRol(
+    @Req() req: Solicitud,
+    @Param("id") id: string,
+    @Param("roleAssignmentId") roleAssignmentId: string,
+  ): Promise<UserResponse> {
+    const clubId = clubDeLaSolicitud(req);
+
+    anotarEstadoPrevio(req, await this.servicio.detalle(clubId, id), id);
+
+    return this.servicio.retirarRol(await this.actor(req), clubId, id, roleAssignmentId);
   }
 
   private async cambiarEstado(
