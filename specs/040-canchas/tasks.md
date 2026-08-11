@@ -194,25 +194,48 @@ por salir.
 
 ## G — Pantallas
 
-- [ ] **T-460** **Calendario del día** (`/calendar`): tres columnas, una por cancha; lo ajeno y
+- [x] **T-460** **Calendario del día** (`/calendar`): tres columnas, una por cancha; lo ajeno y
   privado como «Ocupado». Mobile-first: en un celular es una cancha a la vez, deslizable.
   Verificación: tests de componente con las dos formas del contrato; que «Ocupado» **no renderice**
   ningún dato del evento aunque llegara por error en la respuesta.
+  ✅ 2026-08-11 — 6 tests. **Nació con sus dos formas**: carrusel con ajuste por cancha en el
+  celular, rejilla de columnas desde `md` — la misma estructura, cambia cómo se recorre.
+  > Las horas se pintan con la zona **del club**, que viaja en la respuesta del calendario. Hay un
+  > test que lo fija: jsdom corre en la zona de la máquina, y si la pantalla usara la zona local el
+  > texto cambiaría según dónde corra el test — y según dónde viva quien mira.
+  > El caso «Ocupado» del componente no tiene rama para pintar tipo ni nombre: aunque un día llegara
+  > algo por error, no sabe mostrarlo. Los huecos entre actividades se muestran como «Libre de X a
+  > Y», que es la otra mitad de la pregunta (HU-040-04).
+  > El día viaja en la URL: «mira cómo quedó el martes» es un enlace que se puede mandar.
 
-- [ ] **T-461** **Canchas** (`/fields`): lista, crear, editar, archivar. Acceso desde el panel para
+- [x] **T-461** **Canchas** (`/fields`): lista, crear, editar, archivar. Acceso desde el panel para
   quien administra.
   Verificación: el formulario no ofrece archivar una cancha ya archivada; el error de nombre
   repetido se muestra con el texto del club, no con el del servidor.
+  ✅ 2026-08-11 — 5 tests. Una archivada no ofrece **ninguna** acción —no hay vuelta atrás que
+  prometer— y muestra por qué ya no se puede programar en ella, en vez de desaparecer.
 
-- [ ] **T-462** **Bloquear una franja** desde el calendario, sobre una franja libre.
+- [x] **T-462** **Bloquear una franja** desde el calendario, sobre una franja libre.
   Verificación: el choque con algo existente se muestra diciendo con qué choca; el motivo es
   obligatorio en el formulario, no sólo en el API.
+  ✅ 2026-08-11 — 3 tests. **Cierra la sección G.** Las horas se escriben como las diría el club y
+  se convierten con `instanteDelDia`, función de dominio nueva: armar `${dia}T${hora}:00-05:00` a
+  mano fijaría el desfase de Bogotá en el código. Hay un test que comprueba el instante exacto que
+  viaja.
+  > El botón de bloquear no existe para un jugador: ofrecer lo que el API va a rechazar es mentir.
 
 ## H — Cierre
 
-- [ ] **T-470** E2E de navegador: el administrador bloquea una franja por riego, el calendario lo
+- [x] **T-470** E2E de navegador: el administrador bloquea una franja por riego, el calendario lo
   muestra, e intentar programar encima falla con un mensaje entendible.
-- [ ] **T-471** `verification.md` con cada criterio de aceptación de `spec.md` mapeado a su test.
+  ✅ 2026-08-11 — el ciclo completo de HU-040-03 por las pantallas: bloquear → ver el motivo →
+  chocar con el texto del club → levantar → la franja vuelve y lo que antes chocaba entra. Usa un
+  día fijo lejano porque la base de desarrollo no se limpia entre corridas, y **deja el día limpio**
+  al terminar. Además verificado a mano contra el API real a 574 px y 1440 px.
+- [x] **T-471** `verification.md` con cada criterio de aceptación de `spec.md` mapeado a su test.
   Cualquier criterio sin test identificado se resuelve **antes** de dar el módulo por terminado.
   > En `specs/010` esta tarea destapó cuatro criterios que no estaban implementados, no sin probar.
   > No es papeleo.
+  ✅ 2026-08-11 — mapa completo: 5 historias y las reglas transversales, cada una con su archivo y
+  el título literal de su test. **Cierra el módulo 040**, con cuatro pendientes declarados y sus
+  motivos — el mayor: `participa` es `false` hasta `specs/050`, con el punto de conexión escrito.

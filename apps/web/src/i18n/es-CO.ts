@@ -42,6 +42,64 @@ export const copy = {
     treasurer: "Tesorero",
   } as Record<string, string>,
 
+  calendario: {
+    titulo: "Calendario de canchas",
+    descripcion: "Qué hay programado en cada cancha, y qué está libre.",
+    diaAnterior: "← Día anterior",
+    diaSiguiente: "Día siguiente →",
+    hoy: "Hoy",
+    // Lo ajeno y privado. La palabra sola, sin tipo ni nombre: es la promesa de R-040-07.
+    ocupado: "Ocupado",
+    libreTodoElDia: "Libre todo el día",
+    libreEntre: (desde: string, hasta: string) => `Libre de ${desde} a ${hasta}`,
+    bloquear: "Bloquear una franja",
+    levantarBloqueo: "Levantar bloqueo",
+    tipos: {
+      practice: "Práctica",
+      lesson: "Clase",
+      tournament_match: "Partido de copa",
+      stick_and_ball: "Taqueo",
+      coaching: "Entrenamiento",
+      maintenance: "Mantenimiento",
+      block: "Bloqueo",
+    } as Record<string, string>,
+  },
+
+  bloquearFranja: {
+    titulo: "Bloquear una franja",
+    descripcion: "Nada podrá programarse en la cancha mientras dure el bloqueo.",
+    cancha: "Cancha",
+    desde: "Desde",
+    hasta: "Hasta",
+    motivo: "Motivo",
+    motivoAyuda: "Riego, mantenimiento, cancha impracticable… La siguiente persona que quiera programar aquí lo va a leer.",
+    motivoRequerido: "Escribe el motivo del bloqueo.",
+    horaInvalida: "Revisa las horas: el fin debe ser posterior al inicio.",
+    bloquear: "Bloquear",
+    bloqueando: "Bloqueando…",
+  },
+
+  canchas: {
+    titulo: "Canchas",
+    descripcion: "Las canchas del club: se archivan, nunca se borran.",
+    nueva: "Nueva cancha",
+    nombre: "Nombre",
+    nombreInvalido: "Escribe el nombre de la cancha.",
+    superficie: "Superficie",
+    notas: "Notas de capacidad",
+    crear: "Crear cancha",
+    creando: "Creando…",
+    ponerEnMantenimiento: "Poner en mantenimiento",
+    reactivar: "Reactivar",
+    archivar: "Archivar",
+    archivadaAviso: "Archivada: no admite reservas nuevas. Su historia se conserva.",
+    estados: {
+      active: "Activa",
+      maintenance: "En mantenimiento",
+      archived: "Archivada",
+    } as Record<string, string>,
+  },
+
   usuarios: {
     titulo: "Usuarios del club",
     descripcion: "Busca, filtra y administra las cuentas.",
@@ -200,6 +258,8 @@ export const copy = {
     misDispositivos: "Mis dispositivos",
     misAvisos: "Mis avisos",
     misPerfilesACargo: "Perfiles a cargo",
+    calendario: "Calendario de canchas",
+    canchas: "Canchas",
     administracion: "Administración",
     usuarios: "Usuarios del club",
   },
@@ -324,6 +384,14 @@ export const copy = {
     nadie_es_acudiente_de_si_mismo: "Una persona no puede ser acudiente de sí misma.",
     no_eres_su_acudiente: "Sólo un acudiente vigente puede hacer esto por esta persona.",
     waiver_no_aceptado: "Falta aceptar la exención de responsabilidad para poder continuar.",
+
+    // ── Canchas y calendario ─────────────────────────────────────────────────
+    // El API además manda en `details` la franja que ocupa, para resaltarla en el calendario.
+    cancha_ocupada: "Esa cancha ya está ocupada en ese horario.",
+    nombre_de_cancha_en_uso: "Ya hay una cancha con ese nombre en el club.",
+    cancha_no_disponible: "Esa cancha está fuera de servicio.",
+    fuera_del_horario: "Ese horario está fuera de las horas de operación del club.",
+    rango_invalido: "La hora de fin tiene que ser posterior a la de inicio.",
 
     // ── Club, temporadas y configuración ─────────────────────────────────────
     nombre_en_uso: "Ya existe algo con ese nombre en el club.",

@@ -15,6 +15,8 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
+import { Route as AuthenticatedFieldsRouteImport } from './routes/_authenticated/fields'
 import { Route as AuthenticatedMeConfirmEmailRouteImport } from './routes/_authenticated/me/confirm-email'
 import { Route as AuthenticatedMeDependentsRouteImport } from './routes/_authenticated/me/dependents'
 import { Route as AuthenticatedMeNotificationsRouteImport } from './routes/_authenticated/me/notifications'
@@ -51,6 +53,16 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedFieldsRoute = AuthenticatedFieldsRouteImport.update({
+  id: '/fields',
+  path: '/fields',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedMeConfirmEmailRoute =
@@ -104,6 +116,8 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/calendar': typeof AuthenticatedCalendarRoute
+  '/fields': typeof AuthenticatedFieldsRoute
   '/me/confirm-email': typeof AuthenticatedMeConfirmEmailRoute
   '/me/dependents': typeof AuthenticatedMeDependentsRoute
   '/me/notifications': typeof AuthenticatedMeNotificationsRoute
@@ -118,6 +132,8 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/calendar': typeof AuthenticatedCalendarRoute
+  '/fields': typeof AuthenticatedFieldsRoute
   '/': typeof AuthenticatedIndexRoute
   '/me/confirm-email': typeof AuthenticatedMeConfirmEmailRoute
   '/me/dependents': typeof AuthenticatedMeDependentsRoute
@@ -135,6 +151,8 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
+  '/_authenticated/fields': typeof AuthenticatedFieldsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/me/confirm-email': typeof AuthenticatedMeConfirmEmailRoute
   '/_authenticated/me/dependents': typeof AuthenticatedMeDependentsRoute
@@ -153,6 +171,8 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
+    | '/calendar'
+    | '/fields'
     | '/me/confirm-email'
     | '/me/dependents'
     | '/me/notifications'
@@ -167,6 +187,8 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
+    | '/calendar'
+    | '/fields'
     | '/'
     | '/me/confirm-email'
     | '/me/dependents'
@@ -183,6 +205,8 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
+    | '/_authenticated/calendar'
+    | '/_authenticated/fields'
     | '/_authenticated/'
     | '/_authenticated/me/confirm-email'
     | '/_authenticated/me/dependents'
@@ -246,6 +270,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/calendar': {
+      id: '/_authenticated/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof AuthenticatedCalendarRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/fields': {
+      id: '/_authenticated/fields'
+      path: '/fields'
+      fullPath: '/fields'
+      preLoaderRoute: typeof AuthenticatedFieldsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/me/confirm-email': {
       id: '/_authenticated/me/confirm-email'
       path: '/me/confirm-email'
@@ -306,6 +344,8 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
+  AuthenticatedFieldsRoute: typeof AuthenticatedFieldsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedMeConfirmEmailRoute: typeof AuthenticatedMeConfirmEmailRoute
   AuthenticatedMeDependentsRoute: typeof AuthenticatedMeDependentsRoute
@@ -318,6 +358,8 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
+  AuthenticatedFieldsRoute: AuthenticatedFieldsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedMeConfirmEmailRoute: AuthenticatedMeConfirmEmailRoute,
   AuthenticatedMeDependentsRoute: AuthenticatedMeDependentsRoute,

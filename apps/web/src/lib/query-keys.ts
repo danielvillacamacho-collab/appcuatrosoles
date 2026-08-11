@@ -28,4 +28,8 @@ export const queryKeys = {
 
   organizaciones: ["organizations"] as const,
   categorias: ["membership-categories"] as const,
+
+  canchas: ["fields"] as const,
+  /** Un día por clave: cambiar de día es otra consulta, y bloquear una franja invalida sólo el suyo. */
+  calendario: (date: string) => ["calendar", date] as const,
 } as const;

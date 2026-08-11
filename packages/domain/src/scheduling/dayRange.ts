@@ -18,6 +18,24 @@ export function rangoDelDia(dia: LocalDate, timeZone: string): RangoDeTiempo {
 }
 
 /**
+ * El instante que corresponde a una hora de pared de ese día **en esa zona** (T-460).
+ *
+ * Es lo que necesita un formulario que pide «bloquear de 16:00 a 17:30»: la persona escribe horas
+ * del club, y el API espera instantes. Construir `${dia}T${hora}:00-05:00` a mano fijaría el
+ * desfase de Bogotá en el código — el error contra el que existe todo este archivo.
+ */
+export function instanteDelDia(dia: LocalDate, hora: string, timeZone: string): Date {
+  const [horas, minutos] = hora.split(":").map(Number);
+  const [ano, mes, fecha] = dia.split("-").map(Number);
+  const comoSiFueraUtc = Date.UTC(ano ?? 0, (mes ?? 1) - 1, fecha ?? 1, horas ?? 0, minutos ?? 0);
+
+  const primera = comoSiFueraUtc - desfaseEnMinutos(new Date(comoSiFueraUtc), timeZone) * 60_000;
+  const segunda = comoSiFueraUtc - desfaseEnMinutos(new Date(primera), timeZone) * 60_000;
+
+  return new Date(segunda);
+}
+
+/**
  * El instante en que empieza ese día en esa zona.
  *
  * **Se calcula en dos pasadas y no en una**, y no es exceso de cuidado: el desfase de una zona

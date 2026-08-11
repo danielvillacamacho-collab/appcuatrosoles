@@ -123,6 +123,9 @@ function Panel(): React.JSX.Element {
           <li>
             <Acceso a="/me/dependents">{copy.panel.misPerfilesACargo}</Acceso>
           </li>
+          <li>
+            <Acceso a="/calendar">{copy.panel.calendario}</Acceso>
+          </li>
         </ul>
       </nav>
 
@@ -137,6 +140,9 @@ function Panel(): React.JSX.Element {
           <ul className="mt-2 flex flex-col">
             <li>
               <Acceso a="/users">{copy.panel.usuarios}</Acceso>
+            </li>
+            <li>
+              <Acceso a="/fields">{copy.panel.canchas}</Acceso>
             </li>
           </ul>
         </nav>
@@ -167,7 +173,7 @@ function Acceso({
   a,
   children,
 }: {
-  a: "/me/profile" | "/me/sessions" | "/me/notifications" | "/me/dependents" | "/users";
+  a: "/me/profile" | "/me/sessions" | "/me/notifications" | "/me/dependents" | "/users" | "/calendar" | "/fields";
   children: string;
 }): React.JSX.Element {
   return (

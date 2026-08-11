@@ -62,6 +62,13 @@ export const CODIGOS_DE_ERROR = [
   "no_eres_su_acudiente",
   "waiver_no_aceptado",
 
+  // Canchas y calendario (`specs/040`).
+  "cancha_ocupada",
+  "nombre_de_cancha_en_uso",
+  "cancha_no_disponible",
+  "fuera_del_horario",
+  "rango_invalido",
+
   // Club, temporadas y configuración (`specs/020`, `specs/140`).
   "nombre_en_uso",
   "codigo_en_uso",

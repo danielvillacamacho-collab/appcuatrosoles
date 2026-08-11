@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { toLocalDate } from "../../shared/localDate.js";
-import { rangoDelDia } from "../dayRange.js";
+import { instanteDelDia, rangoDelDia } from "../dayRange.js";
 
 const BOGOTA = "America/Bogota";
 
@@ -84,5 +84,28 @@ describe("rangoDelDia · zonas que sí cambian de hora", () => {
     const enMadrid = rangoDelDia("2026-09-01", "Europe/Madrid");
 
     expect(enBogota.inicio.toISOString()).not.toBe(enMadrid.inicio.toISOString());
+  });
+});
+
+describe("instanteDelDia · de la hora de pared del club al instante", () => {
+  it("las 16:00 en Bogotá son las 21:00 UTC", () => {
+    expect(instanteDelDia("2026-09-01", "16:00", BOGOTA).toISOString()).toBe(
+      "2026-09-01T21:00:00.000Z",
+    );
+  });
+
+  it("la misma hora de pared es otro instante en otro club", () => {
+    // Es la razón de que exista: `${dia}T${hora}:00-05:00` a mano fijaría el desfase de Bogotá en
+    // el código, y un club en Madrid bloquearía siempre cinco horas corridas.
+    const enBogota = instanteDelDia("2026-09-01", "16:00", BOGOTA);
+    const enMadrid = instanteDelDia("2026-09-01", "16:00", "Europe/Madrid");
+
+    expect(enBogota.getTime() - enMadrid.getTime()).toBe(7 * 3_600_000);
+  });
+
+  it("la medianoche coincide con el inicio del día", () => {
+    expect(instanteDelDia("2026-09-01", "00:00", BOGOTA).toISOString()).toBe(
+      rangoDelDia("2026-09-01", BOGOTA).inicio.toISOString(),
+    );
   });
 });
