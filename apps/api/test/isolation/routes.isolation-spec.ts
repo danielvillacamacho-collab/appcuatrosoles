@@ -56,6 +56,14 @@ const CON_TEST_PROPIO = [
   // dos es doble: por club al pedir, y por token al usar.
   "POST /auth/password/forgot",
   "POST /auth/password/reset",
+  // `me.int-spec` → «NO expone campos administrativos», «no se puede cerrar la sesión de otra
+  // persona (404)». Todo `/me` es por definición de quien pide: su aislamiento es por cuenta.
+  "GET /me",
+  "PATCH /me",
+  "POST /me/email-change",
+  "POST /me/email-change/confirm",
+  "GET /me/sessions",
+  "DELETE /me/sessions/:id",
 ];
 
 /** Rutas que no operan dentro de un club y por lo tanto no tienen tenant que aislar. */

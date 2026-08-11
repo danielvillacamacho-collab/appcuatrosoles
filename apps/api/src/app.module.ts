@@ -4,6 +4,7 @@ import { AuthModule } from "./common/auth/auth.module.js";
 import { ClockModule } from "./common/clock/clock.module.js";
 import { PrismaModule } from "./common/prisma/prisma.module.js";
 import { AuthApiModule } from "./auth/auth.module.js";
+import { MeModule } from "./me/me.module.js";
 import { OutboxModule } from "./common/outbox/outbox.module.js";
 import { ClubModule } from "./club/club.module.js";
 import { SettingsModule } from "./settings/settings.module.js";
@@ -21,6 +22,6 @@ import { HealthModule } from "./health/health.module.js";
  * permiso (`ADR-014` punto 4) — por eso importa al `AppModule` y no sólo a quien use los guards.
  */
 @Module({
-  imports: [PrismaModule, ClockModule, OutboxModule, TenantModule, AuthModule, AuditModule, PlatformModule, ClubModule, SettingsModule, AuthApiModule, HealthModule],
+  imports: [PrismaModule, ClockModule, OutboxModule, TenantModule, AuthModule, AuditModule, PlatformModule, ClubModule, SettingsModule, AuthApiModule, MeModule, HealthModule],
 })
 export class AppModule {}

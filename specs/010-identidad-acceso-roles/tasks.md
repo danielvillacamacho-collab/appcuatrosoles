@@ -207,14 +207,19 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 
 ## E — Perfil propio (`me/`)
 
-- [ ] **T-040** `GET /me`: devuelve datos propios, roles, categoría, organizaciones — sin
-  exponer campos administrativos que el propio usuario no debe editar.
-- [ ] **T-041** `PATCH /me`: sólo permite editar teléfono, foto, preferencias de notificación.
+- [x] **T-040** `GET /me`: devuelve datos propios, roles, categoría, organizaciones — sin
+  exponer campos administrativos que el propio usuario no debe editar. ✅ 2026-08-11 — ver
+  `verification.md` §E.
+- [x] **T-041** `PATCH /me`: sólo permite editar teléfono, foto, preferencias de notificación.
   Test: un intento de mandar `categoryId` o `roles` en el body no tiene efecto (se ignora, no
   se rechaza con error — para no filtrar la existencia del campo a quien no debería tocarlo).
-- [ ] **T-042** `POST /me/email-change` + `POST /me/email-change/confirm`: correo anterior
-  sigue válido hasta confirmar el nuevo.
-- [ ] **T-043** `GET /me/sessions` y `DELETE /me/sessions/:id`.
+  ✅ 2026-08-11 — ver `verification.md` §E.
+  > **Las preferencias de notificación quedan fuera**: su tabla es T-091 y todavía no existe.
+  > Hoy se editan teléfono y foto.
+- [x] **T-042** `POST /me/email-change` + `POST /me/email-change/confirm`: correo anterior
+  sigue válido hasta confirmar el nuevo. ✅ 2026-08-11 — ver `verification.md` §E.
+- [x] **T-043** `GET /me/sessions` y `DELETE /me/sessions/:id`. ✅ 2026-08-11 — 13 tests entre
+  las cuatro tareas, ver `verification.md` §E. **Cierra la sección E.**
 
 ## F — Gestión de usuarios (`users/`)
 

@@ -96,6 +96,14 @@ model UserAccount {
 
   status UserAccountStatus @default(invited)
 
+  /// Correo nuevo, a la espera de que su titular lo confirme (T-042, HU-010-07).
+  ///
+  /// Vive aparte de `email` a propósito: **el correo anterior sigue siendo válido hasta que se
+  /// confirme el nuevo** (`docs/06` §2). Si se cambiara `email` de una y la confirmación no
+  /// llegara —dedo, buzón lleno, correo mal escrito— la persona quedaría sin poder entrar y sin
+  /// forma de recuperarlo, porque el restablecimiento iría a la dirección equivocada.
+  pendingEmail String? @map("pending_email")
+
   /// Bloqueo por intentos fallidos: 5 intentos → 15 minutos (T-032, configurable en
   /// `docs/08-configuration-catalog.md` §9).
   failedAttempts Int       @default(0) @map("failed_attempts")
@@ -752,6 +760,7 @@ model OneTimeToken {
 enum OneTimeTokenType {
   invitation
   password_reset
+  email_change
 
   @@map("one_time_token_type")
 }

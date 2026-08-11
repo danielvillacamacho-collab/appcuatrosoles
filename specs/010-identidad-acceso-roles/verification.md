@@ -1594,3 +1594,57 @@ los tres casos: pedir uno nuevo. El texto lo dice.
 - **La pantalla `/restablecer-contrasena` no existe todavía.** El enlace del correo la apunta y es
   la ruta correcta; hasta que exista la interfaz, el flujo se prueba llamando al endpoint con el
   token que aparece en el correo escrito a disco.
+
+---
+
+## Sección E — El perfil propio (T-040 a T-043)
+
+**Fecha:** 2026-08-11 · 13 tests de integración (267 en total)
+
+Las cuatro tareas comparten controlador y servicio. **Ninguna ruta exige permiso y todas exigen
+sesión**: cada quien manda sobre lo suyo. Lo que sí se acota es *qué* es lo suyo.
+
+### Lo que el perfil no muestra
+
+La respuesta se arma **campo por campo**, no con un `select` amplio, porque hay datos que son
+*sobre* alguien y no *para* alguien: las notas internas del club son el ejemplo más claro. Un test
+crea a la persona con una nota interna y exige que no aparezca en la respuesta.
+
+### Mandar campos administrativos no da error
+
+`fullName`, `categoryId`, `roles` en el cuerpo de `PATCH /me` **se descartan en silencio** — es el
+segundo criterio de T-041, y la razón es que un error revelaría que el campo existe a quien no
+debería tocarlo. Lo hace el contrato: Zod descarta lo que no declara, así que el servicio ni se
+entera.
+
+### El correo anterior vale hasta que se confirme el nuevo
+
+`pending_email` es una columna aparte de `email` a propósito. Si se cambiara de una y la
+confirmación no llegara —dedo, buzón lleno, dirección mal escrita— la persona quedaría **sin poder
+entrar y sin forma de recuperarlo**: el restablecimiento iría a la dirección equivocada. Hay un test
+que pide el cambio y comprueba que se sigue entrando con el correo viejo.
+
+Se exige la contraseña actual: cambiar el correo de acceso es cambiar la llave de la cuenta.
+
+Y aquí **sí** se dice que un correo está en uso, a diferencia del login: quien pregunta ya demostró
+ser el titular de esta cuenta, y sin ese aviso quedaría esperando una confirmación que no va a
+llegar nunca.
+
+### Cerrar la sesión de otra persona responde 404
+
+Adivinar un identificador de sesión y cerrarla sería un secuestro al revés. La consulta va acotada
+por cuenta, y si no es suya responde `404` —nunca `403`, que confirmaría que existe—. El test
+comprueba además que la sesión ajena **sigue viva**.
+
+La lista marca cuál es la sesión actual, para que la interfaz no ofrezca «cerrar» sobre ella.
+
+### Pendientes declarados
+
+- **Las preferencias de notificación no se editan todavía**: su tabla es T-091 y no existe. T-041
+  las menciona; hoy se editan teléfono y foto.
+- **`photoKey` se acepta como texto libre.** Cuando exista `FileStorage` (`docs/01` §4, S3 con URLs
+  prefirmadas), esa clave tendrá que validarse contra lo que el usuario realmente subió — hoy nada
+  impide poner ahí la clave de la foto de otra persona.
+- **`last_seen_at` no se actualiza**, así que la lista de dispositivos muestra la hora de creación
+  como último uso. Es el mismo pendiente que T-021 declaró sobre el cierre por inactividad: entra
+  con esa tarea.

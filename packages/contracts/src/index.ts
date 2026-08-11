@@ -5,3 +5,4 @@ export * from "./season.js";
 export * from "./membership.js";
 export * from "./setting.js";
 export * from "./auth.js";
+export * from "./me.js";
