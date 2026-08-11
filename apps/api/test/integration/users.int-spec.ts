@@ -166,6 +166,169 @@ describe("Gestión de usuarios (sección F)", () => {
       expect(encolados).toBe(1);
     });
 
+    describe("la variante ligera: invitar con sólo el correo (HU-010-02)", () => {
+      async function invitarSoloConCorreo(): Promise<{ id: string; email: string }> {
+        const email = `${etiqueta("ligera")}@ejemplo.test`;
+        const creado = await con(tokenAdmin).post("/users").send({ email, roles: ["player"] });
+
+        expect(creado.status).toBe(201);
+
+        return { id: creado.body.id, email };
+      }
+
+      /** El token como lo saca quien recibe el correo: del enlace, no de la base. */
+      async function tokenDelCorreoA(email: string): Promise<string> {
+        const mensaje = await prisma.outboxMessage.findFirstOrThrow({
+          where: { payload: { path: ["email"], equals: email } },
+          orderBy: { createdAt: "desc" },
+        });
+
+        return ((mensaje.payload as { link?: string }).link ?? "").split("token=")[1] ?? "";
+      }
+
+      function aceptar(cuerpo: Record<string, unknown>): request.Test {
+        return request(app.getHttpServer())
+          .post("/auth/invitation/accept")
+          .set("Host", `${club.slug}.${BASE}`)
+          .send(cuerpo);
+      }
+
+      it("la ficha nace con la parte local del correo, no en blanco", async () => {
+        // Una lista de usuarios con filas en blanco es peor que una con nombres feos: el
+        // administrador no sabe a quién invitó.
+        const { id, email } = await invitarSoloConCorreo();
+        const visto = await con(tokenAdmin).get(`/users/${id}`);
+
+        expect(visto.body.fullName).toBe(email.replace(/@.*$/u, ""));
+      });
+
+      it("la persona pone su nombre al aceptar, y ése es el que queda", async () => {
+        const { id, email } = await invitarSoloConCorreo();
+
+        const aceptada = await aceptar({
+          token: await tokenDelCorreoA(email),
+          newPassword: "la-clave-que-yo-elijo-5",
+          newPasswordConfirmation: "la-clave-que-yo-elijo-5",
+          fullName: "María Fernanda Pérez",
+          phone: "+57 300 999 8888",
+        });
+
+        expect(aceptada.status).toBe(204);
+
+        const visto = await con(tokenAdmin).get(`/users/${id}`);
+        expect(visto.body.fullName).toBe("María Fernanda Pérez");
+        expect(visto.body.phone).toBe("+57 300 999 8888");
+      });
+
+      it("pero no se renombra a quien el club ya nombró: el enlace no es para eso", async () => {
+        const datos = datosDeUsuario({ fullName: "Nombre puesto por el club" });
+        const creado = await con(tokenAdmin).post("/users").send(datos);
+
+        await aceptar({
+          token: await tokenDelCorreoA(datos.email),
+          newPassword: "otra-clave-mia-larga-6",
+          newPasswordConfirmation: "otra-clave-mia-larga-6",
+          fullName: "El nombre que yo quiera",
+        });
+
+        const visto = await con(tokenAdmin).get(`/users/${creado.body.id}`);
+        expect(visto.body.fullName).toBe("Nombre puesto por el club");
+      });
+    });
+
+    it("dice cuándo se envió la invitación: sin eso, se reenvía a ciegas", async () => {
+      // HU-010-01, criterio 3. Un administrador no puede distinguir una invitación de ayer de una
+      // de hace tres semanas si sólo ve «invited».
+      const creado = await con(tokenAdmin).post("/users").send(datosDeUsuario());
+
+      expect(creado.body.invitationSentAt).not.toBeNull();
+      expect(Number.isNaN(Date.parse(creado.body.invitationSentAt))).toBe(false);
+
+      const activada = await prisma.userAccount.findUniqueOrThrow({ where: { id: creado.body.id } });
+      await prisma.oneTimeToken.updateMany({
+        where: { userAccountId: activada.id, type: "invitation" },
+        data: { usedAt: new Date("2026-08-11T12:00:00.000Z") },
+      });
+
+      // Una invitación ya usada no dice nada sobre la que está esperando: no hay ninguna.
+      const despues = await con(tokenAdmin).get(`/users/${creado.body.id}`);
+      expect(despues.body.invitationSentAt).toBeNull();
+    });
+
+    describe("darle cuenta a alguien que ya está en el club (HU-010-03)", () => {
+      it("usa la persona que existe en vez de crear otra, y conserva su historia", async () => {
+        // El invitado externo de una copa, o el menor que cumplió la edad del club: si se creara
+        // otra persona, el club quedaría con dos fichas del mismo jugador y el historial en la
+        // vieja.
+        const invitadoExterno = await prisma.person.create({
+          data: { clubId: club.id, fullName: "Invitado de la copa", isMinor: true },
+        });
+        await prisma.membershipAssignment.create({
+          data: {
+            clubId: club.id,
+            personId: invitadoExterno.id,
+            membershipCategoryId: categoriaId,
+            effectiveFrom: new Date("2026-01-01"),
+            assignedById: cuentaAdminId,
+          },
+        });
+
+        const creado = await con(tokenAdmin)
+          .post("/users")
+          .send(datosDeUsuario({ personId: invitadoExterno.id, fullName: "Nombre que se ignora" }));
+
+        expect(creado.status).toBe(201);
+        expect(creado.body.personId).toBe(invitadoExterno.id);
+        // El nombre de alguien que ya está en el club no se cambia de paso al darle acceso.
+        expect(creado.body.fullName).toBe("Invitado de la copa");
+        // Y su historia sigue ahí: es lo que HU-010-10 pide al convertir un perfil de menor.
+        expect(creado.body.membershipCategory.id).toBe(categoriaId);
+
+        const personas = await prisma.person.count({
+          where: { clubId: club.id, fullName: "Invitado de la copa" },
+        });
+        expect(personas).toBe(1);
+      });
+
+      it("deja de ser un perfil administrado por otro: desde ahora manda sobre lo suyo", async () => {
+        const menor = await prisma.person.create({
+          data: { clubId: club.id, fullName: "Menor que cumplió años", isMinor: true },
+        });
+
+        await con(tokenAdmin).post("/users").send(datosDeUsuario({ personId: menor.id }));
+
+        const despues = await prisma.person.findUniqueOrThrow({ where: { id: menor.id } });
+        expect(despues.isMinor).toBe(false);
+      });
+
+      it("una persona que ya tiene cuenta no recibe una segunda", async () => {
+        // Serían dos formas de entrar a lo mismo, y ninguna sabría de la otra.
+        const primera = await con(tokenAdmin).post("/users").send(datosDeUsuario());
+
+        const segunda = await con(tokenAdmin)
+          .post("/users")
+          .send(datosDeUsuario({ personId: primera.body.personId }));
+
+        expect(segunda.status).toBe(409);
+        expect(segunda.body.error.code).toBe("la_persona_ya_tiene_cuenta");
+      });
+
+      it("una persona de otro club no existe desde aquí: 404, nunca 403 (P-05)", async () => {
+        const ajeno = await prisma.club.create({
+          data: { slug: `ajena-${etiqueta("u")}`.toLowerCase().slice(0, 40), name: "Club ajeno" },
+        });
+        const personaAjena = await prisma.person.create({
+          data: { clubId: ajeno.id, fullName: "Persona de otro club" },
+        });
+
+        const respuesta = await con(tokenAdmin)
+          .post("/users")
+          .send(datosDeUsuario({ personId: personaAjena.id }));
+
+        expect(respuesta.status).toBe(404);
+      });
+    });
+
     it("rechaza un correo duplicado (HU-010-01, segundo criterio)", async () => {
       const datos = datosDeUsuario();
       await con(tokenAdmin).post("/users").send(datos);

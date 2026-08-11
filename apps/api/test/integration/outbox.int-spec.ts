@@ -15,9 +15,10 @@ import { configurarApp } from "../../src/configure-app.js";
 import { etiqueta } from "../db.js";
 
 /**
- * El límite del procesador va alto a propósito: los demás archivos de la suite comparten la base y
- * encolan sus propias invitaciones, así que con el límite por defecto este test podía quedarse sin
- * llegar a su mensaje. Es un detalle del arnés, no del componente.
+ * El límite del procesador **se calcula, no se adivina**: los demás archivos de la suite comparten
+ * la base y encolan sus propias invitaciones, así que un número fijo —por alto que sea— convierte
+ * a estos tests en una bomba de tiempo que estalla el día que la suite crece lo suficiente para
+ * que el mensaje propio quede fuera del lote. Ya pasó una vez, con el tope en 500.
  */
 describe("Bandeja de salida transaccional (T-026, P-11)", () => {
   let app: INestApplication;
@@ -42,6 +43,13 @@ describe("Bandeja de salida transaccional (T-026, P-11)", () => {
     await app.close();
     await rm(carpeta, { recursive: true, force: true });
   });
+
+  /** Procesa TODO lo pendiente, sea cuanto sea: el tope sale de contarlo. */
+  async function vaciarLaBandeja(): Promise<void> {
+    const pendientes = await prisma.outboxMessage.count({ where: { sentAt: null } });
+
+    await procesador.procesarPendientes(pendientes + 10);
+  }
 
   async function encolarInvitacion(email: string): Promise<void> {
     await prisma.$transaction(async (tx) => {
@@ -94,7 +102,7 @@ describe("Bandeja de salida transaccional (T-026, P-11)", () => {
       const email = `${etiqueta("enviado")}@ejemplo.test`;
       await encolarInvitacion(email);
 
-      await procesador.procesarPendientes(500);
+      await vaciarLaBandeja();
 
       const archivos = await readdir(carpeta);
       const suyo = archivos.find((nombre) => nombre.includes(email));
@@ -110,9 +118,9 @@ describe("Bandeja de salida transaccional (T-026, P-11)", () => {
       const email = `${etiqueta("unavez")}@ejemplo.test`;
       await encolarInvitacion(email);
 
-      await procesador.procesarPendientes(500);
+      await vaciarLaBandeja();
       const despuesDelPrimero = (await readdir(carpeta)).filter((n) => n.includes(email)).length;
-      await procesador.procesarPendientes(500);
+      await vaciarLaBandeja();
       const despuesDelSegundo = (await readdir(carpeta)).filter((n) => n.includes(email)).length;
 
       expect(despuesDelPrimero).toBe(1);
@@ -126,7 +134,7 @@ describe("Bandeja de salida transaccional (T-026, P-11)", () => {
       const mailer = app.get<Mailer>(MAILER);
       const espia = vi.spyOn(mailer, "enviar").mockRejectedValueOnce(new Error("SMTP caído"));
 
-      await procesador.procesarPendientes(500);
+      await vaciarLaBandeja();
 
       const mensaje = await prisma.outboxMessage.findFirstOrThrow({
         where: { payload: { path: ["email"], equals: email } },
@@ -147,7 +155,7 @@ describe("Bandeja de salida transaccional (T-026, P-11)", () => {
         data: { type: "identity.enviar-algo-que-no-existe", payload: { email: "x@y.test" } },
       });
 
-      await procesador.procesarPendientes(500);
+      await vaciarLaBandeja();
 
       const mensaje = await prisma.outboxMessage.findFirstOrThrow({
         where: { type: "identity.enviar-algo-que-no-existe" },
@@ -186,7 +194,7 @@ describe("Bandeja de salida transaccional (T-026, P-11)", () => {
       await prisma.outboxMessage.create({ data: { type: "practice.reminder", payload: { email } } });
 
       const espia = vi.spyOn(app.get<Mailer>(MAILER), "enviar");
-      await procesador.procesarPendientes(500);
+      await vaciarLaBandeja();
 
       const mensaje = await prisma.outboxMessage.findFirstOrThrow({
         where: { payload: { path: ["email"], equals: email } },
@@ -206,7 +214,7 @@ describe("Bandeja de salida transaccional (T-026, P-11)", () => {
         data: { type: "identity.notify-password-changed", payload: { email } },
       });
 
-      await procesador.procesarPendientes(500);
+      await vaciarLaBandeja();
 
       expect((await readdir(carpeta)).some((nombre) => nombre.includes(email))).toBe(true);
     });
@@ -217,7 +225,7 @@ describe("Bandeja de salida transaccional (T-026, P-11)", () => {
       const email = `${etiqueta("sincuenta")}@ejemplo.test`;
       await encolarInvitacion(email);
 
-      await procesador.procesarPendientes(500);
+      await vaciarLaBandeja();
 
       expect((await readdir(carpeta)).some((nombre) => nombre.includes(email))).toBe(true);
     });
@@ -230,7 +238,7 @@ describe("Bandeja de salida transaccional (T-026, P-11)", () => {
       const espia = vi.spyOn(app.get<Mailer>(MAILER), "enviar");
 
       await encolarInvitacion(email);
-      await procesador.procesarPendientes(500);
+      await vaciarLaBandeja();
 
       const enviado = espia.mock.calls.find((llamada) => llamada[0].para === email)?.[0];
 
@@ -247,7 +255,7 @@ describe("Bandeja de salida transaccional (T-026, P-11)", () => {
     const espia = vi.spyOn(mailer, "enviar");
 
     await encolarInvitacion(email);
-    await procesador.procesarPendientes(500);
+    await vaciarLaBandeja();
 
     const enviado = espia.mock.calls.find((llamada) => llamada[0].para === email)?.[0];
 

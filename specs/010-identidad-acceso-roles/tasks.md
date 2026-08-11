@@ -306,6 +306,22 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > es dejar que la segunda no ocurra.
   > El límite de edad sale de `identity.minor_profile_max_age` (P-04): un club puede querer 21.
 
+- [x] **T-077** *(agregada 2026-08-11)* Los criterios de aceptación que ningún test cubría, que
+  T-110 destapó al mapear `spec.md` contra la suite:
+  - `POST /users` con `personId`: darle cuenta a **una persona que ya existe** sin duplicarla
+    (HU-010-03 c2), que es también la conversión del perfil de menor que cumple la edad
+    conservando su historia (HU-010-10 c3).
+  - `invitationSentAt` en `UserResponse` (HU-010-01 c3): sin la fecha, un administrador no
+    distingue una invitación de ayer de una de hace tres semanas y reenvía a ciegas.
+  - Invitación **ligera**: `fullName` opcional al crear y nombre/teléfono al aceptar
+    (HU-010-02 c1). La ficha nace con la parte local del correo —no en blanco— y el nombre que
+    puso el club **no se pisa**: el enlace de invitación no es el lugar para que alguien se
+    renombre.
+  ✅ 2026-08-11 — 10 tests de integración nuevos.
+  > De paso: el tope fijo de `procesarPendientes(500)` en los tests de la bandeja era una bomba de
+  > tiempo —estalló cuando esta tarea agregó seis usuarios más y el mensaje propio quedó fuera del
+  > lote. Ahora el tope se **cuenta**.
+
 ## J — Notificaciones del módulo base
 
 - [x] **T-090** Plantillas de correo (MJML) para: invitación, restablecimiento de contraseña,

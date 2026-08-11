@@ -79,18 +79,36 @@ export class UsersService {
     }
 
     await this.exigirCategoriaDelClub(clubId, datos.membershipCategoryId);
+    await this.exigirPersonaSinCuenta(clubId, datos.personId);
 
     const token = crearTokenDeSesion();
 
     const cuentaId = await this.prisma.$transaction(async (tx) => {
-      const persona = await tx.person.create({
-        data: {
-          clubId,
-          fullName: datos.fullName,
-          ...(datos.phone === undefined ? {} : { phone: datos.phone }),
-          createdById: actor.userAccountId,
-        },
-      });
+      const persona =
+        datos.personId === undefined
+          ? await tx.person.create({
+              data: {
+                clubId,
+                // Sin nombre, la parte local del correo. Es provisional y se ve como tal: la
+                // persona la reemplaza al aceptar, y mientras tanto el administrador ve algo
+                // reconocible en la lista en vez de una fila en blanco.
+                fullName: datos.fullName ?? nombreProvisional(correo),
+                ...(datos.phone === undefined ? {} : { phone: datos.phone }),
+                createdById: actor.userAccountId,
+              },
+            })
+          : // Sobre la persona que ya está: el invitado externo de una copa, el menor que cumplió
+            // la edad del club. **No se crea otra** —eso dejaría al club con dos fichas del mismo
+            // jugador y el historial en la vieja— y tampoco se le cambia el nombre de paso.
+            await tx.person.update({
+              where: { id: datos.personId },
+              data: {
+                ...(datos.phone === undefined ? {} : { phone: datos.phone }),
+                // Deja de ser un perfil administrado por otro: desde que tiene contraseña, manda
+                // sobre lo suyo. Su historia —vínculos, membresías, waivers— no se toca.
+                isMinor: false,
+              },
+            });
       const cuenta = await tx.userAccount.create({
         data: { personId: persona.id, email: correo, passwordHash: SIN_CONTRASENA, status: "invited" },
       });
@@ -202,7 +220,11 @@ export class UsersService {
   }
 
   /** Definir la primera contraseña con el enlace (HU-010-02). Deja la cuenta `active`. */
-  async aceptarInvitacion(token: string, contrasena: string): Promise<void> {
+  async aceptarInvitacion(
+    token: string,
+    contrasena: string,
+    datos: { fullName?: string | undefined; phone?: string | undefined } = {},
+  ): Promise<void> {
     const fila = await this.prisma.oneTimeToken.findUnique({
       where: { tokenHash: hashDeTokenDeSesion(token) },
       select: {
@@ -210,7 +232,14 @@ export class UsersService {
         type: true,
         sentAt: true,
         usedAt: true,
-        userAccount: { select: { id: true, email: true, status: true } },
+        userAccount: {
+          select: {
+            id: true,
+            email: true,
+            status: true,
+            person: { select: { id: true, fullName: true, phone: true } },
+          },
+        },
       },
     });
 
@@ -241,11 +270,22 @@ export class UsersService {
 
     const hash = await this.passwords.hash(contrasena);
 
+    // Sólo se completa lo que el club dejó en blanco. Quien invita con nombre completo lo hizo
+    // por algo —así aparece esa persona en la lista del club— y un enlace de invitación no es el
+    // lugar para que alguien se renombre.
+    const persona = fila.userAccount.person;
+    const provisional = persona.fullName === nombreProvisional(fila.userAccount.email);
+    const aCompletar = {
+      ...(provisional && datos.fullName !== undefined ? { fullName: datos.fullName } : {}),
+      ...(persona.phone === null && datos.phone !== undefined ? { phone: datos.phone } : {}),
+    };
+
     await this.prisma.$transaction([
       this.prisma.userAccount.update({
         where: { id: fila.userAccount.id },
         data: { passwordHash: hash, status: "active", emailVerifiedAt: this.clock.now() },
       }),
+      this.prisma.person.update({ where: { id: persona.id }, data: aCompletar }),
       this.prisma.oneTimeToken.update({ where: { id: fila.id }, data: { usedAt: this.clock.now() } }),
     ]);
   }
@@ -517,6 +557,31 @@ export class UsersService {
     }
   }
 
+  /**
+   * La persona sobre la que se va a crear la cuenta existe en este club y **todavía no tiene una**.
+   *
+   * Dos cuentas para una persona sería dos formas de entrar a lo mismo, y ninguna sabría de la
+   * otra. Una persona de otro club responde 404 y no 403 (P-05): desde aquí no existe.
+   */
+  private async exigirPersonaSinCuenta(clubId: string, personId: string | undefined): Promise<void> {
+    if (personId === undefined) {
+      return;
+    }
+
+    const persona = await this.prisma.person.findFirst({
+      where: { id: personId, clubId },
+      select: { userAccount: { select: { id: true } } },
+    });
+
+    if (persona === null) {
+      throw new NotFoundException();
+    }
+
+    if (persona.userAccount !== null) {
+      throw new ConflictException({ code: "la_persona_ya_tiene_cuenta" });
+    }
+  }
+
   private async exigirCategoriaDelClub(clubId: string, categoriaId?: string): Promise<void> {
     if (categoriaId === undefined) return;
 
@@ -557,10 +622,29 @@ export class UsersService {
   }
 }
 
+/**
+ * El nombre con el que nace una ficha invitada sólo-con-correo: la parte local del correo.
+ *
+ * Que sea una función y no un literal es lo que permite reconocerla después: al aceptar, el
+ * servicio compara contra esto para saber si el nombre es todavía el provisional o si el club puso
+ * uno de verdad — y en el segundo caso, no lo pisa.
+ */
+function nombreProvisional(email: string): string {
+  return email.replace(/@.*$/u, "");
+}
+
 const SELECCION = {
   id: true,
   email: true,
   status: true,
+  // La invitación vigente, para responder «¿le llegó, y cuándo?» (HU-010-01, criterio 3). Sólo la
+  // sin usar: una ya usada no dice nada sobre la que está esperando.
+  oneTimeTokens: {
+    where: { type: "invitation" as const, usedAt: null },
+    orderBy: { sentAt: "desc" as const },
+    take: 1,
+    select: { sentAt: true },
+  },
   person: {
     select: {
       id: true,
@@ -593,6 +677,7 @@ function aRespuesta(cuenta: CuentaSeleccionada): UserResponse {
     email: cuenta.email,
     phone: cuenta.person.phone,
     status: cuenta.status,
+    invitationSentAt: cuenta.oneTimeTokens[0]?.sentAt.toISOString() ?? null,
     roles: cuenta.roleAssignments,
     membershipCategory: cuenta.person.membershipHistory[0]?.category ?? null,
     organizations: cuenta.person.organizations.map((vinculo) => vinculo.organization),

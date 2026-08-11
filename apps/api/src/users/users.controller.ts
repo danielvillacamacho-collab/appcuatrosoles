@@ -274,7 +274,10 @@ export class InvitationController {
   async aceptar(
     @Body(new ZodValidationPipe(AcceptInvitationRequest)) cuerpo: AcceptInvitationRequest,
   ): Promise<void> {
-    await this.servicio.aceptarInvitacion(cuerpo.token, cuerpo.newPassword);
+    await this.servicio.aceptarInvitacion(cuerpo.token, cuerpo.newPassword, {
+      fullName: cuerpo.fullName,
+      phone: cuerpo.phone,
+    });
   }
 }
 

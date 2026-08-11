@@ -45,7 +45,10 @@ describe("Identidad de punta a punta (sección K)", () => {
 
   /** Lo que hace un navegador: recibe el correo, abre el enlace, saca el token. */
   async function tokenDelUltimoCorreoA(email: string): Promise<string> {
-    await procesador.procesarPendientes(500);
+    // El tope se cuenta en vez de fijarse: con un número fijo, el día que el recorrido encole un
+    // mensaje más, el correo que este test espera se queda fuera del lote y falla sin motivo.
+    const pendientes = await prisma.outboxMessage.count({ where: { sentAt: null } });
+    await procesador.procesarPendientes(pendientes + 10);
 
     const archivos = (await readdir(buzon)).filter((nombre) => nombre.includes(email)).sort();
     const ultimo = archivos.at(-1);

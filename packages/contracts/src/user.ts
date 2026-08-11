@@ -11,7 +11,25 @@ const RolAsignable = z.enum([
 ]);
 
 export const CreateUserRequest = z.object({
-  fullName: z.string().min(1).max(120),
+  /**
+   * **Opcional a propósito** (HU-010-02, «variante ligera»): el administrador puede invitar con
+   * sólo el correo y dejar que la persona ponga sus datos al aceptar. Sin nombre, la ficha queda
+   * con la parte local del correo como provisional — no vacía, porque una lista de usuarios con
+   * filas en blanco es peor que una con nombres feos.
+   */
+  fullName: z.string().min(1).max(120).optional(),
+  /**
+   * Darle cuenta a una **persona que ya existe** (HU-010-03, segundo criterio).
+   *
+   * El invitado externo de una copa entra al club como `person` sin cuenta; el menor que cumple
+   * la edad del club también es una persona con años de historia. Cuando cualquiera de los dos
+   * necesita entrar, se le crea la cuenta **sobre su persona** — nunca una nueva, o el club
+   * termina con dos fichas del mismo jugador y sólo una tiene el historial.
+   *
+   * Con `personId`, `fullName` se ignora: el nombre de alguien que ya está en el club no se
+   * cambia de paso al darle acceso.
+   */
+  personId: z.string().optional(),
   email: z.string().trim().email(),
   phone: z.string().max(40).optional(),
   membershipCategoryId: z.string().optional(),
@@ -38,6 +56,13 @@ export const UserResponse = z.object({
   email: z.string(),
   phone: z.string().nullable(),
   status: z.enum(["invited", "active", "suspended", "archived"]),
+  /**
+   * Cuándo se envió la invitación vigente, si la cuenta sigue `invited` (HU-010-01, criterio 3).
+   *
+   * Es la respuesta a «¿le llegó?»: sin la fecha, un administrador no puede distinguir una
+   * invitación de ayer de una de hace tres semanas, y reenvía a ciegas.
+   */
+  invitationSentAt: z.string().datetime().nullable(),
   roles: z.array(
     z.object({
       id: z.string(),
@@ -58,6 +83,15 @@ export const AcceptInvitationRequest = z
     token: z.string().min(1),
     newPassword: z.string().min(1),
     newPasswordConfirmation: z.string().min(1),
+    /**
+     * Los datos que la persona completa de sí misma (HU-010-02, primer criterio).
+     *
+     * Sólo se aplican **si el club no los puso ya**: quien invita con nombre completo lo hizo por
+     * algo —así aparece en la lista del club— y el enlace de invitación no es el lugar para que
+     * alguien se renombre. Lo que llene aquí quien fue invitado sólo-con-correo sí queda.
+     */
+    fullName: z.string().min(1).max(120).optional(),
+    phone: z.string().max(40).optional(),
   })
   .refine((datos) => datos.newPassword === datos.newPasswordConfirmation, {
     message: "Las dos contraseñas no coinciden.",
