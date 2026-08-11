@@ -53,7 +53,7 @@ revisión de código humana; y hay un manual de operación en `docs/10-operating
 | Q-06 | ¿Alquiler de caballos y quién recibe el ingreso? | Sí, ingreso a quien lo lista, 0 % al dueño |
 | Q-07 | Diferencias exactas entre categorías | Sólo cuota y precio por jugar; "requiere aptitud" sólo para estudiante |
 | Q-08 | Hora de decisión de prácticas | 6:00 p.m., configurable por día |
-| Q-09 | ¿Taqueos con reserva y cobro? | Sí |
+| Q-09 | ¿Taqueos con reserva y cobro? | Sí. **Se implementan con el módulo de pagos (Fase 3), no en `specs/040`** — decidido 2026-08-11 |
 | Q-10 | ¿Reservar clase con bolsa en cero? | No |
 | Q-11 | Quién puede ser subcomisario | Quien designe el comisario, por período |
 | Q-12 | ¿Notificaciones por WhatsApp? | No en v1; adaptador previsto |

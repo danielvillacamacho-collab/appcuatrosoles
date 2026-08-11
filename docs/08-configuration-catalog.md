@@ -52,6 +52,7 @@ inserta una fila nueva, nunca sobreescribe la vigente (histórico consultable si
 | `stick_and_ball.requires_booking_and_payment` | club | `true` | `docs/09` Q-09 |
 | `stick_and_ball.max_players_per_slot` | club | a definir con el club | PRD Parte I §6 |
 | `field.count` | club | 3 | PRD Parte I §6 |
+| `field.operating_hours` | club | `06:00`–`18:00` | `specs/040` §13 — las canchas no tienen iluminación, así que el horario lo acota la luz natural |
 
 ## 6. Caballos y alquiler
 
