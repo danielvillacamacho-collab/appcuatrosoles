@@ -173,17 +173,22 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
 
 ## F — Configuración
 
-- [ ] **T-250** `GET /settings?scope=…`: valores vigentes con su origen (explícito, heredado,
-  default). Verificación: los cuatro niveles de herencia, vistos desde la API.
+- [x] **T-250** `GET /settings?scope=…`: valores vigentes con su origen (explícito, heredado,
+  default). Verificación: los cuatro niveles de herencia, vistos desde la API. ✅ 2026-08-11 —
+  18 tests que cubren T-250 a T-253, ver `verification.md`. **Cierra la sección F.**
+  > Las cuatro se hicieron juntas: comparten controlador y servicio. Hay **una familia de rutas por
+  > ámbito** (`/platform/settings`, `/settings`, `/organizations/:id/settings`) porque el ámbito no
+  > puede llegar en la query: el guard decide antes de entrar al controlador, y con `?scope=` el
+  > cliente elegiría contra qué se evalúa su propio permiso.
 
-- [ ] **T-251** `PUT /settings/:key`: fija un valor con su vigencia, validado contra el catálogo
+- [x] **T-251** `PUT /settings/:key`: fija un valor con su vigencia, validado contra el catálogo
   (R-020-09). Verificación: clave desconocida → rechazada; tipo equivocado → rechazado **al
   escribir**; el valor anterior sigue consultable.
 
-- [ ] **T-252** `GET /settings/:key/history` y consulta por fecha. Verificación: «qué regía el 3 de
+- [x] **T-252** `GET /settings/:key/history` y consulta por fecha. Verificación: «qué regía el 3 de
   marzo» devuelve el valor de entonces, no el de hoy.
 
-- [ ] **T-253** Auditoría de configuración: cada cambio deja **exactamente una** fila con el valor
+- [x] **T-253** Auditoría de configuración: cada cambio deja **exactamente una** fila con el valor
   anterior y el nuevo (R-020-12, mismo criterio que T-023).
 
 ## G — Cierre de módulo

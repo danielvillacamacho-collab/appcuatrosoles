@@ -879,3 +879,65 @@ test para que quien construya pagos complete la otra mitad.
 - **`membership.category_change_proration` no se aplica** (`docs/08` §7): qué pasa con el mes en
   curso cuando alguien cambia de categoría es una regla de cobro, y vive en `specs/100`. La clave ni
   siquiera está en el catálogo de T-212 todavía, por lo mismo.
+
+---
+
+## T-250 a T-253 — Configuración por API
+
+**Fecha:** 2026-08-11 · 18 tests de integración (178 en total) · **cierra la sección F**
+
+Las cuatro tareas comparten controlador y servicio, así que se hicieron juntas.
+
+### Una familia de rutas por ámbito, y no un `?scope=`
+
+`/platform/settings`, `/settings` y `/organizations/:id/settings`. **El ámbito no puede llegar en
+la query**: `PermissionGuard` decide antes de entrar al controlador, así que el ámbito tiene que
+estar declarado en la ruta. Con `?scope=platform`, el cliente elegiría contra qué se evalúa su
+propio permiso — que es la definición de no tener permisos.
+
+Probado por los dos lados: un `club_admin` recibe `422` si intenta fijar una clave de plataforma por
+su ruta, y `403` si lo intenta por la ruta de plataforma. Dos códigos distintos porque son dos cosas
+distintas: la primera es «esa clave no es tuya», la segunda es «esa puerta no es tuya».
+
+### Se listan todas las claves del catálogo, no sólo las fijadas
+
+Una pantalla de configuración que sólo muestre lo que alguien tocó es una pantalla donde no se puede
+**descubrir** qué se puede configurar. El test compara la cantidad con el tamaño del catálogo, así
+que agregar una clave sin exponerla rompe el test.
+
+### Lo que el primer test descubrió sobre el catálogo
+
+**Ninguna clave del catálogo es hoy de ámbito de organización** (las de `auth.*` son de plataforma,
+las de `identity.*` de club). Es decir: la ruta de organización sólo puede **rechazar**, y así quedó
+probado — fijar una clave de club desde una organización responde `422`, porque el ámbito declarado
+es el más específico en el que se puede fijar (T-212). Si una organización pudiera sobreescribirla,
+dejaría de ser una decisión del club.
+
+La herencia hacia abajo sí funciona y tiene test (la organización ve el valor del club como
+`inherited`). El primer módulo que agregue una clave de organización estrenará el resto de la ruta.
+
+### La historia, vista desde afuera
+
+Fijar un valor **inserta una fila**, nunca actualiza (R-020-08). El histórico se sirve del más
+reciente al más viejo, `?asOf=` devuelve lo que regía en esa fecha, y un valor con vigencia futura
+todavía no rige. Los tres con test — es la mitad de HU-020-08 que permite explicar un cobro viejo
+sin reconstruir nada.
+
+### La auditoría del cambio
+
+Cada cambio deja **exactamente una** fila con el valor anterior y el nuevo, y un cambio rechazado no
+deja ninguna: no hubo cambio que auditar (T-023). El `entityId` es **la clave**, no el identificador
+de la fila: una fila de `setting` es un cambio, no una cosa, y lo que alguien va a buscar meses
+después es «qué pasó con esta clave».
+
+El «antes» lo aporta el controlador con `anotarEstadoPrevio`, que es exactamente el hueco que T-023
+dejó abierto para los servicios.
+
+### Pendiente declarado
+
+- **Nadie lee todavía estos valores para decidir nada.** El catálogo y la API existen; los
+  consumidores llegan con las tareas de `specs/010` que los necesitan (T-032 el bloqueo por
+  intentos, T-036 el enlace de restablecimiento) y con cada módulo nuevo. Hasta entonces P-04 se
+  cumple en el diseño, no en el comportamiento.
+- **`asOf` inválido se ignora en silencio** y se usa «ahora». Es lo más benigno para una pantalla,
+  pero conviene revisarlo cuando exista un consumidor real que dependa de la fecha.
