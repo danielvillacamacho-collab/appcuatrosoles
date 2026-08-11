@@ -2038,3 +2038,122 @@ invitación al waiver firmado, pasa entero por el API.
 - **No es el E2E de navegador** que pide `docs/05` §7. `apps/web` no tiene todavía estas pantallas;
   el de Playwright entra cuando exista la interfaz, y estos recorridos quedan como su red de
   seguridad del lado del API.
+
+---
+
+## Sección L — Cierre: cada criterio de aceptación con su test (T-110)
+
+**Fecha:** 2026-08-11 · 226 tests de dominio, 346 de integración, 3 de aislamiento, 8 e2e
+
+Lo que sigue recorre `spec.md` §5 criterio por criterio. **La regla de T-110 era que un criterio sin
+test se resuelve antes de dar el módulo por terminado, no que se anote.** Al hacer este mapa
+aparecieron cuatro criterios que no estaban implementados —no que estuvieran sin probar— y por eso
+existe T-077; están marcados abajo con la referencia a esa tarea.
+
+Los nombres entre «comillas» son el título literal del test; el archivo es su ubicación.
+
+### HU-010-01 — Creación de usuario por administrador
+
+| Criterio | Dónde se prueba |
+|---|---|
+| Se crea `invited` y se envía el correo de invitación | `users.int-spec` «crea la cuenta invitada y encola su invitación» · `identidad.e2e-spec` «la administradora crea el usuario, le llega el correo, define su contraseña y entra» |
+| Correo ya existente: lo impide y avisa | `users.int-spec` «rechaza un correo duplicado (HU-010-01, segundo criterio)» |
+| Ve el estado `invited`, **la fecha de envío**, y puede reenviar | `users.int-spec` «dice cuándo se envió la invitación: sin eso, se reenvía a ciegas» *(T-077)* · «reenviar la invitación invalida el enlace anterior (T-053)» |
+| Administrador de organización: sólo roles de la suya | `users.int-spec` «un administrador de organización sólo otorga roles de la suya (T-052, R-010-04)» · `permission-guard.int-spec` «un administrador de organización no actúa sobre el club entero (R-010-04)» |
+
+### HU-010-02 — Invitación con enlace (variante ligera)
+
+| Criterio | Dónde se prueba |
+|---|---|
+| Sólo el correo; la persona completa sus datos al aceptar | `users.int-spec` «la ficha nace con la parte local del correo, no en blanco» · «la persona pone su nombre al aceptar, y ése es el que queda» · «pero no se renombra a quien el club ya nombró: el enlace no es para eso» *(los tres, T-077)* |
+| Enlace de más de 7 días: rechazado, hay que reenviar | `isInvitationLinkValid.spec` «a los 7 días exactos ya está vencida» · «a los 8 días está vencida y el administrador debe reenviarla» — la ventana sale de `auth.invitation_link_validity_days` (P-04) |
+| Enlace ya usado: rechazado | `identidad.e2e-spec` «el mismo enlace no sirve dos veces: es de un solo uso» · `users.int-spec` «reenviar la invitación invalida el enlace anterior» |
+
+### HU-010-03 — Persona sin cuenta (invitado externo)
+
+| Criterio | Dónde se prueba |
+|---|---|
+| Existe como `person` sin `user_account` | `minors.int-spec` «no le crea cuenta: ése es el punto de un perfil de menor» · `person-email.int-spec` «dos personas del mismo club pueden tener el correo vacío» |
+| Se le crea la cuenta **sobre la persona existente**, sin duplicar | `users.int-spec` «usa la persona que existe en vez de crear otra, y conserva su historia» · «una persona que ya tiene cuenta no recibe una segunda» *(T-077)* |
+
+> El alta del invitado externo **de una copa** es `specs/060`. Lo que 010 garantiza —y prueba— es
+> que el modelo lo admite y que darle acceso después no le parte la historia en dos.
+
+### HU-010-04 — Inicio de sesión
+
+| Criterio | Dónde se prueba |
+|---|---|
+| Cuenta `active` con contraseña correcta accede a su panel | `auth-login.int-spec` «con credenciales correctas devuelve al usuario y abre una sesión» · `identidad.e2e-spec` (recorrido T-100, `GET /me`) |
+| Contraseña incorrecta: error genérico, sin decir cuál falló | `auth-login.int-spec` «un correo inexistente responde 401 — el mismo cuerpo, byte a byte (R-010-07)» · «ninguna cabecera delata la diferencia» |
+| Al quinto fallo se bloquea 15 minutos y se informa | `auth-lockout.int-spec` «al quinto intento fallido bloquea, y ni la contraseña correcta abre la puerta» · «pasado el tiempo configurado, desbloquea sola» |
+| `suspended`/`archived` **con la contraseña correcta**: mensaje acorde | `auth-login.int-spec` «una suspendida y una archivada reciben cada una su motivo (T-033)» |
+| Cualquier estado **con la contraseña incorrecta**: exactamente el mismo error | `auth-login.int-spec` «los cuatro rechazos de credenciales son idénticos byte a byte» · «pero el motivo SÓLO llega a quien acertó la contraseña (T-033 + P-12)» |
+
+### HU-010-05 — Cierre de sesión
+
+| Criterio | Dónde se prueba |
+|---|---|
+| Queda deslogueado de inmediato, ni con el botón «atrás» | `auth-logout.int-spec` «la sesión cerrada no sirve ni repitiendo la misma petición (el «atrás» del navegador)» · «borra las dos cookies» |
+| «Cerrar en todos» revoca todas las sesiones | `auth-logout.int-spec` «cierra también la actual: media desconexión no tranquiliza a nadie» |
+
+### HU-010-06 — Recuperación y cambio de contraseña
+
+| Criterio | Dónde se prueba |
+|---|---|
+| Enlace de un solo uso que expira en 1 hora | `password-reset.int-spec` «encola el correo con un enlace utilizable» · `isInvitationLinkValid.spec` (la ventana, generalizada) |
+| Misma respuesta exista o no la cuenta | `password-reset.int-spec` «responde lo mismo exista o no la cuenta (R-010-07)» · `identidad.e2e-spec` «pedir el enlace para un correo que no existe responde igual que para uno que sí» |
+| Enlace ya usado: rechazado | `password-reset.int-spec` «el mismo enlace no sirve dos veces (R-010-08)» · «un token inventado responde lo mismo que uno usado o vencido» |
+| Al restablecer se cierran **todas** las demás sesiones | `password-reset.int-spec` «revoca TODAS las sesiones» · `identidad.e2e-spec` «restablece desde el correo y la sesión del otro dispositivo deja de servir» |
+| Contraseña actual incorrecta: no permite el cambio | `me-password.int-spec` «exige la contraseña actual aunque haya sesión válida» |
+
+### HU-010-07 — Perfil propio
+
+| Criterio | Dónde se prueba |
+|---|---|
+| Edita su teléfono y queda actualizado | `me.int-spec` «cambia teléfono y foto» |
+| Categoría, roles y handicap son de sólo lectura para él | `me.int-spec` «mandar campos administrativos NO da error: se ignoran en silencio» · «NO expone campos administrativos sobre la persona» |
+| Cambio de correo: confirma en el nuevo, el anterior vale mientras tanto | `me.int-spec` «el correo anterior sigue valiendo hasta confirmar el nuevo» · «al confirmar, el nuevo reemplaza al anterior» |
+
+### HU-010-08 — Gestión de usuarios
+
+| Criterio | Dónde se prueba |
+|---|---|
+| Suspender deja fuera y revoca sus sesiones en el acto | `users.int-spec` «suspender revoca las sesiones activas en el acto» · `session-guard.int-spec` «con la cuenta suspendida aunque la sesión siga viva» |
+| Administrador de organización: usuario de otra no aparece ni por id (404) | `users.int-spec` «un administrador de organización sólo ve a la gente de la suya» · «un usuario de otro club responde 404 por acceso directo (T-055)» |
+| No puede suspenderse, archivarse ni quitarse un rol a sí mismo | `users.int-spec` «nadie se suspende ni se archiva a sí mismo (R-010-05)» · «nadie se retira roles a sí mismo (R-010-05)» |
+| La exportación trae exactamente lo filtrado en pantalla | `users.int-spec` «devuelve CSV con el mismo filtro que el listado» · «escapa comillas y comas» |
+
+### HU-010-09 — Asignación de roles
+
+| Criterio | Dónde se prueba |
+|---|---|
+| Agregar `instructor` no quita lo que ya podía hacer | `users.int-spec` «otorgar un rol lo deja vigente y auditado (T-060, R-010-11)» |
+| Administrador de organización no asigna `commissioner` ni `club_admin` | `users.int-spec` «un administrador de organización no otorga roles de club (T-062, R-010-04)» · `canAssignRole.spec` (la regla, en dominio) |
+| Todo cambio de rol queda auditado y tiene efecto inmediato | `audit-log.int-spec` «crear, suspender, archivar, otorgar y retirar rol: una fila cada una» · `permission-guard.int-spec` «un rol revocado no otorga nada — el retiro tiene efecto inmediato» |
+
+### HU-010-10 — Cuentas familiares y perfiles de menores
+
+| Criterio | Dónde se prueba |
+|---|---|
+| El cobro del menor se consolida en el estado de cuenta del titular | **Parcial y declarado**: `identidad.e2e-spec` «crea el menor, lo ve entre los suyos, firma por él y queda como quien paga» fija *a quién* se le cobra (`isPrimaryPayer` vigente). El cobro es `specs/100` |
+| Con dos acudientes, exactamente uno es pagador principal | `family.int-spec` «un pagador nuevo cierra el anterior: nunca hay dos vigentes» · `resolvePrimaryPayer.spec` (la regla) · `family.int-spec` «el job de integridad detecta al menor sin pagador vigente (T-071)» |
+| Al llegar a la edad del club se convierte en cuenta propia **conservando su historial** | `users.int-spec` «usa la persona que existe en vez de crear otra, y conserva su historia» · «deja de ser un perfil administrado por otro» *(T-077)* · el límite: `minors.int-spec` «el límite de edad lo pone el club, no el código (P-04)» |
+
+### HU-010-11 — Exención de responsabilidad
+
+| Criterio | Dónde se prueba |
+|---|---|
+| Sin aceptación vigente se bloquea, y el acudiente puede firmar por el menor | `family.int-spec` «un acudiente acepta por su menor; alguien más, no (T-074)» · «el ayudante reutilizable dice que sí cuando el club no tiene waiver publicado (T-075)» · `identidad.e2e-spec` (T-102, `waiverAccepted` pasa de `false` a `true`) |
+| Una versión nueva vuelve a pedir aceptación | `family.int-spec` «aceptar deja a la persona cubierta, y publicar una versión nueva la descubre (R-010-12)» · `isWaiverAcceptanceCurrent.spec` |
+
+### Lo que sigue abierto al cerrar el módulo
+
+1. **T-007 — rol de base de datos de privilegio mínimo.** Sigue abierto de la sección A. Hoy la
+   aplicación se conecta con un rol que puede más de lo que necesita; el `append-only` de
+   `audit_log` lo sostienen los triggers de T-004, no los permisos. Entra con el despliegue en AWS.
+2. **T-111 — demostración en staging desde un celular real.** No la puede hacer un agente. Es el
+   punto 4 de `docs/10` §3 y queda para cuando el producto esté desplegado.
+3. **El E2E de navegador** (`docs/05` §7) y **las pantallas**: `specs/010` no tiene tareas de
+   frontend y `apps/web` no tiene ninguna de las siete pantallas que enumera `spec.md` §10. Es el
+   hueco más grande del módulo y el trabajo que sigue.
+4. **SES y MJML**, ambos con su motivo escrito en §J.

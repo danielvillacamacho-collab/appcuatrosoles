@@ -365,8 +365,13 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 
 ## L — Cierre de módulo
 
-- [ ] **T-110** `verification.md`: marcar cada criterio de aceptación de `spec.md` con su test
+- [x] **T-110** `verification.md`: marcar cada criterio de aceptación de `spec.md` con su test
   correspondiente (nombre de archivo + nombre de test). Cualquier criterio sin test
   identificado se resuelve antes de dar el módulo por terminado.
+  ✅ 2026-08-11 — mapa completo en `verification.md` §L: **11 historias, 33 criterios**, cada uno
+  con su archivo y el título literal de su test.
+  > La tarea sirvió para lo que decía su última frase: **cuatro criterios no tenían test porque no
+  > estaban implementados**. Se resolvieron en T-077 antes de marcar nada. Un mapa que hubiera
+  > anotado «pendiente» en esas cuatro filas habría dado el módulo por terminado sin estarlo.
 - [ ] **T-111** Demostración en staging desde un celular real (`docs/10` §3 punto 4) antes de
   continuar con el módulo 020.
