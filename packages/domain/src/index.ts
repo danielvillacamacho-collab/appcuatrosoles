@@ -25,3 +25,4 @@ export * from "./settings/resolveSetting.js";
 export * from "./scheduling/overlap.js";
 export * from "./scheduling/operatingHours.js";
 export * from "./scheduling/calendarPrivacy.js";
+export * from "./scheduling/dayRange.js";

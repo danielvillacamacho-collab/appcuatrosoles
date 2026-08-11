@@ -76,6 +76,11 @@ const CON_TEST_PROPIO = [
   // `fields.int-spec` → «una cancha de otro club responde 404, nunca 403 (P-05)» y «bloquear encima
   // de algo existente se rechaza». El recorrido genérico no sirve para el bloqueo: necesita un
   // cuerpo con fechas coherentes dentro del horario del club para llegar siquiera al servicio.
+  // `calendar.int-spec` → «el calendario de otro club no se alcanza desde este subdominio» y «LA
+  // RESPUESTA ENTERA no contiene ningún identificador de lo ajeno y privado». El recorrido genérico
+  // no sirve: esta ruta no recibe identificadores, recibe una fecha — su aislamiento es por lo que
+  // devuelve, no por lo que se le pide.
+  "GET /api/calendar",
   "POST /api/field-bookings/block",
   "DELETE /api/field-bookings/:id",
   // `minors.int-spec` → «un acudiente de otro club no existe desde aquí: 404, nunca 403». El

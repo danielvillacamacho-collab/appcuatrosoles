@@ -1,6 +1,8 @@
 import { Global, Module } from "@nestjs/common";
 import { SettingsModule } from "../settings/settings.module.js";
 import { BookingsService } from "./bookings.service.js";
+import { CalendarController } from "./calendar.controller.js";
+import { CalendarService } from "./calendar.service.js";
 import { FieldBookingsController, FieldsController } from "./fields.controller.js";
 import { FieldsService } from "./fields.service.js";
 
@@ -14,8 +16,8 @@ import { FieldsService } from "./fields.service.js";
 @Global()
 @Module({
   imports: [SettingsModule],
-  controllers: [FieldsController, FieldBookingsController],
-  providers: [BookingsService, FieldsService],
+  controllers: [FieldsController, FieldBookingsController, CalendarController],
+  providers: [BookingsService, FieldsService, CalendarService],
   exports: [BookingsService],
 })
 export class FieldsModule {}

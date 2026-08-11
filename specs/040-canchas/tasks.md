@@ -156,22 +156,41 @@ por salir.
 
 ## F — El calendario
 
-- [ ] **T-450** `GET /calendar?date=` — el día por cancha, resuelto **contra la zona del club**
+- [x] **T-450** `GET /calendar?date=` — el día por cancha, resuelto **contra la zona del club**
   (`plan.md` §5).
   Verificación: el mismo día devuelve lo mismo consultado desde dos zonas horarias distintas; una
   actividad de las 7:00 p.m. en Bogotá aparece en **ese** día y no en el siguiente; un día sin nada
   devuelve las canchas con sus franjas vacías, no una lista vacía sin contexto.
+  ✅ 2026-08-11 — 11 tests. El día se resuelve con `rangoDelDia`, una función de dominio nueva que
+  es la inversa de `toLocalDate`: «el martes» no es un instante hasta saber dónde queda el club.
+  > Calcula el desfase **en dos pasadas**, porque el desfase de una zona depende del instante — hay
+  > que saber ya de qué instante se habla para saber qué desfase aplicar. Colombia no cambia de hora
+  > y con una pasada daría igual; en Santiago la primera se equivoca una hora dos veces al año, y
+  > hay un test con el día de 23 horas que lo fija.
+  > **Ese test señalaba el día equivocado y falló**: el día corto es el sábado, no el domingo. Se
+  > comprobó contra `Intl` en qué día cambia el desfase antes de tocar nada — «arreglar» el código
+  > para que el domingo diera 23 lo habría dejado mal para siempre y con un test verde encima.
 
-- [ ] **T-451** La privacidad aplicada en el servicio (R-040-07), con el contrato de unión
+- [x] **T-451** La privacidad aplicada en el servicio (R-040-07), con el contrato de unión
   discriminada.
   Verificación: **el test serializa la respuesta completa** y falla si aparece cualquier
   identificador de un evento ajeno y privado — no basta con comprobar que el campo `type` viene
   vacío. Los seis casos de T-412, ahora de punta a punta.
   > Es el test que protege la promesa del spec: nadie debe poder deducir del calendario quién toma
   > clases o taquea a cierta hora.
+  ✅ 2026-08-11 — **Y se verificó que atrapa una fuga de verdad**: se agregó a mano el campo `type`
+  al caso anónimo —lo que haría alguien sin pensar en la privacidad— y el test falló nombrando el
+  dato: «la respuesta filtró *lesson*». Comprobar campo por campo no lo habría visto.
+  > `participa` es `false` hoy y entra explícito: la participación se conoce cuando exista
+  > `practice_application` (`specs/050`). Que esté escrito es lo que hace que, cuando llegue, se vea
+  > de inmediato dónde conectarlo — la regla ya está probada con sus seis casos.
 
-- [ ] **T-452** Registrar las rutas nuevas en el arnés de aislamiento de tenant.
+- [x] **T-452** Registrar las rutas nuevas en el arnés de aislamiento de tenant.
   Verificación: `pnpm check:isolation` en verde con las cinco rutas declaradas.
+  ✅ 2026-08-11 — **Cierra la sección F.** Quedaron seis, no cinco: las cuatro de canchas entran al
+  recorrido genérico, y las de bloqueo y calendario llevan test propio. El calendario no recibe
+  identificadores sino una fecha, así que **su aislamiento es por lo que devuelve, no por lo que se
+  le pide** — el recorrido genérico no habría probado nada.
 
 ## G — Pantallas
 
