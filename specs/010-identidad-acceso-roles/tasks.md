@@ -144,9 +144,13 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > iniciar sesión por el subdominio de otro y leer su estructura por las rutas que sólo exigen
   > sesión. Ahora una cuenta sólo entra donde pertenece. Se decidieron y documentaron además la
   > duración de la sesión (12 h / 30 días con «recordarme») y los parámetros de Argon2id.
-- [ ] **T-031** `POST /auth/login`: mensaje de error genérico ante credencial incorrecta y
+- [x] **T-031** `POST /auth/login`: mensaje de error genérico ante credencial incorrecta y
   ante correo inexistente — mismo mensaje en ambos casos (R-010-07). Test que compara los dos
-  cuerpos de respuesta byte a byte.
+  cuerpos de respuesta byte a byte. ✅ 2026-08-11 — ver `verification.md` §T-031.
+  > El mensaje genérico del catálogo («Debes iniciar sesión para continuar») era correcto para una
+  > ruta que exige sesión y desconcertante para quien acaba de escribir su contraseña. Ahora el
+  > login tiene el suyo, y se comparan **cuatro** formas de fallar, no dos: cuerpo, estado y
+  > cabeceras.
 - [ ] **T-032** Bloqueo tras 5 intentos fallidos (`docs/08` `auth.failed_login_lockout_*`).
   Test con `FixedClock`: al quinto intento bloquea; pasado el tiempo, desbloquea.
 - [ ] **T-033** Rechazo de login por estado `invited`/`suspended`/`archived` con mensaje

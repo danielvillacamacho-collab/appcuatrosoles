@@ -1226,3 +1226,30 @@ comprobación de `ADR-014` punto 4 en una formalidad que cualquiera saltea olvid
   el mismo `401` genérico. El dominio ya distingue los cuatro motivos desde T-010; falta que el
   controlador los use **sólo para quien demostró conocer su contraseña**.
 - **No hay `logout`** (T-034) ni límite de tasa (T-032, `docs/03` §3 `429`).
+
+---
+
+## T-031 — El rechazo genérico, comparado en serio
+
+**Fecha:** 2026-08-11 · 2 tests nuevos (22 en el archivo de login)
+
+La tarea pedía comparar dos cuerpos byte a byte. Se comparan **cuatro** formas de fallar —correo
+inexistente con contraseña buena, correo inexistente con contraseña cualquiera, y dos contraseñas
+incorrectas distintas sobre una cuenta real— y se exige que la huella sea **una sola**: mismo
+cuerpo (sin el `requestId`, que es aleatorio por definición) y mismo estado.
+
+Un segundo test compara **las cabeceras**, que es por donde se escapan estas cosas: si un camino
+emitiera un `Set-Cookie` y el otro no, o si alguno agregara una cabecera propia, la diferencia sería
+visible sin leer el cuerpo. También exige que un rechazo no emita ninguna cookie.
+
+### Un mensaje que estaba mal y que este test destapó
+
+El login respondía con el genérico del catálogo de errores: **«Debes iniciar sesión para
+continuar»**. Es correcto para una ruta que exige sesión y desconcertante para quien acaba de
+escribir su contraseña — parece que el sistema no se enteró de que lo intentó. Ahora tiene el suyo,
+«Correo o contraseña incorrectos», con código `CREDENTIALS_INVALID`, e **idéntico en los cuatro
+caminos**.
+
+La función que lo construye está aislada y comentada precisamente para que nadie la haga más
+específica con buena intención: cualquier diferencia —el mensaje, el código, el estado, una
+cabecera— convierte el login en un detector de correos registrados.

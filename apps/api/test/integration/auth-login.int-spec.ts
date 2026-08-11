@@ -233,6 +233,52 @@ describe("Inicio de sesión (T-030, HU-010-04)", () => {
       expect(sinRequestId(inexistente.body)).toBe(sinRequestId(malaContrasena.body));
     });
 
+    it("los cuatro rechazos de credenciales son idénticos byte a byte (T-031, R-010-07)", async () => {
+      // Cuatro formas de equivocarse que deben ser indistinguibles desde afuera. Si alguna se
+      // diferenciara —por el cuerpo, por el estado o por una cabecera— el login pasaría a ser un
+      // detector de correos registrados: escribir uno y ver si la respuesta cambia.
+      const intentos = [
+        { email: `${etiqueta("nadie")}@ejemplo.test`, password: CONTRASENA },
+        { email: `${etiqueta("tampoco")}@ejemplo.test`, password: "cualquier-cosa" },
+        { email: correo, password: "contrasena-incorrecta" },
+        { email: correo, password: "otra-incorrecta-distinta" },
+      ];
+
+      const respuestas = [];
+
+      for (const intento of intentos) {
+        respuestas.push(await entrar(intento));
+      }
+
+      const huella = (respuesta: request.Response): string => {
+        const resto: Record<string, unknown> = { ...respuesta.body.error };
+        delete resto.requestId;
+
+        return JSON.stringify({ status: respuesta.status, error: resto });
+      };
+
+      expect(new Set(respuestas.map(huella)).size).toBe(1);
+      expect(respuestas[0]?.body.error.message).toBe(
+        "Correo o contraseña incorrectos.",
+      );
+    });
+
+    it("ninguna cabecera delata la diferencia entre correo inexistente y contraseña mala", async () => {
+      const inexistente = await entrar({
+        email: `${etiqueta("fantasma")}@ejemplo.test`,
+        password: CONTRASENA,
+      });
+      const malaContrasena = await entrar({ email: correo, password: "no-es" });
+
+      const cabeceras = (respuesta: request.Response): string[] =>
+        Object.keys(respuesta.headers)
+          .filter((nombre) => nombre !== "x-request-id" && nombre !== "date" && nombre !== "etag")
+          .sort();
+
+      expect(cabeceras(inexistente)).toEqual(cabeceras(malaContrasena));
+      expect(inexistente.headers["set-cookie"]).toBeUndefined();
+    });
+
     it("una cuenta invitada no entra ni con la contraseña correcta", async () => {
       const invitada = await crearCuenta("invited");
 

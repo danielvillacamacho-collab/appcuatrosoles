@@ -1,4 +1,5 @@
-import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import { Inject, Injectable, HttpStatus } from "@nestjs/common";
+import { ApiException } from "../common/errors/api-error.js";
 import type { LoginResponse } from "@polo/contracts";
 import { resolveLoginOutcome, type AccountStatus, type Clock } from "@polo/domain";
 import type { UserAccountStatus } from "@prisma/client";
@@ -95,14 +96,17 @@ export class AuthService {
       //
       // La respuesta es la misma que para una contraseña incorrecta, a propósito: decir «tu cuenta
       // no es de este club» confirmaría que existe (P-12).
-      throw new UnauthorizedException();
+      throw credencialesInvalidas();
     }
 
     if (cuenta === null || !veredicto.allowed) {
-      // Un solo tipo de excepción para todos los motivos. El cuerpo lo arma el filtro global y es
-      // idéntico; el motivo real —`invitation_pending`, `suspended`…— lo distinguirá T-033, que
-      // sólo puede hacerlo con quien ya demostró conocer su contraseña.
-      throw new UnauthorizedException();
+      // Una sola excepción para todos los motivos, con su propio código y su propio mensaje. El
+      // genérico del catálogo («Debes iniciar sesión para continuar») es correcto para una ruta
+      // que exige sesión y desconcertante para quien acaba de escribir su contraseña.
+      //
+      // El motivo real —`invitation_pending`, `suspended`…— lo distinguirá T-033, y sólo con quien
+      // ya demostró conocer su contraseña.
+      throw credencialesInvalidas();
     }
 
     const token = crearTokenDeSesion();
@@ -147,6 +151,20 @@ export class AuthService {
   private async gastarElMismoTiempo(contrasena: string): Promise<boolean> {
     return this.passwords.verificar(HASH_SEÑUELO, contrasena);
   }
+}
+
+/**
+ * El único rechazo que se le puede mostrar a alguien que no demostró conocer la contraseña
+ * (R-010-07, P-12). **Idéntico** para correo inexistente y para contraseña incorrecta: cualquier
+ * diferencia —el mensaje, el código, el estado, una cabecera— convierte el login en un detector de
+ * correos registrados.
+ */
+function credencialesInvalidas(): ApiException {
+  return new ApiException(
+    "CREDENTIALS_INVALID",
+    HttpStatus.UNAUTHORIZED,
+    "Correo o contraseña incorrectos.",
+  );
 }
 
 /**
