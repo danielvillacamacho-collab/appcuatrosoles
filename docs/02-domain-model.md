@@ -134,12 +134,23 @@ jugar), `granted_by_id`, `granted_at`, `revoked_at`, `revoked_by_id`.
 ## C. Handicaps
 
 **player_handicap** — valor vigente denormalizado para consultas rápidas.
-`person_id`, `type` (international | club), `value_halves`, `updated_at`.
+`club_id`, `person_id`, `type` (international | club), `value_halves`, `updated_at`.
 Rango válido: -4 a 20 medios goles (-2 a 10 goles).
+> **La ausencia de fila es un dato**: significa que nadie ha calificado a esa persona todavía, y se
+> lee como -4 medios (`specs/030` R-030-05). No se crean filas al dar de alta a alguien.
+> El rango **no** se replica como `CHECK` en la base: es una regla de polo y vive en
+> `packages/domain` (P-01). Duplicarla crearía dos verdades capaces de desincronizarse.
 
-**handicap_history** — `person_id`, `type`, `previous_halves`, `new_halves`,
+**handicap_history** — `club_id`, `person_id`, `type`, `previous_halves`, `new_halves`,
 `changed_by_id`, `on_behalf_of_id`, `reason`, `season_id`, `changed_at`.
 > Append-only. La denormalizada se recalcula desde esta tabla; si divergen, gana el historial.
+> `reason` es **obligatorio y no vacío** (`specs/030` R-030-07): un historial sin motivos no
+> respalda ninguna decisión, que es para lo único que existe.
+> `on_behalf_of_id` queda **previsto y sin usar** hasta que exista la delegación en un subcomisario
+> (Q-11). Se declara desde ya porque agregar la columna después obligaría a migrar una tabla que
+> para entonces tendrá años de historia.
+> Ambas tablas llevan `club_id` aunque se pueda llegar a él por la persona: el filtro de tenant se
+> aplica en el repositorio y no puede depender de un join (constitución, regla 6).
 
 ---
 

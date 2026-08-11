@@ -55,7 +55,10 @@ revisión de código humana; y hay un manual de operación en `docs/10-operating
 | Q-08 | Hora de decisión de prácticas | 6:00 p.m., configurable por día |
 | Q-09 | ¿Taqueos con reserva y cobro? | Sí. **Se implementan con el módulo de pagos (Fase 3), no en `specs/040`** — decidido 2026-08-11 |
 | Q-10 | ¿Reservar clase con bolsa en cero? | No |
-| Q-11 | Quién puede ser subcomisario | Quien designe el comisario, por período |
+| Q-11 | Quién puede ser subcomisario | Quien designe el comisario, por período. **La delegación no entra en `specs/030`: va en su propio spec** — decidido 2026-08-11 |
+| Q-17 | ¿Un cambio de handicap puede programarse con fecha futura? | **No: rige de inmediato** — decidido 2026-08-11. Las copas ya se protegen con su propio congelado (`docs/02` §E) |
+| Q-18 | ¿Qué handicap tiene quien nunca fue calificado? | **−2, como cualquiera.** Lo distingue el historial vacío, no el valor — decidido 2026-08-11 |
+| Q-19 | ¿Quién ve el historial de handicap de otro? | **El vigente es público dentro del club; el historial** sólo lo ven comisario, administradores, la propia persona y su acudiente — decidido 2026-08-11 |
 | Q-12 | ¿Notificaciones por WhatsApp? | No en v1; adaptador previsto |
 | Q-13 | Ventana para reclamar cupo liberado | 60 minutos |
 | Q-14 | Destino del dinero cuando el club cancela | Crédito a favor |
@@ -72,3 +75,5 @@ revisión de código humana; y hay un manual de operación en `docs/10-operating
 | 2026-08 | No se modela qué caballo juega cada chukker en v1 | Daniel |
 | 2026-08 | Stack: TypeScript, NestJS, React, PostgreSQL, una EC2 | CTO |
 | 2026-08-10 | D-01 a D-04 (arriba) | Daniel |
+| 2026-08-11 | Q-09: taqueos a Fase 3, fuera de `specs/040` | Daniel |
+| 2026-08-11 | Q-17 a Q-19 y el alcance de Q-11: las cuatro decisiones de `specs/030` §13 | Daniel |
