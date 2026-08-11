@@ -417,3 +417,57 @@ inactividad» de «cerrar de inmediato», que es exactamente lo contrario.
   haber una clave que el catálogo ya no declara (una que se retiró). Se ignoran al filtrar por
   clave, que es el comportamiento correcto, pero conviene que T-250 las reporte en vez de que
   desaparezcan en silencio.
+
+---
+
+## T-220 — `ClubRepository` y `ClubDirectory`: la lista de clubes en memoria
+
+**Fecha:** 2026-08-11 · 7 tests de integración (82 en total)
+
+`ClubRepository` es **el único repositorio del sistema que consulta sin filtro de tenant, y por
+definición tiene que serlo**: es el que resuelve cuál es el tenant. Cualquier otro repositorio que
+no filtre por `club_id` es un bug (P-05); éste es la excepción que hace posible la regla, y por eso
+vive aparte, con su propio nombre, en vez de esconderse dentro de un servicio genérico.
+
+### La invalidación no es una optimización, es parte de una regla
+
+R-020-04 dice que suspender un club corta el acceso **de inmediato**. Con sólo TTL de 60 segundos
+(`docs/06` §1), «de inmediato» sería «dentro de un minuto» — y ese minuto es exactamente el que le
+queda a alguien a quien se le acaba de cortar el contrato. Por eso hay `invalidate()`, y por eso
+T-231 tendrá que llamarlo.
+
+El test que lo fija está escrito **al revés**, que es como se ve mejor: un club creado después de
+la primera lectura **no aparece** hasta invalidar. Si un club nuevo no aparece sin invalidar, un
+club suspendido tampoco desaparece.
+
+### Dos cosas que la tarea no pedía y sin las cuales la caché sería un problema
+
+1. **Deduplicación de la carga en curso.** Veinte solicitudes simultáneas con la caché fría
+   dispararían veinte consultas idénticas, y el arranque de un proceso es exactamente ese momento.
+   Hay un test con veinte llamadas concurrentes que exige **una** consulta.
+2. **No servir la copia vieja cuando la base falla.** Es tentador —mantendría el sitio en pie— pero
+   esa copia puede contener un club que acaba de ser suspendido, y servirlo es el único error que
+   este componente no puede cometer. Falla la solicitud, no el aislamiento. El test comprueba
+   además que no queda una carga en curso pegada que envenene la siguiente lectura.
+
+### Los suspendidos también se traen
+
+`resolveTenant` los necesita para distinguir en el log un club que dejó de pagar de un intento a
+ciegas — aunque la respuesta al cliente sea idéntica en los dos casos (R-020-02). Omitirlos aquí
+obligaría a una segunda consulta para saber cuál es cuál.
+
+### El vencimiento se prueba sin esperar
+
+El test usa un reloj movible inyectado en lugar del `SystemClock`: «pasaron 59 segundos, no
+consulta; pasaron 61, consulta». Es la razón por la que `ClockModule` existe desde T-021 — un test
+que dependiera del reloj del sistema tardaría un minuto o sería inestable.
+
+### Pendiente declarado
+
+- **Se cachea la lista completa de clubes.** Es correcto para el orden de magnitud de este producto
+  (clubes de polo, decenas o cientos) y hace que resolver un tenant no toque la base. Si algún día
+  fueran miles, el camino es cachear por slug con la misma invalidación, no agrandar esta lista.
+- **La caché es por proceso** (ADR-012: no hay Redis). Con más de una instancia de la API, la
+  invalidación de T-231 sólo alcanza al proceso que la ejecuta; los demás tardan hasta un minuto.
+  Hoy hay un solo proceso (`docs/07`), así que no es un problema, pero **deja de no serlo el día
+  que se escale horizontalmente**, y ese día hay que resolverlo antes de escalar, no después.

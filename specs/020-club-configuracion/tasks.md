@@ -88,9 +88,13 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
 
 ## C — El tenant en la aplicación
 
-- [ ] **T-220** `ClubRepository` + caché en memoria del proceso con TTL (`docs/06` §1, ADR-012) e
+- [x] **T-220** `ClubRepository` + caché en memoria del proceso con TTL (`docs/06` §1, ADR-012) e
   **invalidación explícita**. Verificación: dos lecturas seguidas hacen una sola consulta; tras
-  invalidar, vuelve a consultar.
+  invalidar, vuelve a consultar. ✅ 2026-08-11 — 7 tests, ver `verification.md` §T-220.
+  > Dos cosas que la tarea no pedía y sin las cuales la caché sería un problema: **deduplicación
+  > de la carga en curso** (veinte solicitudes simultáneas con la caché fría harían veinte
+  > consultas idénticas — el arranque de un proceso es exactamente ese momento) y **no servir la
+  > copia vieja cuando la base falla**, porque esa copia puede contener un club recién suspendido.
 
 - [ ] **T-221** `TenantGuard` — **cierra `T-020` de `specs/010`**. Resuelve el club por host antes
   que cualquier otro guard, `404` para host desconocido, suspendido o malformado, sin distinguir
