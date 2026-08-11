@@ -79,21 +79,39 @@ por salir.
 
 ## C — El servicio de reservas, que es el que van a usar los demás módulos
 
-- [ ] **T-420** `bookings.service`: `reservar(...)` y `cancelar(...)`, **recibiendo la transacción**
+- [x] **T-420** `bookings.service`: `reservar(...)` y `cancelar(...)`, **recibiendo la transacción**
   (`plan.md` §2). Es el único lugar del sistema que escribe `field_booking`.
   Verificación: crear una reserva dentro de una transacción que después se revierte **no deja
   nada**; cancelar libera la franja de inmediato; una cancha de otro club responde `404`.
+  ✅ 2026-08-11 — 15 tests entre T-420, T-421 y T-422. El servicio es global, como `WaiversService`:
+  que haya que importarlo es lo que empuja a alguien a insertar por su cuenta.
+  > Valida además lo que la base no puede: cancha **activa** —una en mantenimiento no admite
+  > reservas— y horario de operación, con el motivo exacto del rechazo.
 
-- [ ] **T-421** `overlap-error.ts`: traducir el `23P01` de PostgreSQL a un error de contrato que
+- [x] **T-421** `overlap-error.ts`: traducir el `23P01` de PostgreSQL a un error de contrato que
   **diga con qué choca**, no sólo que chocó.
   Verificación: se provoca el choque de verdad —dos inserciones reales— y se comprueba el código de
   error y que el mensaje nombre la franja ocupada. Un `500` con «conflicting key value violates
   exclusion constraint» es un error que el usuario no puede entender ni resolver.
+  ✅ 2026-08-11 — **Prisma no le da clase propia a este error**: llega como
+  `PrismaClientUnknownRequestError`, sin `code` y sin `meta` — se comprobó imprimiendo el error
+  real. Lo único que queda del fallo de PostgreSQL es el texto anidado, que sí trae `23P01` y el
+  nombre de la restricción. Se exigen los dos: el código solo aparecería también en el `EXCLUDE` de
+  temporadas de `specs/020`, y traducir aquél a «esa cancha ya está ocupada» sería mentir.
+  > La consulta de «con qué choca» va **fuera** de la transacción: la violación ya la abortó, y
+  > cualquier consulta dentro fallaría con «current transaction is aborted».
+  > La zona horaria del mensaje entra como parámetro. Estaba escrita como `"America/Bogota"` fijo
+  > con una justificación que era una racionalización — el servicio ya conoce el club.
 
-- [ ] **T-422** Test de **concurrencia real**: dos transacciones abiertas a la vez intentando
+- [x] **T-422** Test de **concurrencia real**: dos transacciones abiertas a la vez intentando
   reservar franjas que se solapan, y confirmar las dos.
   Verificación: entra una y la otra recibe el error de solapamiento. **Dos inserciones en secuencia
   no prueban esto** — pasarían igual sin la restricción, porque la segunda vería a la primera.
+  ✅ 2026-08-11 — **Cierra la sección C.** Y se verificó que el test prueba lo que dice: se corrió
+  el mismo escenario **quitando la restricción** en la base de prueba, y las dos transacciones
+  entraron dejando dos reservas solapadas. Con la restricción, la segunda falla y queda una.
+  > Un test que pasa igual con y sin la garantía que dice probar es peor que no tenerlo: da
+  > confianza sin avisar de nada. Comprobarlo cuesta cinco minutos.
 
 ## D — Canchas
 
