@@ -375,3 +375,65 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > anotado «pendiente» en esas cuatro filas habría dado el módulo por terminado sin estarlo.
 - [ ] **T-111** Demostración en staging desde un celular real (`docs/10` §3 punto 4) antes de
   continuar con el módulo 020.
+
+## M — Interfaz *(agregada 2026-08-11 — `plan.md` §9)*
+
+> `spec.md` §10 enumeraba siete pantallas y **el módulo no tenía una sola tarea de frontend**. Es el
+> hueco que dejó anotado `verification.md` §L. El orden lo fija `plan.md` §9.5: primero el recorrido
+> por el que entra todo el mundo.
+
+### M.1 — Los cimientos (sin ellos, cada pantalla los inventaría por su cuenta)
+
+- [ ] **T-120** `lib/api-client.ts`: un solo lugar que habla con el API — `credentials: "include"`,
+  la cabecera de CSRF en toda mutación, y traducción del error de contrato a un tipo propio con su
+  `code`. Tests: manda la cabecera, la omite en `GET`, y un `401` se distingue de un `422`.
+  > Que el CSRF viva aquí y no en cada `useMutation` es la diferencia entre un olvido imposible y un
+  > `403` incomprensible en producción.
+- [ ] **T-121** `lib/query-keys.ts` + proveedores en `__root.tsx` (Query, Router, tokens de marca).
+  Tests: la aplicación monta y muestra la pantalla de ingreso.
+- [ ] **T-122** Traducción `código de error → texto en español` en `i18n/es-CO.ts`, con caída a un
+  texto genérico **y aviso en consola** para los códigos sin traducir. Test: cada código que hoy
+  devuelve el API tiene su texto.
+- [ ] **T-123** Tokens de marca de `docs/04` §1 en `packages/ui/tokens.css` + Tailwind 4 configurado.
+  Test: el bundle no trae un color hex suelto fuera de ese archivo.
+
+### M.2 — El recorrido de T-100, que es por donde entra todo el mundo
+
+- [ ] **T-124** Pantalla de **ingreso** (`/login`): correo, contraseña, «recordarme», el mismo
+  mensaje genérico para credenciales malas y el mensaje propio para cuenta suspendida. Muestra el
+  nombre del club del subdominio (`GET /club/public`). Mobile-first, 44 px de objetivo táctil.
+- [ ] **T-125** Guard de sesión (`_authenticated/route.tsx`): la sesión **no se guarda en el
+  cliente**, se resuelve con `GET /me`; un `401` redirige a `/login` conservando a dónde iba.
+- [ ] **T-126** **Aceptar invitación** (`/accept-invitation?token=`): define contraseña —con la
+  política visible antes de fallar— y, si el club invitó sólo con el correo, pide nombre y teléfono.
+  Enlace vencido o usado: pantalla que dice qué hacer, no un error crudo.
+- [ ] **T-127** **Panel propio** (`/`): quién es, sus roles, su categoría, y los accesos a lo suyo.
+  Es la pantalla que cierra el recorrido de T-100 en el navegador.
+- [ ] **T-128** E2E de navegador (Playwright) del recorrido completo: el club invita → la persona
+  define su contraseña → entra → ve su panel. **Es el pendiente que dejó `verification.md` §K.**
+
+### M.3 — Lo propio de cada quien
+
+- [ ] **T-129** **Olvidé mi contraseña** y **restablecer** (`/forgot-password`, `/reset-password`):
+  la misma respuesta exista o no la cuenta, y el aviso de que las demás sesiones se cerraron.
+- [ ] **T-130** **Mi perfil** (`/me/profile`): editable vs. sólo lectura **diferenciado visualmente**
+  (`docs/04`), y el cambio de correo con su confirmación pendiente a la vista.
+- [ ] **T-131** **Mis dispositivos** (`/me/sessions`): lista, cuál es la actual, cerrar una y cerrar
+  todas.
+- [ ] **T-132** **Mis avisos** (`/me/notifications`): los inevitables se muestran en gris con su
+  motivo, no se esconden — esconderlos haría creer que el sistema no los manda.
+- [ ] **T-133** **Perfiles a cargo** (`/me/dependents`): los menores, quién paga, y si les falta
+  firmar la exención.
+
+### M.4 — La administración del club
+
+- [ ] **T-134** **Listado de usuarios** (`/users`): filtros por estado, rol y texto, con exportación.
+  Paginación real —el API tiene tope de 200 sin cursor, así que esta tarea decide si el cursor entra
+  aquí o se declara como límite conocido.
+- [ ] **T-135** **Crear/invitar** (`/users/new`): formulario mínimo, invitación ligera con sólo el
+  correo, y el selector de roles **acotado a lo que quien lo usa puede otorgar**.
+- [ ] **T-136** **Ficha de usuario** (`/users/$userId`): datos, roles, estado, acciones (suspender,
+  archivar, reenviar invitación con su fecha de envío) e historial de auditoría de esa persona.
+- [ ] **T-137** Presupuesto de bundle como gate de CI (200 KB comprimidos, `ADR-014` punto 9).
+  > Entra con la primera pantalla y no después: un presupuesto que se agrega tarde ya viene
+  > incumplido, y bajarlo estaría prohibido por la regla de oro 12.

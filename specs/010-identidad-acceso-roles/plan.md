@@ -352,3 +352,87 @@ Todo job se encola en la misma transacción que el cambio de datos que lo origin
 o grupo de archivos, en el orden: esquema → dominio puro → repositorios → guards/decoradores →
 auth → users/roles → me → guardianship/waivers → auditoría → jobs → E2E de los flujos
 críticos de este módulo.
+
+---
+
+## 9. Interfaz — el plan que este documento no tenía *(agregado 2026-08-11)*
+
+`spec.md` §10 enumera siete pantallas y este plan no decía **cómo** construirlas: sólo describía el
+API. Ese hueco es el que sigue abierto al terminar la sección L, y esta sección lo cierra antes de
+escribir el primer componente (regla: nunca código de producción sin su plan).
+
+### 9.1. Lo que ya está decidido y no se vuelve a discutir
+
+`ADR-003` y `docs/04` fijan el stack: **React 19 + Vite + TanStack Router + TanStack Query + Tailwind
+4 + shadcn/ui**, con Zustand sólo para estado de interfaz. Las dependencias ya están en
+`apps/web/package.json`. Lo que falta es todo lo demás.
+
+### 9.2. Estructura de archivos
+
+```
+apps/web/src/
+├── routes/                        # TanStack Router, rutas por archivo (docs/04 §3)
+│   ├── __root.tsx                 # layout, proveedores, franja de error
+│   ├── login.tsx
+│   ├── accept-invitation.tsx      # ?token= — sin sesión
+│   ├── forgot-password.tsx
+│   ├── reset-password.tsx         # ?token= — sin sesión
+│   └── _authenticated/
+│       ├── route.tsx              # guard de sesión: sin ella, a /login
+│       ├── index.tsx              # panel propio
+│       ├── me/
+│       │   ├── profile.tsx
+│       │   ├── sessions.tsx
+│       │   ├── notifications.tsx
+│       │   └── dependents.tsx     # «Perfiles a cargo»
+│       └── users/
+│           ├── index.tsx          # listado con filtros + exportar
+│           ├── new.tsx            # crear/invitar
+│           └── $userId.tsx        # ficha: datos, roles, estado, auditoría
+├── features/<feature>/
+│   ├── api/                       # hooks de TanStack Query, uno por endpoint
+│   └── components/                # componentes que conocen el dominio
+├── lib/
+│   ├── api-client.ts              # fetch con credenciales, CSRF y traducción de errores
+│   ├── query-keys.ts              # claves estructuradas (docs/04 §4)
+│   └── session.ts                 # el usuario actual, desde `GET /me`
+└── i18n/es-CO.ts                  # TODO el copy visible (regla de oro 1)
+```
+
+### 9.3. Las tres decisiones que hay que tomar bien, porque son difíciles de deshacer
+
+**a) La sesión no se guarda en el cliente.** El token vive en una cookie `httpOnly` que JavaScript
+no puede leer (`ADR-005`). Entonces «¿hay sesión?» **no es un estado del frontend**: es el resultado
+de `GET /me`. El guard de `_authenticated` espera esa query; un `401` redirige a `/login`. No hay
+`isLoggedIn` en un store — un booleano que el servidor puede desmentir en cualquier momento es la
+forma más común de mostrarle a alguien una pantalla que no tiene derecho a ver.
+
+**b) El CSRF se resuelve una vez, en el cliente HTTP.** El API exige la cabecera en toda mutación con
+sesión, derivada de la cookie legible que emite el login. Va en `api-client.ts` y en ningún otro
+lado: si cada `useMutation` tuviera que acordarse, el día que uno se olvide el error va a ser un
+`403` incomprensible en producción.
+
+**c) Los errores del API ya traen código.** Después del arreglo del filtro global, `error.code` es
+específico (`email_en_uso`, `la_persona_ya_tiene_cuenta`, `PASSWORD_POLICY`…). El cliente traduce
+**código → texto en español** en `i18n/es-CO.ts`; nunca muestra el `message` del API en una pantalla
+de formulario, porque ese mensaje está pensado para quien lee un log, no para quien está tratando de
+entrar. Un código sin traducción cae en un texto genérico y **queda anotado en consola**, para que la
+falta se note en desarrollo y no en producción.
+
+### 9.4. Cómo se prueba
+
+- **Componentes y hooks**: Vitest + Testing Library, con el API simulado en el borde de `fetch`.
+  Se prueba lo que ve y hace la persona, no el estado interno.
+- **E2E de navegador**: Playwright contra el API real (`docs/05` §7), que es lo que `verification.md`
+  §K dejó anotado como pendiente. El recorrido de T-100 es el primero, y es el que convierte esos
+  tests de API en una prueba de producto.
+- **Presupuesto de bundle**: 200 KB comprimidos (`ADR-014` punto 9), medido en CI. Entra como gate
+  junto con la primera pantalla, no después: un presupuesto que se agrega tarde ya viene incumplido.
+
+### 9.5. Orden
+
+El recorrido completo de T-100 primero —ingreso → aceptar invitación → panel propio—, porque es el
+camino por el que entra **todo el mundo** y hasta que exista no se puede probar ninguna otra pantalla
+desde un navegador. Después la cuenta propia (perfil, sesiones, avisos, perfiles a cargo) y por
+último la administración, que es donde está el trabajo del club pero a la que no se llega sin haber
+iniciado sesión.
