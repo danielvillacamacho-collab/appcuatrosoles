@@ -728,3 +728,47 @@ función dos veces y exige que la segunda no cambie nada.
   esquema, así que se le pone el del club recién creado; su rol, en cambio, es de plataforma, así
   que no manda ahí por ser de ahí sino en todos por ser superadministrador. Es la tensión que
   `specs/140` HU-140-03 resuelve de verdad, con personal que trabaja en varios clubes.
+
+---
+
+## T-240 — Los datos del club, y la única puerta sin sesión
+
+**Fecha:** 2026-08-11 · 13 tests de integración (134 en total)
+
+Tres rutas sobre `clubs/current`: la pública, el detalle y la edición. **Ninguna recibe un
+identificador de club** — el club es el del subdominio, porque un `clubId` del cliente nunca
+determina el tenant (R-020-01).
+
+### La respuesta pública devuelve exactamente dos campos, y hay un test que lo exige
+
+`name` y `timezone`. Es la única respuesta del sistema que se sirve **sin sesión**, así que todo
+campo que se agregue ahí es información que cualquiera puede leer apuntando al subdominio. El test
+compara las claves de la respuesta contra la lista completa: **agregar un campo rompe el test a
+propósito**, y quien lo agregue tendrá que decidirlo mirando esa línea.
+
+Se construye a mano, campo por campo, y no con un `select` que alguien pueda ampliar sin pensarlo.
+
+### El cruce que el test tenía que cubrir
+
+Un administrador del club A, usando **su cookie válida**, sobre el subdominio del club B: `403`. La
+sesión es buena; el permiso se evalúa contra el club del subdominio, que no es el suyo. Es la
+combinación que un test de permisos solo, o de tenant solo, no habría cubierto.
+
+### El `slug` no se cambia por aquí
+
+Cambiar el subdominio rompe enlaces y sesiones, así que es una operación de plataforma y no una
+edición de perfil (R-020-03). El contrato de edición simplemente no lo declara, y el pipe descarta
+lo que el contrato no declara: mandarlo devuelve `200` con el slug intacto. Tiene test.
+
+### Editar invalida la caché
+
+El nombre viaja en la respuesta pública y el directorio guarda una copia del club: sin invalidar,
+la pantalla de ingreso mostraría el nombre viejo hasta un minuto después de cambiarlo. Hay un test
+que edita y consulta la ruta pública en la misma prueba.
+
+### Pendiente declarado
+
+- `clubDeLaSolicitud` lanza un error de programación si falta el tenant. Es correcto —y evita la
+  aserción no-nula que el repo prohíbe— pero **su causa siempre es la misma**: una ruta sin
+  `TenantGuard`. Cuando los guards pasen a ser globales (pendiente compartido con T-022b y T-221),
+  esa función deja de poder fallar.

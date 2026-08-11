@@ -145,9 +145,10 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
 
 ## E — Club, organizaciones, temporadas, categorías
 
-- [ ] **T-240** `GET /clubs/current/public` (sin sesión, sólo nombre y zona horaria — HU-020-09) y
+- [x] **T-240** `GET /clubs/current/public` (sin sesión, sólo nombre y zona horaria — HU-020-09) y
   `GET`/`PATCH /clubs/current` (con `club.edit`). Verificación: la respuesta pública se compara
   **campo por campo** contra la lista permitida; agregar un campo nuevo rompe el test a propósito.
+  ✅ 2026-08-11 — 13 tests, ver `verification.md` §T-240.
 
 - [ ] **T-241** Organizaciones: crear, editar, listar, archivar (nunca borrar). Verificación:
   aislamiento — un administrador de otro club recibe `404`; archivar conserva la historia.

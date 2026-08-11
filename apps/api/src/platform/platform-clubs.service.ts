@@ -10,6 +10,7 @@ import { CLOCK } from "../common/clock/clock.module.js";
 import type { ClubResponse, CreateClubRequest } from "@polo/contracts";
 import { validateSlug } from "@polo/domain";
 import { crearClubCompleto, SIN_CONTRASENA } from "../club/create-club.js";
+import { esZonaHorariaValida } from "../club/timezone.js";
 import { PrismaService } from "../common/prisma/prisma.service.js";
 import { ClubDirectory } from "../tenant/club-directory.js";
 
@@ -144,19 +145,4 @@ function aRespuesta(club: {
     currency: club.currency,
     status: club.status,
   };
-}
-
-/**
- * Se valida contra `Intl` y no contra una lista propia: la base de datos de zonas horarias cambia
- * —países que cambian de huso, zonas que se agregan— y una lista escrita a mano envejece sin que
- * nadie se entere hasta que un club de un país nuevo no puede darse de alta.
- */
-function esZonaHorariaValida(zona: string): boolean {
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: zona });
-
-    return true;
-  } catch {
-    return false;
-  }
 }

@@ -49,3 +49,12 @@ export const SuspendClubRequest = z.object({
 });
 
 export type SuspendClubRequest = z.infer<typeof SuspendClubRequest>;
+
+/** Lo que un administrador puede cambiar del club. El `slug` **no** está: cambiarlo rompe enlaces
+ * y sesiones, así que es una operación de plataforma y no una edición de perfil (R-020-03). */
+export const UpdateClubRequest = z.object({
+  name: z.string().min(1).max(120).optional(),
+  timezone: z.string().min(1).optional(),
+});
+
+export type UpdateClubRequest = z.infer<typeof UpdateClubRequest>;
