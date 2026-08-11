@@ -716,6 +716,41 @@ model Setting {
   @@map("setting")
 }
 
+// ─── T-026 · Bandeja de salida transaccional ────────────────────────────────────
+// memory/constitution.md P-11 · specs/010-identidad-acceso-roles/plan.md §5
+
+/// Un mensaje pendiente de enviar (correo, notificación), encolado **en la misma transacción** que
+/// el cambio de datos que lo origina (P-11).
+///
+/// Por qué una tabla y no encolar directo en la cola de trabajos: `pg-boss` (ADR-012) abre su
+/// propia conexión, así que un `send()` suyo no participa de la transacción de Prisma. Si el
+/// cambio se revierte después de encolar, sale un correo por algo que nunca ocurrió; si el proceso
+/// muere entre el `COMMIT` y el `send()`, la invitación no llega nunca y nadie se entera. Con una
+/// fila en la misma transacción, las dos cosas son imposibles: o pasan juntas o no pasa ninguna.
+model OutboxMessage {
+  id String @id @default(uuid(7))
+
+  /// Nulo en mensajes de ámbito de plataforma. Sirve para depurar y para poder purgar por club.
+  clubId String? @map("club_id")
+
+  /// Qué hay que hacer: `identity.send-invitation`, `identity.send-password-reset`… Los nombres
+  /// son los de `plan.md` §5.
+  type    String
+  payload Json
+
+  /// Desde cuándo se puede procesar. Permite reintentos con espera y envíos programados.
+  availableAt DateTime @default(now()) @map("available_at") @db.Timestamptz(3)
+  sentAt      DateTime? @map("sent_at") @db.Timestamptz(3)
+  attempts    Int      @default(0)
+  lastError   String?  @map("last_error")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  /// El índice que usa el procesador: pendientes que ya se pueden enviar, en orden de llegada.
+  @@index([sentAt, availableAt])
+  @@map("outbox_message")
+}
+
 // ─── Integridad pendiente (no es un olvido) ─────────────────────────────────────
 // `person.club_id`, `person_organization.club_id` / `.organization_id` y
 // `commissioner_delegation.club_id` son todavía TEXT sin llave foránea, porque las tablas

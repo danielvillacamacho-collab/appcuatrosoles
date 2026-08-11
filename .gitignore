@@ -20,3 +20,7 @@ prisma/*.db
 
 # Temporales de scripts/down-sql.sh (fuera de prisma/migrations a propósito)
 apps/api/.down-tmp/
+
+# Correos escritos a disco por el adaptador local de desarrollo (T-026)
+.correos/
+.correos-de-prueba/

@@ -1469,3 +1469,71 @@ veces y se rinda. Hay un test que lo exige sobre el texto.
 - **No se guarda historial de contraseñas**, así que nadie impide volver a la anterior. `docs/06` §2
   descarta explícitamente la expiración periódica, y prohibir la reutilización sin expiración
   protege poco; si se agrega, es una tarea con su propia decisión.
+
+---
+
+## T-026 — Bandeja de salida transaccional, y el correo que se puede abrir
+
+**Fecha:** 2026-08-11 · 7 tests de integración (242 en total)
+
+Tarea que faltaba: `plan.md` §5 lista cinco jobs y ADR-012 elige `pg-boss`, pero **ninguna tarea
+montaba la cola** — y sin ella T-035, T-036, T-050 y T-090 no se pueden terminar, porque todas
+encolan un correo *en la misma transacción* que el cambio de datos.
+
+### Por qué una tabla y no la cola directamente
+
+`pg-boss` abre su propia conexión, así que un `send()` suyo **no participa** de la transacción de
+Prisma. De ahí salen los dos errores que la bandeja hace imposibles, y los dos tienen test:
+
+- Si el cambio se revierte después de encolar, sale un correo anunciando algo que nunca ocurrió.
+- Si el proceso muere entre el `COMMIT` y el `send()`, la invitación no llega **nunca** y nadie se
+  entera.
+
+Con una fila escrita en la misma transacción, o pasan las dos cosas o no pasa ninguna.
+
+### Marca antes de enviar, no después
+
+Si se marcara después, un proceso que muere entre el envío y la marca dejaría el mensaje pendiente y
+lo enviaría otra vez: dos invitaciones, **dos enlaces válidos**. Al revés, el peor caso es un correo
+que no llega — molesto, pero se resuelve pidiendo el reenvío. Un enlace de restablecimiento
+duplicado no se resuelve.
+
+La marca usa `updateMany` filtrando por `sent_at IS NULL`, así que si dos procesadores corrieran a
+la vez sólo uno se lleva el mensaje.
+
+### El correo se escribe a disco, y eso es una decisión de producto
+
+`SesMailer` (ADR-008) entra cuando se configure la cuenta de AWS. Hasta entonces `MailerDeArchivo`
+escribe cada mensaje como un `.html` que se abre en el navegador: **quien prueba en local hace clic
+en el enlace de la invitación**, que es exactamente lo que hará con el correo real. Es lo que
+permite terminar el producto y probarlo sin depender de nada externo.
+
+El puerto está donde `docs/01` §4 manda, y el adaptador se elige en **un solo archivo**
+(`outbox.module.ts`): cambiarlo por SES es cambiar esa línea.
+
+Se loguea la ruta del archivo, nunca el contenido: un correo suele traer un enlace con un token de
+un solo uso, y el log no es lugar para un secreto.
+
+### Los textos viven en el consumidor, no en quien encola
+
+El trabajo encolado guarda **datos** —a quién, con qué enlace—, no un texto ya armado. Así una
+invitación se manda igual desde el alta de un club y desde la creación de un usuario, y si mañana se
+corrige una redacción, los mensajes que estaban en cola salen con la nueva. Un tipo desconocido
+**falla y queda registrado** en vez de mandar un correo vacío que nadie entiende.
+
+### El disparador es lo más simple que funciona
+
+Un `setInterval` cada cinco segundos, con `unref` para no mantener vivo el proceso, apagado en los
+tests —donde el procesador se llama a mano, para que ninguna prueba dependa de cuándo saltó un
+temporizador—. `pg-boss` va a reemplazarlo con reintentos, cron y visibilidad; **no hace falta para
+probar el producto en local**, y cuando entre no toca ni a quien encola ni a quien envía.
+
+### Pendientes declarados
+
+- **`pg-boss` sigue sin montarse** (ADR-012). La bandeja ya garantiza lo que importa; lo que falta
+  es el planificador con reintentos y cron, que es también lo que necesita
+  `identity.check-primary-payer-integrity` (T-071).
+- **Nadie purga los mensajes enviados.** La tabla crece con una fila por correo. Igual que las
+  sesiones revocadas (T-034): un job de purga cuando exista el planificador.
+- **`SesMailer` no existe**, a propósito: es lo primero que se escribe al configurar AWS, y su
+  contrato ya está fijado por el puerto.

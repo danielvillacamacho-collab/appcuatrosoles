@@ -136,6 +136,19 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > Verificación: una mutación sin el encabezado del token responde `403`; con el token correcto
   > pasa; y el token de CSRF no viaja en una cookie que pueda leer otro subdominio.
 
+- [x] **T-026** Bandeja de salida transaccional (P-11) + puerto `Mailer` con adaptador **local**.
+  > **Tarea agregada el 2026-08-11.** `plan.md` §5 lista cinco jobs y ADR-012 elige `pg-boss`, pero
+  > ninguna tarea montaba la cola — y sin ella, T-035, T-036, T-050 y T-090 no se pueden terminar:
+  > todas encolan un correo *en la misma transacción* que el cambio de datos. Sin eso, un fallo
+  > después del `COMMIT` deja una invitación que nunca llega, o un correo enviado por un cambio que
+  > se revirtió.
+  >
+  > **El adaptador de correo es local a propósito**: escribe cada mensaje a disco para poder abrirlo
+  > en el navegador. `SesMailer` (ADR-008) entra cuando se configure la cuenta de AWS; hasta
+  > entonces el producto se prueba de punta a punta sin depender de nada externo. Verificación: un
+  > cambio que falla no deja mensaje encolado; un mensaje encolado se envía una sola vez.
+  > ✅ 2026-08-11 — 7 tests, ver `verification.md` §T-026.
+
 ## D — Autenticación (`auth/`)
 
 - [x] **T-030** `POST /auth/login`: camino feliz (HU-010-04, cuenta activa). Test de contrato
