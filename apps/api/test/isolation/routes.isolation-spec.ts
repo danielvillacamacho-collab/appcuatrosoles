@@ -73,6 +73,11 @@ const CON_TEST_PROPIO = [
   // y «un vínculo terminado deja de mostrarse». Aquí el aislamiento no es sólo por club: dos
   // acudientes del MISMO club no pueden verse los hijos.
   "GET /api/me/dependents",
+  // `fields.int-spec` → «una cancha de otro club responde 404, nunca 403 (P-05)» y «bloquear encima
+  // de algo existente se rechaza». El recorrido genérico no sirve para el bloqueo: necesita un
+  // cuerpo con fechas coherentes dentro del horario del club para llegar siquiera al servicio.
+  "POST /api/field-bookings/block",
+  "DELETE /api/field-bookings/:id",
   // `minors.int-spec` → «un acudiente de otro club no existe desde aquí: 404, nunca 403». El
   // recorrido genérico no sirve: la ruta necesita un cuerpo válido con una fecha de nacimiento
   // coherente para llegar siquiera al servicio.
@@ -142,6 +147,10 @@ const COBERTURA: { ruta: string; espera: "ajeno" | "vacio" | "propio" }[] = [
   { ruta: "GET /api/membership-categories", espera: "vacio" },
   { ruta: "POST /api/membership-categories", espera: "propio" },
   { ruta: "PATCH /api/membership-categories/:id", espera: "ajeno" },
+  { ruta: "GET /api/fields", espera: "vacio" },
+  { ruta: "POST /api/fields", espera: "propio" },
+  { ruta: "PATCH /api/fields/:id", espera: "ajeno" },
+  { ruta: "POST /api/fields/:id/archive", espera: "ajeno" },
   { ruta: "GET /api/settings", espera: "propio" },
   { ruta: "GET /api/settings/:key", espera: "propio" },
   { ruta: "GET /api/settings/:key/history", espera: "propio" },
@@ -259,6 +268,9 @@ describe("Aislamiento de tenant por ruta (T-261, ADR-014 punto 3)", () => {
     const categoriaAjena = await prisma.membershipCategory.create({
       data: { clubId: victima.id, code: "ajena", name: "Ajena", monthlyFeeCents: 0n, rights: {} },
     });
+    const canchaAjena = await prisma.field.create({
+      data: { clubId: victima.id, name: `Ajena ${etiqueta("f")}` },
+    });
     app.get(ClubDirectory).invalidate();
 
     const fallos: string[] = [];
@@ -270,6 +282,7 @@ describe("Aislamiento de tenant por ruta (T-261, ADR-014 punto 3)", () => {
         .replace("/api/organizations/:id", `/api/organizations/${organizacionAjena.id}`)
         .replace("/api/seasons/:id", `/api/seasons/${temporadaAjena.id}`)
         .replace("/api/membership-categories/:id", `/api/membership-categories/${categoriaAjena.id}`)
+        .replace("/api/fields/:id", `/api/fields/${canchaAjena.id}`)
         .replace(":key", "identity.minor_profile_max_age");
 
       const metodo = verbo.toLowerCase() as "get" | "post" | "put" | "patch";
@@ -281,7 +294,7 @@ describe("Aislamiento de tenant por ruta (T-261, ADR-014 punto 3)", () => {
         .set(CABECERA_CSRF, tokenCsrfParaSesion(tokenDelClubAjeno))
         .send({ value: 17, name: "Intento", type: "team", startsOn: "2040-01-01", endsOn: "2040-06-30", code: "x", monthlyFeeCents: 0 });
 
-      const ajenos = [organizacionAjena.id, temporadaAjena.id, categoriaAjena.id, victima.id];
+      const ajenos = [organizacionAjena.id, temporadaAjena.id, categoriaAjena.id, canchaAjena.id, victima.id];
 
       if (caso.espera === "propio") {
         // Opera sobre el club del subdominio: lo que no puede es traer nada del otro.

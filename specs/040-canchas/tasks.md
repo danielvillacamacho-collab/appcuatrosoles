@@ -115,25 +115,44 @@ por salir.
 
 ## D — Canchas
 
-- [ ] **T-430** `GET /fields` y `POST /fields` con permiso `field.edit` (`plan.md` §4).
+- [x] **T-430** `GET /fields` y `POST /fields` con permiso `field.edit` (`plan.md` §4).
   Verificación: contrato de entrada y salida; un jugador puede listar pero no crear; dos canchas del
   mismo club no se llaman igual; el mismo nombre sí se repite en otro club (P-05).
+  ✅ 2026-08-11 — 18 tests entre las cuatro tareas. **Listar no exige permiso administrativo, sólo
+  sesión**: saber qué canchas hay es lo mínimo para leer el calendario.
+  > El nombre repetido lo decide el índice único, no una comprobación previa: dos administradores
+  > creando «Cancha 4» a la vez pasarían los dos un `findFirst`. La base decide y el servicio
+  > traduce.
 
-- [ ] **T-431** `PATCH /fields/:id` y `POST /fields/:id/archive`.
+- [x] **T-431** `PATCH /fields/:id` y `POST /fields/:id/archive`.
   Verificación: archivar **no borra** y lo ya programado sigue existiendo (R-040-08); una cancha
   archivada o en mantenimiento no admite reservas nuevas; una cancha de otro club responde `404`,
   nunca `403`.
+  > **El contrato no deja archivar por la puerta de atrás**: `PATCH` admite `active` y
+  > `maintenance`, no `archived`. Archivar tiene su propia ruta y su propio registro de auditoría;
+  > colarlo como un cambio de campo lo haría parecer reversible y trivial, y es lo contrario.
+  > Una cancha archivada **no se lista** pero se puede pedir: quien mira el calendario de marzo
+  > necesita saber en qué cancha fue esa práctica.
 
 ## E — Bloqueos
 
-- [ ] **T-440** `POST /field-bookings/block` con permiso `field.block` (administrador o comisario).
+- [x] **T-440** `POST /field-bookings/block` con permiso `field.block` (administrador o comisario).
   Verificación: bloquear una franja libre la ocupa como cualquier otra actividad; **bloquear encima
   de algo existente se rechaza** diciendo con qué choca (HU-040-03) — el bloqueo no atropella lo
   programado; el motivo es obligatorio.
+  > **`field.block` es un permiso aparte de `field.edit`**, y el comisario tiene sólo el primero: su
+  > autoridad es deportiva —la cancha está impracticable— no administrativa (`docs/06` §4). Con un
+  > permiso único, dárselo le habría dado también renombrar y archivar canchas. Hay dos tests de
+  > dominio nuevos que fijan que puede bloquear **y nada más**.
+  > El bloqueo pasa por el mismo `BookingsService` que todo lo demás: ocupa igual y choca igual.
 
-- [ ] **T-441** `DELETE /field-bookings/:id` para levantar un bloqueo.
+- [x] **T-441** `DELETE /field-bookings/:id` para levantar un bloqueo.
   Verificación: la franja queda disponible de inmediato; un jugador no levanta el bloqueo de otro;
   cancelar dos veces no falla.
+  ✅ 2026-08-11 — **Cierran las secciones D y E.** Las cinco rutas quedaron declaradas en el arnés
+  de aislamiento (adelanta T-452); las cuatro de canchas entran al recorrido genérico y las dos de
+  bloqueo llevan test propio, porque necesitan un cuerpo con fechas coherentes dentro del horario
+  del club para llegar siquiera al servicio.
 
 ## F — El calendario
 

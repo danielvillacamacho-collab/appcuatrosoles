@@ -143,10 +143,15 @@ describe("hasPermission · los permisos se acumulan, pero acumular no crea autor
 });
 
 describe("hasPermission · quién NO tiene autoridad administrativa", () => {
-  it("ningún rol operativo pasa ningún permiso, en ningún ámbito válido", () => {
+  it("ningún rol operativo pasa ningún permiso administrativo, en ningún ámbito válido", () => {
     // Recorre roles × sus ámbitos válidos × todos los permisos. Si un rol ganara autoridad por
     // accidente —al agregar un permiso nuevo a la tabla, por ejemplo— aparece aquí.
+    //
+    // **El comisario sale de la lista con una excepción explícita**, no borrándolo del recorrido:
+    // tiene `field.block` y nada más (`specs/040`, `docs/06` §4). Su autoridad es deportiva —sacar
+    // una cancha de juego porque está impracticable— y sigue sin poder administrar nada.
     const OPERATIVOS = ["commissioner", "instructor", "groom", "treasurer", "player"] as const;
+    const DEPORTIVOS: string[] = ["commissioner/club → field.block"];
     const infractores: string[] = [];
 
     for (const role of OPERATIVOS) {
@@ -156,8 +161,10 @@ describe("hasPermission · quién NO tiene autoridad administrativa", () => {
 
         for (const permiso of PERMISSIONS) {
           for (const ambito of [EN_EL_CLUB, EN_LA_ORG]) {
-            if (hasPermission(actor(asignacion), permiso, ambito).ok) {
-              infractores.push(`${role}/${scope} → ${permiso}`);
+            const caso = `${role}/${scope} → ${permiso}`;
+
+            if (hasPermission(actor(asignacion), permiso, ambito).ok && !DEPORTIVOS.includes(caso)) {
+              infractores.push(caso);
             }
           }
         }
@@ -167,7 +174,21 @@ describe("hasPermission · quién NO tiene autoridad administrativa", () => {
     expect(infractores).toEqual([]);
   });
 
-  it("sólo tres roles tienen alguna autoridad administrativa, y son los del catálogo", () => {
+  it("el comisario puede bloquear una cancha y NADA más", () => {
+    // La otra cara del test de arriba: que tenga un permiso no puede volverse «tiene permisos».
+    const comisario = actor({ role: "commissioner", scope: "club", scopeId: CLUB });
+    const suyos = PERMISSIONS.filter((permiso) => hasPermission(comisario, permiso, EN_EL_CLUB).ok);
+
+    expect(suyos).toEqual(["field.block"]);
+  });
+
+  it("el comisario de un club no bloquea canchas de otro", () => {
+    const comisario = actor({ role: "commissioner", scope: "club", scopeId: "otro-club" });
+
+    expect(hasPermission(comisario, "field.block", EN_EL_CLUB).ok).toBe(false);
+  });
+
+  it("sólo cuatro roles tienen alguna autoridad, y son los del catálogo", () => {
     const conAutoridad = ROLE_NAMES.filter((role) =>
       ROLE_SCOPES[role].some((scope) =>
         PERMISSIONS.some((permiso) =>
@@ -180,7 +201,12 @@ describe("hasPermission · quién NO tiene autoridad administrativa", () => {
       ),
     );
 
-    expect([...conAutoridad].sort()).toEqual(["club_admin", "organization_admin", "superadmin"]);
+    expect([...conAutoridad].sort()).toEqual([
+      "club_admin",
+      "commissioner",
+      "organization_admin",
+      "superadmin",
+    ]);
   });
 
   it("un actor sin ningún rol no pasa nada", () => {

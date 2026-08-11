@@ -26,6 +26,16 @@ export const PERMISSIONS = [
   "membership.manage",
   "setting.edit",
   "platform.club.manage",
+  /** Crear, editar y archivar canchas (`specs/040` R-040-06). */
+  "field.edit",
+  /**
+   * Bloquear una franja de cancha.
+   *
+   * Va aparte de `field.edit` porque **el comisario lo tiene y no administra canchas**: su autoridad
+   * es deportiva —la cancha está impracticable, se riega— no administrativa (`docs/06` §4). Con un
+   * solo permiso, dárselo le habría dado también renombrar y archivar canchas.
+   */
+  "field.block",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -122,7 +132,15 @@ const AUTORIDAD_POR_ROL: Record<RoleName, AutoridadDelRol> = {
       asignacion.scopeId === target.scopeId,
   },
 
-  commissioner: { permisos: [], alcanza: NINGUNO },
+  /**
+   * Autoridad **deportiva** dentro de su club: puede sacar una cancha de juego por sus condiciones,
+   * y nada más de la administración (`docs/06` §4).
+   */
+  commissioner: {
+    permisos: ["field.block"],
+    alcanza: (asignacion, target) =>
+      asignacion.scope === "club" && asignacion.scopeId === target.clubId,
+  },
   instructor: { permisos: [], alcanza: NINGUNO },
   groom: { permisos: [], alcanza: NINGUNO },
   treasurer: { permisos: [], alcanza: NINGUNO },

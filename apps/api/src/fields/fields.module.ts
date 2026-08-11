@@ -1,6 +1,8 @@
 import { Global, Module } from "@nestjs/common";
 import { SettingsModule } from "../settings/settings.module.js";
 import { BookingsService } from "./bookings.service.js";
+import { FieldBookingsController, FieldsController } from "./fields.controller.js";
+import { FieldsService } from "./fields.service.js";
 
 /**
  * Global por `BookingsService`: es el único lugar que escribe `field_booking` (R-040-01), y lo van
@@ -12,7 +14,8 @@ import { BookingsService } from "./bookings.service.js";
 @Global()
 @Module({
   imports: [SettingsModule],
-  providers: [BookingsService],
+  controllers: [FieldsController, FieldBookingsController],
+  providers: [BookingsService, FieldsService],
   exports: [BookingsService],
 })
 export class FieldsModule {}
