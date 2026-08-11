@@ -27,6 +27,10 @@ jobs:
       DATABASE_URL: postgresql://polo:polo@localhost:5432/polo_test
     steps:
       - uses: actions/checkout@v4
+        with:
+          # El escaneo de secretos mira el historial, y el clon por defecto trae un solo commit:
+          # sin esto no puede ver nada, y «no encontré secretos» sobre un commit no es una garantía.
+          fetch-depth: 0
 
       # Sin `version`: la toma de `packageManager` del package.json. Declararla también
       # aquí hace fallar la acción con «Multiple versions of pnpm specified», y además
@@ -94,8 +98,12 @@ jobs:
         # un `pnpm build` que pasa y un bundle que engorda no se reporten como cosas distintas.
         run: pnpm --filter @polo/web check:bundle
 
-      - name: Escaneo de secretos en el diff
+      - name: Escaneo de secretos en el historial
         uses: gitleaks/gitleaks-action@v2
+        env:
+          # La acción lo exige: sin él aborta antes de escanear nada, y el fallo no dice que falte
+          # un token — dice que encontró secretos.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   e2e:
     runs-on: ubuntu-latest
