@@ -26,3 +26,7 @@ export * from "./scheduling/overlap.js";
 export * from "./scheduling/operatingHours.js";
 export * from "./scheduling/calendarPrivacy.js";
 export * from "./scheduling/dayRange.js";
+export * from "./handicap/halves.js";
+export * from "./handicap/change.js";
+export * from "./handicap/team.js";
+export * from "./handicap/visibility.js";

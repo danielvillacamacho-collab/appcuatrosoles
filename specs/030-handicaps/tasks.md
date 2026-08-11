@@ -14,31 +14,37 @@ Conviene que ocurra cuando no hay nada más a medio hacer.
 
 ## A — Dominio puro
 
-- [ ] **T-301** `HandicapHalves`, `goalsToHalves`, `halvesToGoals` y `validarHandicap`
+- [x] **T-301** `HandicapHalves`, `goalsToHalves`, `halvesToGoals` y `validarHandicap`
   (`plan.md` §3). El tipo se construye **sólo** por `validarHandicap`.
   Verificación: −2 goles ↔ −4 medios y 10 ↔ 20 en los dos sentidos; 1.5 goles → 3 medios; se
   rechazan 21, −5, 1.3 y `NaN`. Ida y vuelta para todo el rango válido sin pérdida.
   > El redondeo es el error silencioso de este módulo: un jugador de 2.5 que pasa a 2 no rompe
   > nada, sólo desequilibra los equipos y nadie sabe por qué.
 
-- [ ] **T-302** `planearCambioDeHandicap` y la unión `RechazoDeCambio` (`spec.md` §9).
+- [x] **T-302** `planearCambioDeHandicap` y la unión `RechazoDeCambio` (`spec.md` §9).
   Verificación: los cuatro rechazos con su razón distinguible —`fuera_de_rango`, `no_es_medio_gol`,
   `sin_motivo`, `sin_cambio`—, un motivo de sólo espacios se rechaza, y un cambio válido devuelve el
   anterior y el nuevo.
   > `sin_cambio` (R-030-08) es el que se olvida. Sin él, el historial se llena de filas idénticas y
   > deja de servir para lo único que existe.
 
-- [ ] **T-303** `handicapDelEquipo` (`spec.md` §9). Suma en medios goles.
+- [x] **T-303** `handicapDelEquipo` (`spec.md` §9). Suma en medios goles.
   Verificación: la suma de cuatro jugadores; un equipo vacío da 0; la suma **no** se sale del tipo
   —el total de un equipo puede pasar de 20 medios y eso es válido, porque el rango −4..20 acota a un
   jugador, no a un equipo.
   > Vive aquí y no en 050 porque es aritmética de handicap. La regla del «medio hombre» —el puesto
   > compartido pesa el más alto de los dos— **no** entra: eso es composición de equipos, y es de 050.
 
-- [ ] **T-304** `puedeVerElHistorial` (`plan.md` §7).
+- [x] **T-304** `puedeVerElHistorial` (`plan.md` §7).
   Verificación: los seis casos —comisario, administrador, la propia persona, el acudiente de un
   menor, otro jugador, sin sesión—. El caso «sin sesión» se prueba explícitamente con `personId`
   nulo, que es como llega.
+  ✅ 2026-08-11 — 8 tests, los seis casos más dos bordes: sin sesión sigue siendo «no» aunque
+  llegaran roles puestos, y ser acudiente de uno no da acceso al historial de otro.
+
+> **Sección A cerrada el 2026-08-11.** 36 tests, `packages/domain/src/handicap` al 100 % de líneas
+> y ramas. Nada de esto toca la base de datos ni sabe de roles: son las cuatro reglas que el resto
+> del módulo va a consultar.
 
 ## B — Permisos
 
