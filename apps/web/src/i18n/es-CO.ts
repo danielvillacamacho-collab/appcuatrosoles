@@ -11,6 +11,90 @@ export const copy = {
     scaffoldNotice: "Plataforma en construcción — módulo de identidad en curso (specs/010).",
   },
 
+  comun: {
+    cargando: "Cargando…",
+    salir: "Cerrar sesión",
+  },
+
+  /**
+   * Los roles, en el idioma del club.
+   *
+   * `groom` es «petisero» y no «mozo de cuadra»: es la palabra que se usa en la cancha, y el
+   * producto tiene que hablar como habla el club (brandbook §6, voz «cálida y auténtica»).
+   */
+  roles: {
+    superadmin: "Superadministrador",
+    club_admin: "Administrador del club",
+    commissioner: "Comisario",
+    player: "Jugador",
+    organization_admin: "Administrador de organización",
+    instructor: "Instructor",
+    groom: "Petisero",
+    treasurer: "Tesorero",
+  } as Record<string, string>,
+
+  panel: {
+    saludo: "Hola",
+    tusRoles: "Lo que puedes hacer en el club",
+    sinRoles: "Todavía no te asignaron un rol. Comunícate con la administración del club.",
+    categoria: "Categoría de membresía",
+    sinCategoria: "Sin categoría asignada",
+    organizaciones: "Escuelas y organizaciones",
+    misCosas: "Lo tuyo",
+    miPerfil: "Mi perfil",
+    misDispositivos: "Mis dispositivos",
+    misAvisos: "Mis avisos",
+    misPerfilesACargo: "Perfiles a cargo",
+    administracion: "Administración",
+    usuarios: "Usuarios del club",
+  },
+
+  ingreso: {
+    titulo: "Ingresar",
+    subtitulo: "Entra con el correo que le diste al club.",
+    correo: "Correo",
+    contrasena: "Contraseña",
+    recordarme: "Mantener la sesión abierta en este dispositivo",
+    entrar: "Entrar",
+    entrando: "Entrando…",
+    olvide: "Olvidé mi contraseña",
+    // Los errores de formato los dice la interfaz, no Zod: los mensajes de Zod están en inglés y
+    // describen el esquema («Invalid email»), no lo que la persona tiene que hacer.
+    correoInvalido: "Escribe un correo válido, como maria@ejemplo.com.",
+    contrasenaRequerida: "Escribe tu contraseña.",
+  },
+
+  invitacion: {
+    titulo: "Define tu contraseña",
+    subtitulo: "Te crearon una cuenta en el club. Elige una contraseña para entrar.",
+    sinToken:
+      "Este enlace está incompleto. Ábrelo desde el correo que te envió el club, o pídele que te lo reenvíe.",
+    nombre: "Nombre completo",
+    nombreAyuda: "Sólo si el club no lo puso ya. Si lo dejaste en blanco, se conserva el que tienen.",
+    nombreInvalido: "Escribe tu nombre completo, o déjalo en blanco.",
+    telefono: "Teléfono",
+    telefonoInvalido: "Ese teléfono es demasiado largo.",
+    contrasena: "Contraseña nueva",
+    confirmacion: "Repite la contraseña",
+    noCoinciden: "Las dos contraseñas no coinciden.",
+    guardar: "Guardar y continuar",
+    guardando: "Guardando…",
+    yaTengoCuenta: "Ya tengo contraseña, quiero ingresar",
+  },
+
+  olvide: {
+    titulo: "Olvidé mi contraseña",
+    subtitulo: "Te enviamos un enlace para que definas una nueva.",
+    correo: "Correo",
+    enviar: "Enviar el enlace",
+    enviando: "Enviando…",
+    volver: "Volver a ingresar",
+    // El mismo texto exista o no la cuenta (R-010-07, P-12). Si dijera «te enviamos un correo» sólo
+    // cuando la cuenta existe, esta pantalla sería un buscador de socios del club.
+    listo:
+      "Si esa cuenta existe, le enviamos un correo con el enlace para restablecer la contraseña. Revisa tu bandeja y la carpeta de no deseados.",
+  },
+
   /**
    * Los errores del API, por su `code` (T-122, `plan.md` §9.3).
    *

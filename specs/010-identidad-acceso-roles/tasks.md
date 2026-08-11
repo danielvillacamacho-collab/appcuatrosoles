@@ -434,16 +434,49 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 
 ### M.2 — El recorrido de T-100, que es por donde entra todo el mundo
 
-- [ ] **T-124** Pantalla de **ingreso** (`/login`): correo, contraseña, «recordarme», el mismo
+- [x] **T-124** Pantalla de **ingreso** (`/login`): correo, contraseña, «recordarme», el mismo
   mensaje genérico para credenciales malas y el mensaje propio para cuenta suspendida. Muestra el
   nombre del club del subdominio (`GET /club/public`). Mobile-first, 44 px de objetivo táctil.
-- [ ] **T-125** Guard de sesión (`_authenticated/route.tsx`): la sesión **no se guarda en el
+  ✅ 2026-08-11 — 8 tests. Incluye `/forgot-password`, que no estaba en su tarea: es la salida de
+  emergencia **de esta pantalla**, y dejarla para T-129 habría significado un enlace muerto en la
+  primera pantalla del producto. Usar el enlace (`/reset-password`) sigue siendo T-129.
+  > Los campos van con `autoCapitalize="none"` y `autoCorrect="off"`: los teclados de celular
+  > convierten un correo en «María@…» y la persona ve lo que escribió bien y un rechazo que no
+  > entiende.
+  > `packages/ui` estrena `Button`, `TextField` y `Alert`. No usan Radix: un `<button>` y un
+  > `<input>` nativos ya traen foco, teclado y semántica. El primitivo entra cuando haga falta algo
+  > que el HTML no da. `TextField` ata etiqueta, ayuda y error con `aria-describedby` para que
+  > **nadie tenga que acordarse** de la accesibilidad, y el botón es `type="button"` por defecto
+  > —al revés que el HTML— porque el default `submit` hace que un «cancelar» envíe el formulario.
+- [x] **T-125** Guard de sesión (`_authenticated/route.tsx`): la sesión **no se guarda en el
   cliente**, se resuelve con `GET /me`; un `401` redirige a `/login` conservando a dónde iba.
-- [ ] **T-126** **Aceptar invitación** (`/accept-invitation?token=`): define contraseña —con la
+  ✅ 2026-08-11 — 3 tests. Un `401` de `/me` **es la respuesta, no un fallo**: significa «no hay
+  sesión». Un `500` sí es un fallo y se muestra como tal — tratarlo como falta de sesión sacaría a
+  alguien de su cuenta por una caída del servidor, y volvería a sacarlo cada vez que reintentara.
+  > La comprobación es **de conveniencia, no de seguridad**: cualquiera se la salta con las
+  > herramientas del navegador. Lo que no se salta es al API, que exige sesión y permiso en cada
+  > endpoint. Este guard existe para que nadie vea una pantalla vacía llena de errores.
+- [x] **T-126** **Aceptar invitación** (`/accept-invitation?token=`): define contraseña —con la
   política visible antes de fallar— y, si el club invitó sólo con el correo, pide nombre y teléfono.
   Enlace vencido o usado: pantalla que dice qué hacer, no un error crudo.
-- [ ] **T-127** **Panel propio** (`/`): quién es, sus roles, su categoría, y los accesos a lo suyo.
+  ✅ 2026-08-11 — 6 tests, y dos bugs que sólo los tests podían encontrar:
+  > **La política de contraseñas no se estaba aplicando.** Estaba escrita como regla `validate` de
+  > un campo, y cuando `useForm` usa un `resolver`, las reglas por campo **se ignoran por
+  > completo**. El código se leía bien, nada fallaba, y la contraseña corta llegaba al servidor.
+  > Ahora va dentro del esquema, con `validatePassword` de `packages/domain` — la misma función que
+  > aplica el API, importada. No es duplicar la regla: es la regla.
+  > **Un campo opcional en HTML llega como `""`, no como `undefined`**, y `min(1).optional()` lo
+  > rechaza: dejar el nombre en blanco impedía enviar el formulario y señalaba como incorrecto un
+  > campo que nadie tenía que llenar.
+- [x] **T-127** **Panel propio** (`/`): quién es, sus roles, su categoría, y los accesos a lo suyo.
   Es la pantalla que cierra el recorrido de T-100 en el navegador.
+  ✅ 2026-08-11 — 3 tests. **Todavía sin los accesos a las demás pantallas, y no es un olvido**: no
+  existen. Cada una agrega el suyo al llegar (T-130 a T-136); un menú con enlaces a pantallas en
+  blanco es peor que un panel corto.
+  > A quien no tiene rol todavía —acaba de aceptar la invitación y el club no le asignó nada— se le
+  > dice qué hacer. Un espacio en blanco ahí parece un error de la plataforma.
+  > **Verificado contra el API real** con el club sembrado (`pnpm db:seed`), entrando por
+  > `club-demo.localhost:5173`: ingreso, sesión y panel con sus roles y su organización.
 - [ ] **T-128** E2E de navegador (Playwright) del recorrido completo: el club invita → la persona
   define su contraseña → entra → ve su panel. **Es el pendiente que dejó `verification.md` §K.**
 

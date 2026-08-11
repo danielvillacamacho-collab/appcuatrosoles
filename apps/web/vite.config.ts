@@ -20,7 +20,7 @@ export default defineConfig({
     // de sesión y la resolución de tenant por subdominio dependen de eso. En desarrollo lo imita
     // este proxy, para que no haya un `VITE_API_URL` que sólo exista aquí y esconda el problema.
     proxy: Object.fromEntries(
-      ["/auth", "/me", "/users", "/minors", "/guardianships", "/waivers", "/club", "/organizations", "/seasons", "/membership-categories", "/settings", "/audit-log", "/platform", "/health"].map(
+      ["/auth", "/me", "/users", "/minors", "/guardianships", "/waivers", "/clubs", "/organizations", "/seasons", "/membership-categories", "/settings", "/audit-log", "/platform", "/health"].map(
         (ruta) => [ruta, { target: "http://localhost:3000", changeOrigin: false }],
       ),
     ),

@@ -1,28 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { RouterProvider, createMemoryHistory, createRouter } from "@tanstack/react-router";
-import { ApiError, NetworkError } from "../../lib/api-client.js";
-import { crearQueryClient } from "../__root.js";
-import { routeTree } from "../../routeTree.gen.js";
-
-function montar(ruta: string): void {
-  const router = createRouter({
-    routeTree,
-    history: createMemoryHistory({ initialEntries: [ruta] }),
-  });
-
-  // El tipo del router de prueba no es el registrado globalmente; lo que se prueba es que el árbol
-  // de rutas monta, no la inferencia de tipos, que ya la comprueba `tsc`.
-  render(<RouterProvider router={router as never} />);
-}
-
-describe("La aplicación monta (T-121)", () => {
-  it("renderiza la ruta raíz con su copy centralizado", async () => {
-    montar("/");
-
-    expect(await screen.findByRole("heading", { name: "Cuatro Soles" })).toBeDefined();
-  });
-});
+import { ApiError, NetworkError } from "../api-client.js";
+import { crearQueryClient } from "../../lib/query-client.js";
 
 describe("La configuración de TanStack Query (T-121)", () => {
   const opciones = crearQueryClient().getDefaultOptions();
