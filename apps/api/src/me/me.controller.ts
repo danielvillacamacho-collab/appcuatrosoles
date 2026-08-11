@@ -16,8 +16,10 @@ import {
   ConfirmEmailChangeRequest,
   MeResponse,
   RequestEmailChangeRequest,
+  NotificationPreferenceResponse,
   SessionResponse,
   UpdateMeRequest,
+  UpdateNotificationPreferencesRequest,
 } from "@polo/contracts";
 import { AuditInterceptor } from "../common/audit/audit.interceptor.js";
 import { Auditable, anotarEstadoPrevio, type ConAuditoria } from "../common/audit/auditable.js";
@@ -121,6 +123,21 @@ export class MeController {
   @SinPermiso("Cerrar una sesión propia no exige permiso: es la sesión de quien pide.")
   async cerrarSesion(@Req() req: Solicitud, @Param("id") id: string): Promise<void> {
     await this.servicio.cerrarSesion(usuario(req).userAccountId, id);
+  }
+
+  @Get("notification-preferences")
+  async preferencias(@Req() req: Solicitud): Promise<NotificationPreferenceResponse[]> {
+    return this.servicio.preferencias(usuario(req).userAccountId);
+  }
+
+  @Patch("notification-preferences")
+  @SinPermiso("Elegir qué avisos recibe uno no exige permiso: son los avisos de quien pide.")
+  async actualizarPreferencias(
+    @Req() req: Solicitud,
+    @Body(new ZodValidationPipe(UpdateNotificationPreferencesRequest))
+    cuerpo: UpdateNotificationPreferencesRequest,
+  ): Promise<NotificationPreferenceResponse[]> {
+    return this.servicio.actualizarPreferencias(usuario(req).userAccountId, cuerpo.preferences);
   }
 
   /** Ver la nota de `AuthController.urlDelClub`: se arma con el slug, nunca con el `Host`. */

@@ -68,3 +68,40 @@ export const SessionResponse = z.object({
 });
 
 export type SessionResponse = z.infer<typeof SessionResponse>;
+
+/**
+ * Una preferencia de aviso (T-091).
+ *
+ * Se devuelve **la lista completa de tipos**, no sólo las filas guardadas: sin fila se recibe el
+ * aviso, y una pantalla que sólo viera las filas mostraría una lista vacía la primera vez.
+ */
+export const NotificationPreferenceResponse = z.object({
+  type: z.string(),
+  enabled: z.boolean(),
+  /**
+   * Los avisos de seguridad y los que *son* el mecanismo —invitación, restablecimiento— no se
+   * pueden apagar. La interfaz los muestra en gris, no los esconde: esconderlos haría creer que
+   * el sistema no los manda.
+   */
+  canDisable: z.boolean(),
+});
+
+export type NotificationPreferenceResponse = z.infer<typeof NotificationPreferenceResponse>;
+
+/**
+ * El formato de un tipo de aviso: `modulo.accion-en-kebab`. No se valida contra una lista cerrada
+ * —ver la nota de `MeService.actualizarPreferencias`— así que la forma es lo único que impide que
+ * la tabla se llene de basura.
+ */
+const TIPO_DE_AVISO = /^[a-z][a-z0-9]*\.[a-z0-9-]+$/u;
+
+export const UpdateNotificationPreferencesRequest = z.object({
+  preferences: z
+    .array(z.object({ type: z.string().max(80).regex(TIPO_DE_AVISO), enabled: z.boolean() }))
+    .min(1)
+    .max(100),
+});
+
+export type UpdateNotificationPreferencesRequest = z.infer<
+  typeof UpdateNotificationPreferencesRequest
+>;

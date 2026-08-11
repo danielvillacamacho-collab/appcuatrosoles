@@ -64,6 +64,11 @@ const CON_TEST_PROPIO = [
   "POST /me/email-change/confirm",
   "GET /me/sessions",
   "DELETE /me/sessions/:id",
+  // `me-notifications.int-spec` → «sin sesión no se ven ni se cambian las preferencias de nadie».
+  // Las preferencias cuelgan de la cuenta, no del club: la misma persona en dos clubes elige una
+  // sola vez si quiere que le recuerden las prácticas.
+  "GET /me/notification-preferences",
+  "PATCH /me/notification-preferences",
   // `users.int-spec` cubre el aislamiento de todas éstas: «nunca lista usuarios de otro club»,
   // «un usuario de otro club responde 404 por acceso directo» y «un administrador de organización
   // sólo ve a la gente de la suya». El recorrido genérico no sirve aquí porque cada ruta necesita

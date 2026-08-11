@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { Clock } from "@polo/domain";
+import { debeEnviarse, esAvisoInevitable, type Clock } from "@polo/domain";
 import { CLOCK } from "../clock/clock.module.js";
 import { logger } from "../logging/logger.js";
 import { MAILER, type Mailer } from "../mailer/mailer.port.js";
@@ -53,7 +53,12 @@ export class OutboxProcessor {
       }
 
       try {
-        await this.mailer.enviar(construirCorreo(mensaje.type, mensaje.payload));
+        if (await this.leDebeLlegar(mensaje.type, mensaje.payload)) {
+          await this.mailer.enviar(construirCorreo(mensaje.type, mensaje.payload));
+        }
+
+        // Se cuenta como procesado igual cuando se omite por preferencia: el trabajo está hecho, y
+        // dejarlo pendiente lo haría reintentar para siempre.
         procesados += 1;
       } catch (error) {
         // Falló el envío: se devuelve a la cola con espera creciente y se guarda el motivo. Al
@@ -74,5 +79,36 @@ export class OutboxProcessor {
     }
 
     return procesados;
+  }
+
+  /**
+   * ¿Esta persona quiere este aviso? (T-091)
+   *
+   * La regla —qué se puede apagar— vive en `packages/domain`; aquí sólo se consultan sus
+   * preferencias. Los avisos de seguridad no llegan siquiera a preguntar.
+   */
+  private async leDebeLlegar(tipo: string, payload: unknown): Promise<boolean> {
+    // Se pregunta primero por lo inevitable y no con `debeEnviarse(tipo, [])`: sin preferencias
+    // esa función dice que sí a todo —la tabla es de exclusiones—, así que serviría de atajo para
+    // cualquier aviso y no sólo para los que no se pueden apagar.
+    if (esAvisoInevitable(tipo)) {
+      return true;
+    }
+
+    const correo =
+      payload !== null && typeof payload === "object" && "email" in payload
+        ? (payload as { email?: unknown }).email
+        : undefined;
+
+    if (typeof correo !== "string") {
+      return true;
+    }
+
+    const preferencias = await this.prisma.notificationPreference.findMany({
+      where: { userAccount: { email: correo } },
+      select: { type: true, enabled: true },
+    });
+
+    return debeEnviarse(tipo, preferencias);
   }
 }

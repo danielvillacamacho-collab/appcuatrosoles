@@ -63,6 +63,18 @@ export function construirCorreo(tipo: string, payload: Prisma.JsonValue): Mensaj
   }
 }
 
+/**
+ * La envoltura común de todos los correos (T-090).
+ *
+ * **Estilos en línea y tabla de un ancho fijo**: los clientes de correo ignoran hojas de estilo y
+ * la mitad no entiende flexbox. Es feo de escribir y es lo que hace que el correo se vea igual en
+ * Gmail, en Outlook y en el celular.
+ *
+ * `ADR-008` prevé plantillas MJML compiladas en build. **No se montó ese paso todavía**, y la razón
+ * está escrita en `verification.md`: MJML resuelve el problema de mantener plantillas ricas, y hoy
+ * hay cuatro correos de un párrafo y un botón. Cuando haya diez con tablas y encabezados, entra —
+ * y entra aquí, sin tocar a quien encola.
+ */
 function correo(
   para: string,
   asunto: string,
@@ -71,13 +83,23 @@ function correo(
   textoDelEnlace: string,
 ): MensajeDeCorreo {
   const conEnlace = enlace.length > 0;
+  const boton = conEnlace
+    ? `<p style="margin:24px 0"><a href="${enlace}" style="background:#1f6f43;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;display:inline-block">${textoDelEnlace}</a></p>` +
+      `<p style="color:#666;font-size:12px;word-break:break-all">Si el botón no funciona, copia esta dirección: ${enlace}</p>`
+    : "";
+
   const html = [
-    `<p>${cuerpo}</p>`,
-    conEnlace ? `<p><a href="${enlace}">${textoDelEnlace}</a></p>` : "",
-    conEnlace ? `<p style="color:#666;font-size:12px">Si el botón no funciona: ${enlace}</p>` : "",
-  ]
-    .filter(Boolean)
-    .join("\n");
+    // El «preheader»: el texto que la bandeja muestra junto al asunto. Sin él, el cliente de
+    // correo muestra lo primero que encuentre —a menudo «Si el botón no funciona»— y el correo
+    // parece basura antes de que nadie lo abra.
+    `<div style="display:none;max-height:0;overflow:hidden">${cuerpo.slice(0, 120)}</div>`,
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f6f4;padding:24px 0">',
+    '<tr><td align="center">',
+    '<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:8px;padding:32px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a1a;line-height:1.5">',
+    `<tr><td><p style="margin:0 0 16px">${cuerpo}</p>${boton}`,
+    '<p style="color:#888;font-size:12px;margin:24px 0 0">Este es un mensaje automático de la plataforma del club.</p>',
+    "</td></tr></table></td></tr></table>",
+  ].join("\n");
 
   return {
     para,

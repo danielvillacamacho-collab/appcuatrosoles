@@ -296,10 +296,26 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 
 ## J — Notificaciones del módulo base
 
-- [ ] **T-090** Plantillas de correo (MJML) para: invitación, restablecimiento de contraseña,
+- [x] **T-090** Plantillas de correo (MJML) para: invitación, restablecimiento de contraseña,
   contraseña cambiada, cuenta suspendida/reactivada.
-- [ ] **T-091** `NotificationPreference`: el usuario elige qué avisos no críticos recibe; las
+  ✅ 2026-08-11 — envoltura común en `mensajes.ts`, 1 test. **MJML no se montó**: resuelve el
+  problema de mantener plantillas ricas, y hoy hay cuatro correos de un párrafo y un botón. Entra
+  cuando haya diez con tablas, y entra en `correo()` sin tocar a quien encola. Ver `verification.md` §J.
+  > Lo que sí trae la envoltura: estilos **en línea** (los clientes de correo ignoran las hojas de
+  > estilo) y un *preheader*, el texto que la bandeja muestra junto al asunto. Sin él, Gmail muestra
+  > lo primero que encuentre —«Si el botón no funciona»— y el correo parece basura sin abrirlo.
+- [x] **T-091** `NotificationPreference`: el usuario elige qué avisos no críticos recibe; las
   de seguridad se envían siempre sin importar la preferencia (`docs/06` — regla dura).
+  ✅ 2026-08-11 — `debeEnviarse` en dominio, `GET`/`PATCH /me/notification-preferences`, el
+  procesador de la bandeja lo respeta. 10 tests de dominio + 9 de integración + 3 en `outbox`.
+  **Cierra la sección J.**
+  > La tabla es una **lista de exclusiones**: sin fila, se recibe. Al revés —tener que activar cada
+  > aviso— la gente se queda sin enterarse de nada y culpa a la plataforma.
+  > Los cuatro avisos de este módulo son inevitables: dos por seguridad y dos porque **son** el
+  > mecanismo (apagar la invitación deja a la persona sin poder entrar). Por eso el `PATCH` acepta
+  > cualquier tipo bien formado y no sólo los de `NOTIFICATION_TYPES`: si exigiera que prácticas o
+  > copas editaran una constante de identidad antes de poder silenciar sus avisos, la sección
+  > entera sería una pantalla sin nada que apagar.
 
 ## K — End-to-end
 

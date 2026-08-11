@@ -135,6 +135,7 @@ model UserAccount {
 
   settingsCreated Setting[]
   oneTimeTokens   OneTimeToken[]
+  notificationPreferences NotificationPreference[]
 
   @@map("user_account")
 }
@@ -763,6 +764,34 @@ enum OneTimeTokenType {
   email_change
 
   @@map("one_time_token_type")
+}
+
+// ─── T-091 · Preferencias de notificación ───────────────────────────────────────
+
+/// Qué avisos **no críticos** quiere recibir una persona.
+///
+/// Es una lista de exclusiones, no de inclusiones: sin fila, se recibe. Al revés —tener que
+/// activar cada aviso— la gente se queda sin enterarse de nada y culpa a la plataforma.
+///
+/// **Los avisos de seguridad no se pueden apagar** (`docs/06`, `notifications.security_always_sent`):
+/// «tu contraseña cambió» o «tu cuenta fue suspendida» son la única señal que recibe alguien a
+/// quien le pasó algo que no pidió. La regla vive en `packages/domain` y esta tabla no la puede
+/// contradecir.
+model NotificationPreference {
+  id            String @id @default(uuid(7))
+  userAccountId String @map("user_account_id")
+
+  /// El tipo de aviso, con los mismos nombres que la bandeja de salida (`plan.md` §5).
+  type    String
+  enabled Boolean @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  userAccount UserAccount @relation(fields: [userAccountId], references: [id], onDelete: Restrict)
+
+  @@unique([userAccountId, type])
+  @@map("notification_preference")
 }
 
 // ─── T-026 · Bandeja de salida transaccional ────────────────────────────────────

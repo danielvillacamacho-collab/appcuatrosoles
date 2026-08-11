@@ -1,6 +1,16 @@
 import { Inject, Injectable, NotFoundException, HttpStatus } from "@nestjs/common";
-import type { MeResponse, SessionResponse, UpdateMeRequest } from "@polo/contracts";
-import { isOneTimeLinkValid, type Clock } from "@polo/domain";
+import type {
+  MeResponse,
+  NotificationPreferenceResponse,
+  SessionResponse,
+  UpdateMeRequest,
+} from "@polo/contracts";
+import {
+  NOTIFICATION_TYPES,
+  esAvisoInevitable,
+  isOneTimeLinkValid,
+  type Clock,
+} from "@polo/domain";
 import { CLOCK } from "../common/clock/clock.module.js";
 import { ApiException } from "../common/errors/api-error.js";
 import { OutboxRepository } from "../common/outbox/outbox.repository.js";
@@ -252,5 +262,64 @@ export class MeService {
     if (cerradas.count === 0) {
       throw new NotFoundException();
     }
+  }
+
+  /**
+   * Qué avisos recibe esta persona (T-091).
+   *
+   * Devuelve **el catálogo entero**, no las filas guardadas: la tabla es una lista de exclusiones
+   * —sin fila, se recibe— y una pantalla alimentada sólo con filas mostraría la lista vacía la
+   * primera vez, que es justo cuando la persona quiere apagar algo.
+   */
+  async preferencias(userAccountId: string): Promise<NotificationPreferenceResponse[]> {
+    const guardadas = await this.prisma.notificationPreference.findMany({
+      where: { userAccountId },
+      select: { type: true, enabled: true },
+    });
+
+    // El catálogo, más cualquier fila guardada que no esté en él: un aviso de otro módulo que la
+    // persona ya apagó tiene que verse, o volvería a aparecer encendido sin estarlo.
+    const tipos = [...new Set([...NOTIFICATION_TYPES, ...guardadas.map((fila) => fila.type)])];
+
+    return tipos.sort().map((tipo) => ({
+      type: tipo,
+      enabled: guardadas.find((fila) => fila.type === tipo)?.enabled ?? true,
+      canDisable: !esAvisoInevitable(tipo),
+    }));
+  }
+
+  /**
+   * Cambiar las preferencias propias (T-091).
+   *
+   * **Los avisos inevitables se ignoran en silencio**, y no es pereza: un `400` por mandar
+   * `identity.notify-password-changed: false` obligaría a la interfaz a saber cuál es cuál para no
+   * romperse, y la respuesta ya trae `canDisable` diciéndoselo. Lo que no se puede apagar
+   * simplemente no se apaga, y la respuesta lo muestra encendido.
+   *
+   * **Lo que sí se acepta es cualquier tipo bien formado, esté o no en `NOTIFICATION_TYPES`.** Esa
+   * constante describe los avisos *de este módulo*; prácticas, clases y copas traerán los suyos.
+   * Exigir que cada módulo nuevo edite una constante de identidad antes de que sus avisos se
+   * puedan silenciar es acoplamiento que no compra nada: una fila para un aviso que nadie manda
+   * no hace daño, y el formato del contrato es lo que impide que entre basura.
+   */
+  async actualizarPreferencias(
+    userAccountId: string,
+    cambios: { type: string; enabled: boolean }[],
+  ): Promise<NotificationPreferenceResponse[]> {
+    const aplicables = cambios.filter((cambio) => !esAvisoInevitable(cambio.type));
+
+    if (aplicables.length > 0) {
+      await this.prisma.$transaction(
+        aplicables.map((cambio) =>
+          this.prisma.notificationPreference.upsert({
+            where: { userAccountId_type: { userAccountId, type: cambio.type } },
+            create: { userAccountId, type: cambio.type, enabled: cambio.enabled },
+            update: { enabled: cambio.enabled },
+          }),
+        ),
+      );
+    }
+
+    return this.preferencias(userAccountId);
   }
 }

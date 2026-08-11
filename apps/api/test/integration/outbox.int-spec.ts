@@ -158,6 +158,89 @@ describe("Bandeja de salida transaccional (T-026, P-11)", () => {
     });
   });
 
+
+  describe("las preferencias de aviso mandan sobre el envío (T-091)", () => {
+    /** Una cuenta propia: la preferencia se busca por el correo del destinatario. */
+    async function cuentaCon(tipo: string, enabled: boolean): Promise<string> {
+      const marca = etiqueta("pref");
+      const persona = await prisma.person.create({
+        data: { club: { create: { slug: `pref-${marca}`.toLowerCase(), name: "Club de preferencias" } }, fullName: "Persona con preferencia" },
+      });
+      const cuenta = await prisma.userAccount.create({
+        data: {
+          personId: persona.id,
+          email: `${marca}@ejemplo.test`,
+          passwordHash: "no-se-usa-en-este-test",
+          status: "active",
+          notificationPreferences: { create: { type: tipo, enabled } },
+        },
+      });
+
+      return cuenta.email;
+    }
+
+    it("un aviso apagado no se envía, y no queda reintentándose para siempre", async () => {
+      // Se marca como procesado igual: dejarlo pendiente lo haría volver en cada corrida del
+      // programador, para siempre, por un correo que nadie quiere recibir.
+      const email = await cuentaCon("practice.reminder", false);
+      await prisma.outboxMessage.create({ data: { type: "practice.reminder", payload: { email } } });
+
+      const espia = vi.spyOn(app.get<Mailer>(MAILER), "enviar");
+      await procesador.procesarPendientes(500);
+
+      const mensaje = await prisma.outboxMessage.findFirstOrThrow({
+        where: { payload: { path: ["email"], equals: email } },
+      });
+
+      expect(mensaje.lastError).toBeNull();
+      expect(mensaje.sentAt).not.toBeNull();
+      expect(espia.mock.calls.some((llamada) => llamada[0].para === email)).toBe(false);
+      espia.mockRestore();
+    });
+
+    it("un aviso de seguridad se envía aunque exista una fila que lo apague", async () => {
+      // La regla no se negocia con los datos: si esto fallara, un secuestro de cuenta pasaría
+      // inadvertido porque la víctima misma habría «desactivado» el aviso.
+      const email = await cuentaCon("identity.notify-password-changed", false);
+      await prisma.outboxMessage.create({
+        data: { type: "identity.notify-password-changed", payload: { email } },
+      });
+
+      await procesador.procesarPendientes(500);
+
+      expect((await readdir(carpeta)).some((nombre) => nombre.includes(email))).toBe(true);
+    });
+
+    it("sin cuenta que reclame el correo, el aviso sale: no se silencia a un desconocido", async () => {
+      // Una invitación se manda a quien todavía no tiene cuenta. Buscar preferencias y no
+      // encontrarlas no puede significar «no mandar».
+      const email = `${etiqueta("sincuenta")}@ejemplo.test`;
+      await encolarInvitacion(email);
+
+      await procesador.procesarPendientes(500);
+
+      expect((await readdir(carpeta)).some((nombre) => nombre.includes(email))).toBe(true);
+    });
+  });
+
+  describe("la plantilla común (T-090)", () => {
+    it("el HTML trae el preheader y no arrastra estilos de un archivo externo", async () => {
+      // Los clientes de correo ignoran hojas de estilo: si el estilo no va en línea, no va.
+      const email = `${etiqueta("plantilla")}@ejemplo.test`;
+      const espia = vi.spyOn(app.get<Mailer>(MAILER), "enviar");
+
+      await encolarInvitacion(email);
+      await procesador.procesarPendientes(500);
+
+      const enviado = espia.mock.calls.find((llamada) => llamada[0].para === email)?.[0];
+
+      expect(enviado?.html).toContain('style="display:none');
+      expect(enviado?.html).not.toContain("<link");
+      expect(enviado?.html).toContain("Define tu contraseña");
+      espia.mockRestore();
+    });
+  });
+
   it("el correo va también en texto plano: sólo-HTML cae en spam con más facilidad", async () => {
     const email = `${etiqueta("texto")}@ejemplo.test`;
     const mailer = app.get<Mailer>(MAILER);

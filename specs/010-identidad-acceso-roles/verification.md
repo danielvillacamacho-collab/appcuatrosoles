@@ -1846,3 +1846,80 @@ acción **rechazada** no deja ninguna fila.
 - **El listado tiene tope duro de 200 y no pagina.** Es el mismo pendiente que el listado de
   usuarios (`docs/03` §7 pide cursor). En auditoría se nota antes, porque crece con cada acción del
   club y nunca se borra.
+
+---
+
+## Sección J — Notificaciones del módulo base (T-090, T-091)
+
+**Fecha:** 2026-08-11 · 10 tests de dominio + 12 de integración (346 en total)
+
+### La tabla es una lista de exclusiones, no de inclusiones
+
+`notification_preference` guarda **lo que alguien apagó**. Sin fila, el aviso se envía. La
+alternativa —que cada quien active lo que quiere recibir— produce el mismo resultado siempre: la
+gente no entra a esa pantalla, no se entera de nada, y culpa a la plataforma.
+
+Eso obliga a que `GET /me/notification-preferences` devuelva **el catálogo completo** y no las filas
+guardadas: una pantalla alimentada sólo con filas mostraría una lista vacía la primera vez, que es
+justo cuando la persona entra a apagar algo. Devuelve el catálogo del módulo *más* cualquier fila
+guardada fuera de él, porque un aviso que ya se apagó tiene que verse apagado.
+
+### Los cuatro avisos de este módulo no se pueden apagar, y son dos motivos distintos
+
+- **Seguridad** (`docs/06`, `notifications.security_always_sent`): «tu contraseña cambió» y «el
+  estado de tu cuenta cambió» son la única señal que recibe alguien a quien le pasó algo que no
+  pidió. Una preferencia que los silencie es la forma de que un secuestro de cuenta pase inadvertido.
+- **Son el mecanismo, no un aviso**: apagar la invitación o el restablecimiento deja a la persona sin
+  poder entrar.
+
+La regla vive en `packages/domain/identity/notifications.ts` —`esAvisoInevitable`, `debeEnviarse`—
+porque *cuál se puede apagar* es una regla de negocio, no un detalle del transporte. El procesador de
+la bandeja de salida sólo la consulta. Un test comprueba lo importante: **un aviso de seguridad se
+envía aunque exista una fila en la base que lo apague**; la regla no se negocia con los datos.
+
+### Por qué el `PATCH` acepta tipos que este módulo no conoce
+
+`NOTIFICATION_TYPES` describe los avisos **de identidad**. Prácticas, clases y copas traerán los
+suyos. Si el endpoint rechazara todo lo que no esté en esa constante, cada módulo nuevo tendría que
+editar una constante de identidad antes de que sus avisos se pudieran silenciar — acoplamiento que no
+compra nada, porque una fila para un aviso que todavía nadie manda es inerte. Lo que sí impide que la
+tabla se llene de basura es el **formato** (`modulo.accion-en-kebab`), validado en el contrato.
+
+Consecuencia visible hoy: los cuatro avisos del módulo salen con `canDisable: false`, así que la
+pantalla de preferencias del módulo 010 no tiene nada que apagar. Es correcto y es honesto — el
+mecanismo está montado y probado, y el primer interruptor real llega con `specs/050`.
+
+### Un error que atrapó el test de integración
+
+El procesador tenía como atajo `if (debeEnviarse(tipo, []))`. Con la lista vacía esa función dice
+que sí **a todo** —sin preferencia, se envía—, así que el atajo se tragaba también los avisos
+apagables y ninguna preferencia habría tenido efecto jamás. El atajo correcto es
+`esAvisoInevitable(tipo)`. El test que lo destapó es «un aviso apagado no se envía»; sin él, la
+sección entera habría quedado verde sin funcionar.
+
+### Se omite por preferencia, pero se marca como procesado
+
+Un mensaje que no se envía porque la persona lo apagó queda con `sent_at`. Dejarlo pendiente lo haría
+volver en cada corrida del programador, para siempre, por un correo que nadie quiere recibir.
+
+### MJML queda pendiente, a propósito
+
+`ADR-008` prevé plantillas MJML compiladas en build. **No se montó**, y el motivo es de proporción:
+MJML resuelve el problema de mantener plantillas ricas, y hoy hay cuatro correos de un párrafo y un
+botón. Lo que sí se hizo es la envoltura común en `correo()` — estilos **en línea** (los clientes de
+correo ignoran las hojas de estilo y la mitad no entiende flexbox), tabla de ancho fijo, y un
+*preheader*: el texto que la bandeja muestra junto al asunto. Sin preheader, Gmail muestra lo primero
+que encuentra —«Si el botón no funciona»— y el correo parece basura antes de que nadie lo abra.
+
+Cuando haya diez plantillas con tablas y encabezados, MJML entra **dentro de `correo()`**, sin tocar a
+ninguno de los que encolan.
+
+### Pendientes declarados
+
+- **MJML (`ADR-008`)**, por lo dicho arriba.
+- **El envío real por SES queda para el despliegue en AWS.** Hoy el puerto `Mailer` lo implementa
+  `MailerDeArchivo`, que escribe el `.html` en `./.correos`. Es lo que permite probar el producto
+  completo en local; cambiar de implementación es una línea en el módulo.
+- **No hay preferencia por canal (correo / push / WhatsApp)** porque no hay más canal que el correo.
+  La tabla tiene `type`, no `type` + `channel`; agregarlo cuando exista el segundo canal es una
+  migración aditiva.

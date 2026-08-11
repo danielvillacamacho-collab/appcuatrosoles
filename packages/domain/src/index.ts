@@ -6,6 +6,7 @@ export * from "./shared/localDate.js";
 export * from "./identity/accountStatus.js";
 export * from "./identity/login.js";
 export * from "./identity/passwordPolicy.js";
+export * from "./identity/notifications.js";
 export * from "./identity/roles.js";
 export * from "./identity/canAssignRole.js";
 export * from "./identity/hasPermission.js";
