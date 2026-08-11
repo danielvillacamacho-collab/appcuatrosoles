@@ -83,18 +83,39 @@ Conviene que ocurra cuando no hay nada más a medio hacer.
 
 ## C — Datos
 
-- [ ] **T-320** Modelos `PlayerHandicap` y `HandicapHistory` con el enum `HandicapType`
+- [x] **T-320** Modelos `PlayerHandicap` y `HandicapHistory` con el enum `HandicapType`
   (`plan.md` §1), y la migración.
   Verificación: `up`/`down`/`up` contra Postgres real; el `@@unique([personId, type])` rechaza un
   segundo vigente para la misma persona y tipo; el índice del historial se usa al leerlo del más
   nuevo al más viejo.
   > Sin `CHECK` de rango a propósito (`plan.md` §1): esa regla es de polo y vive en el dominio.
+  ✅ 2026-08-11 — 10 tests contra la base, sin pasar por la aplicación (mismo criterio que T-401).
+  > **Prisma generó una migración rota y hubo que arreglarla a mano.** Metió
+  > `ALTER TABLE "field_booking" ALTER COLUMN "time_range" DROP DEFAULT`, porque `time_range` está
+  > declarada `Unsupported("tstzrange")?` —Prisma no sabe expresar una columna GENERATED— y cree en
+  > cada migración nueva que le falta un default. PostgreSQL la rechaza con
+  > `ERROR 42601: column "time_range" ... is a generated column`, y **la migración entera falla**.
+  > Comprobado contra Postgres real antes de borrarla, y comprobado después que con la línea puesta
+  > la suite de integración **no arranca**: `migrate deploy` corre desde cero en el arranque, así que
+  > la red ya existía. Queda escrito en la cabecera de la migración: **toda migración futura hay que
+  > revisarla por esto.**
+  > También hubo que rehacer el esquema desde cero: la primera edición usó como ancla un comentario
+  > que aparece en **ocho** modelos, y quedaron siete columnas de basura en cada tabla nueva. La
+  > segunda vez la edición se acotó al bloque de cada modelo y verifica que el ancla sea única.
 
-- [ ] **T-321** La lectura del vigente cuando **no hay fila** (`plan.md` §2): `−4` medios y
+- [x] **T-321** La lectura del vigente cuando **no hay fila** (`plan.md` §2): `−4` medios y
   `calificado: false`.
   Verificación: una persona recién creada devuelve `−4`/`false`; después de un cambio a `−4`
   devuelve `−4`/**`true`** — el mismo número, distinto significado. Es el test que prueba que la
   decisión D-030-02 quedó bien implementada.
+  ✅ 2026-08-11 — cubierto en el mismo archivo. Se comprueba que una persona recién creada **no
+  tiene ninguna fila**, ni de vigente ni de historial, y que las dos señales van siempre juntas.
+  > Hay además un test que documenta lo contrario de lo habitual: **la base acepta un 999**. El
+  > rango es una regla de polo y vive en el dominio; duplicarla en SQL crearía dos verdades capaces
+  > de desincronizarse. Lo que impide que un 999 llegue es `validarHandicap`.
+
+> **Sección C cerrada el 2026-08-11.** 418 tests de integración con la migración aplicada desde
+> cero contra Postgres real.
 
 ## D — API
 

@@ -66,6 +66,11 @@ model Person {
   /// T-202: la llave foránea que 010 dejó anotada como deuda. Ver `specs/020` §T-202.
   club Club @relation(fields: [clubId], references: [id], onDelete: Restrict)
 
+  /// Handicaps (`specs/030`). La **ausencia** de filas significa que nadie ha calificado a esta
+  /// persona todavía, y se lee como −2 goles (R-030-05). No se crean al darla de alta.
+  handicaps       PlayerHandicap[]
+  handicapChanges HandicapHistory[]
+
   @@unique([clubId, email])
   @@index([clubId, status])
   @@map("person")
@@ -137,6 +142,8 @@ model UserAccount {
   oneTimeTokens           OneTimeToken[]
   notificationPreferences NotificationPreference[]
   fieldBookingsCreated    FieldBooking[]
+  handicapChangesMade      HandicapHistory[] @relation("HandicapChangedBy")
+  handicapChangesDelegated HandicapHistory[] @relation("HandicapOnBehalfOf")
 
   @@map("user_account")
 }
@@ -609,6 +616,8 @@ model Club {
   auditEntries            AuditLog[]
   fields                  Field[]
   fieldBookings           FieldBooking[]
+  playerHandicaps         PlayerHandicap[]
+  handicapHistory         HandicapHistory[]
 
   @@index([status])
   @@map("club")
@@ -684,6 +693,8 @@ model Season {
 
   @@unique([clubId, name])
   @@index([clubId, startsOn])
+  handicapChanges HandicapHistory[]
+
   @@map("season")
 }
 
@@ -933,4 +944,86 @@ model FieldBooking {
   @@index([clubId, startsAt])
   @@index([fieldId, startsAt])
   @@map("field_booking")
+}
+
+/// Cuál de los dos handicaps (`docs/source` §5).
+enum HandicapType {
+  /// El oficial del jugador.
+  international
+  /// La versión del club, que suele moverse en pasos más finos.
+  club
+}
+
+/// El handicap vigente de una persona.
+///
+/// **Es una denormalización**: la verdad está en `HandicapHistory` (`specs/030` R-030-10). Existe
+/// para que consultar el handicap de 40 jugadores al armar equipos sea una consulta y no cuarenta
+/// agregaciones sobre el historial. Si los dos divergieran, gana el historial.
+///
+/// **La ausencia de fila es un dato**: significa que nadie ha calificado a esa persona, y se lee
+/// como −4 medios. No se crean filas al dar de alta a alguien.
+model PlayerHandicap {
+  id       String @id @default(uuid(7))
+  clubId   String @map("club_id")
+  personId String @map("person_id")
+
+  type HandicapType
+
+  /// Medios goles **enteros** (constitution, regla 4): handicap 1.5 → 3. Rango −4..20.
+  ///
+  /// Sin `CHECK` de rango a propósito: ésa es una regla de polo y vive en `packages/domain` (P-01).
+  /// Duplicarla aquí crearía dos verdades capaces de desincronizarse, y la de SQL no se puede
+  /// probar sin base. La base garantiza lo que sólo ella puede: unicidad e integridad referencial.
+  valueHalves Int @map("value_halves")
+
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  person Person @relation(fields: [personId], references: [id], onDelete: Restrict)
+
+  /// Un solo vigente por persona y tipo. Es lo que hace seguro el `upsert` del servicio aunque
+  /// lleguen dos peticiones a la vez.
+  @@unique([personId, type])
+  @@index([clubId, type])
+  @@map("player_handicap")
+}
+
+/// Cada cambio de handicap. **Append-only y fuente de verdad** (constitution, regla 7).
+model HandicapHistory {
+  id       String @id @default(uuid(7))
+  clubId   String @map("club_id")
+  personId String @map("person_id")
+
+  type           HandicapType
+  previousHalves Int          @map("previous_halves")
+  newHalves      Int          @map("new_halves")
+
+  /// La cuenta que ejecutó el cambio. Hoy siempre el comisario.
+  changedById String @map("changed_by_id")
+
+  /// **Previsto y sin usar** hasta que exista la delegación en un subcomisario (`docs/09` Q-11).
+  /// Se declara desde ya porque agregar la columna después obligaría a migrar una tabla que para
+  /// entonces tendrá años de historia.
+  onBehalfOfId String? @map("on_behalf_of_id")
+
+  /// Obligatorio y no vacío (R-030-07): un historial sin motivos no respalda ninguna decisión,
+  /// que es para lo único que existe.
+  reason String
+
+  /// La temporada vigente al momento del cambio, si había alguna (R-030-12). Que el club no tenga
+  /// temporada abierta no puede bloquear una decisión deportiva.
+  seasonId String? @map("season_id")
+
+  changedAt DateTime @default(now()) @map("changed_at") @db.Timestamptz(3)
+
+  club       Club         @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  person     Person       @relation(fields: [personId], references: [id], onDelete: Restrict)
+  season     Season?      @relation(fields: [seasonId], references: [id], onDelete: Restrict)
+  changedBy  UserAccount  @relation("HandicapChangedBy", fields: [changedById], references: [id], onDelete: Restrict)
+  onBehalfOf UserAccount? @relation("HandicapOnBehalfOf", fields: [onBehalfOfId], references: [id], onDelete: Restrict)
+
+  /// El orden en que se lee: el historial de una persona, del más nuevo al más viejo.
+  @@index([personId, type, changedAt(sort: Desc)])
+  @@index([clubId, changedAt(sort: Desc)])
+  @@map("handicap_history")
 }
