@@ -105,5 +105,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: npx playwright install --with-deps
+      # `pnpm test:e2e` recorre hoy flujos completos **de API** contra un PostgreSQL real que
+      # levanta Testcontainers (`apps/api/test/e2e`). Playwright se instalará cuando existan las
+      # pantallas: instalar navegadores para una suite que todavía no los usa son cuatro minutos
+      # de CI por corrida a cambio de nada.
       - run: pnpm test:e2e

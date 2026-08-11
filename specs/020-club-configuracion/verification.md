@@ -1000,3 +1000,47 @@ escribió, porque quien la escribe prueba lo que quiso hacer.
   Una ruta declarada como `propio` que internamente aceptara un identificador ajeno pasaría. Cubrir
   eso exigiría analizar el cuerpo de cada handler; lo que sí queda cubierto es que **ninguna ruta
   puede existir sin decisión explícita**.
+
+---
+
+## T-262 — Cierre del módulo: cada criterio con su test
+
+**Fecha:** 2026-08-11
+
+`spec.md` §12, criterio por criterio, con el archivo y el nombre del test que lo sostiene.
+
+| Criterio de aceptación (§12) | Dónde está probado |
+|---|---|
+| Un host desconocido responde «no encontrado» sin tocar la base de datos de usuarios | `tenant-guard.int-spec` → «un host desconocido NO llega a consultar la tabla de sesiones» |
+| Dos clubes simultáneos, en el mismo test, no se ven entre sí por ninguna ruta | `routes.isolation-spec` → «desde el subdominio de un club, nada de otro club es alcanzable» (recorre las 19 rutas declaradas) |
+| `T-020` de `specs/010` queda desbloqueada e implementada | `tenant-guard.int-spec` completo — T-020 marcada como cerrada en `specs/010/tasks.md` |
+| Las llaves foráneas pendientes de 010 quedan puestas, con su migración reversible | `club-foreign-keys.int-spec` (8 tests) · ciclo `up`/`down` verificado en §T-202 |
+| Un valor de configuración cambiado conserva el anterior y se puede consultar por fecha | `settings.int-spec` → «el valor anterior sigue consultable…» y «preguntar por una fecha pasada…» |
+| La herencia organización → club → plataforma → default está probada en los cuatro niveles | `resolveSetting.spec` (dominio) → «los cuatro niveles, vistos desde la organización» · `settings.int-spec` desde la API |
+| El arranque del primer club corre dos veces sin duplicar nada | `bootstrap.int-spec` → «crea el club completo… y correrlo de nuevo no duplica nada» |
+| Cada cambio de configuración deja exactamente una fila de auditoría | `settings.int-spec` → «cada cambio deja exactamente una fila…» y «un cambio rechazado no deja rastro» |
+| Demostrado en staging: club nuevo operativo en menos de una hora | ⛔ **pendiente** — ver abajo |
+
+### Los dos criterios que no se pueden marcar
+
+1. **La demostración en staging (T-263)** no la puede hacer un agente: exige un servidor desplegado
+   y un celular real (`docs/10` §3). Queda como la única tarea abierta del módulo.
+2. **La herencia desde una organización con valor propio** está probada en el dominio pero **no
+   contra la API**, porque hoy ninguna clave del catálogo es de ámbito de organización (ver
+   §T-250). La ruta existe y rechaza correctamente; el primer módulo que agregue una clave de
+   organización completa esa mitad.
+
+### Estado del módulo
+
+23 de 24 tareas. Lo que queda abierto, en orden de importancia:
+
+- **T-263** — demostración en staging. Requiere despliegue.
+- **La invitación al primer administrador no se envía** (T-230): depende de T-050/T-090 de
+  `specs/010`. **Un club creado por API no es usable de punta a punta hasta entonces** — el de
+  arranque sí, porque entrega la contraseña por la terminal.
+- **Los guards no son globales**: se aplican por controlador. Pendiente compartido con T-022b y
+  T-221; conviene resolverlo antes de que existan muchos controladores, no después.
+- **La caché de clubes es por proceso**: con más de una instancia de la API, invalidar alcanza sólo
+  a la que ejecuta la acción. Hay que resolverlo **antes** de escalar horizontalmente.
+- **`specs/140`** recoge lo que este módulo dejó fuera a propósito: planes, plantillas, marca
+  blanca, conmutador multi-club y servir la administración desde su propio dominio.

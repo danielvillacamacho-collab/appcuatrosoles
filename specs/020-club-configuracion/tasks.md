@@ -205,11 +205,17 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
   > fuera del club, así que devolvía la configuración de una organización ajena. Las rutas que
   > escriben ya estaban cubiertas por `PermissionGuard`; las de lectura no pasan por él.
 
-- [ ] **T-262** `verification.md`: cada criterio de aceptación de `spec.md` §12 con su test
+- [x] **T-262** `verification.md`: cada criterio de aceptación de `spec.md` §12 con su test
   (archivo + nombre). Cualquier criterio sin test identificado se resuelve antes de cerrar.
+  ✅ 2026-08-11 — tabla completa en `verification.md` §T-262. Ocho de nueve criterios con su test;
+  el noveno es T-263.
 
 - [ ] **T-263** Demostración en staging desde un celular real (`docs/10` §3): club nuevo creado y
   operativo, y el club de Los Pinos funcionando por su subdominio.
+  > ⛔ **Única tarea abierta del módulo, y no la puede hacer un agente**: exige un servidor
+  > desplegado y un celular. Antes de darla por posible, falta además el envío de la invitación
+  > (T-050/T-090 de `specs/010`), sin el cual el administrador de un club creado por API no puede
+  > entrar.
 
 ## Orden sugerido y por qué
 
