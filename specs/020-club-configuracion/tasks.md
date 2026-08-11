@@ -150,8 +150,11 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
   **campo por campo** contra la lista permitida; agregar un campo nuevo rompe el test a propósito.
   ✅ 2026-08-11 — 13 tests, ver `verification.md` §T-240.
 
-- [ ] **T-241** Organizaciones: crear, editar, listar, archivar (nunca borrar). Verificación:
+- [x] **T-241** Organizaciones: crear, editar, listar, archivar (nunca borrar). Verificación:
   aislamiento — un administrador de otro club recibe `404`; archivar conserva la historia.
+  ✅ 2026-08-11 — 10 tests, ver `verification.md` §T-241.
+  > **Crear es de ámbito de club; editar y archivar, de la organización concreta.** Si crear fuera
+  > de ámbito de organización, un `organization_admin` podría ampliarse el terreno creando otras.
 
 - [ ] **T-242** Temporadas: crear, listar, cerrar. Cerrar exige que no queden prácticas ni copas
   abiertas (cuando existan; hoy la comprobación queda declarada y vacía). Verificación: crear una

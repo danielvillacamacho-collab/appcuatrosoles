@@ -772,3 +772,34 @@ que edita y consulta la ruta pública en la misma prueba.
   aserción no-nula que el repo prohíbe— pero **su causa siempre es la misma**: una ruta sin
   `TenantGuard`. Cuando los guards pasen a ser globales (pendiente compartido con T-022b y T-221),
   esa función deja de poder fallar.
+
+---
+
+## T-241 — Organizaciones del club
+
+**Fecha:** 2026-08-11 · 10 tests de integración (144 en total)
+
+### La asimetría entre crear y editar es deliberada
+
+**Crear** es de ámbito de club; **editar y archivar**, de la organización concreta. Así un
+`organization_admin` administra la suya —y sólo la suya— pero no puede crear organizaciones nuevas,
+que sería ampliarse el terreno por la puerta de al lado. Tiene test: el mismo actor edita la suya
+(`200`), no la vecina (`403`) y no puede crear (`403`).
+
+### Se archiva, no se borra
+
+R-020-07 y P-06. Una organización que deja de operar conserva su historia: quién estudió ahí, qué
+se cobró, qué clases se dieron. Además, las llaves foráneas de T-202 con su `RESTRICT` ni siquiera
+lo permitirían — la regla está en dos capas, como corresponde a las que importan.
+
+### Aislamiento, probado por sus dos lados
+
+- Una organización de **otro club** responde `404`, no `403`: la consulta va acotada por `club_id`,
+  así que la fila ajena ni se lee.
+- El **mismo nombre** sí se puede usar en dos clubes distintos. Es el error simétrico y el menos
+  obvio: una unicidad global habría impedido que el segundo club llamara «Escuela» a la suya.
+
+### Pendiente declarado
+
+- **Desarchivar no existe.** No estaba en el spec y no se inventó: si el club lo necesita, es una
+  decisión suya y entra con su propia tarea. Hoy una organización archivada se queda así.
