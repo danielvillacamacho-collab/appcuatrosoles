@@ -213,7 +213,9 @@ describe("Configuración (T-250 a T-253)", () => {
         .send({ value: 14 });
 
       expect(respuesta.status).toBe(422);
-      expect(respuesta.body.error.code).toBe("UNPROCESSABLE");
+      // El código es el del catálogo y no el genérico del estado: quien llama tiene que poder
+      // distinguir «esta clave no es de organización» de cualquier otro 422.
+      expect(respuesta.body.error.code).toBe("ambito_demasiado_especifico");
     });
 
     it("y el ajeno tampoco: un administrador de otra organización no toca ésta", async () => {

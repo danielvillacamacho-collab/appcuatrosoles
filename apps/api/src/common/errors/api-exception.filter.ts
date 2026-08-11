@@ -60,6 +60,23 @@ interface ErrorTraducido {
   details?: Record<string, unknown> | undefined;
 }
 
+/**
+ * El `code` que el servicio puso en el cuerpo de una excepción de NestJS
+ * (`throw new ConflictException({ code: "nombre_en_uso" })`).
+ *
+ * Es un contrato con quien lanza, no una casualidad: cualquier otra forma de cuerpo —el `string`
+ * que arma NestJS por defecto, o un objeto sin `code`— cae en el código genérico del estado.
+ */
+function codigoPropio(cuerpo: unknown): string | undefined {
+  if (cuerpo === null || typeof cuerpo !== "object" || !("code" in cuerpo)) {
+    return undefined;
+  }
+
+  const code = (cuerpo as { code?: unknown }).code;
+
+  return typeof code === "string" && code.length > 0 ? code : undefined;
+}
+
 function traducir(exception: unknown): ErrorTraducido {
   if (exception instanceof ApiException) {
     return {
@@ -83,8 +100,14 @@ function traducir(exception: unknown): ErrorTraducido {
 
   if (exception instanceof HttpException) {
     const status = exception.getStatus();
+    const generico = respuestaPorEstado(status);
+    const propio = codigoPropio(exception.getResponse());
 
-    return { status, ...respuestaPorEstado(status) };
+    // Se conserva **el código** que puso el servicio y se descarta **el mensaje** de NestJS. Son
+    // dos decisiones distintas: el mensaje del framework viene en inglés y describe la
+    // infraestructura, pero `{ code: "slug_en_uso" }` es nuestro y es justo lo que el frontend
+    // necesita para decir «ese subdominio ya está tomado» en vez de «datos inválidos».
+    return { status, ...generico, ...(propio === undefined ? {} : { code: propio }) };
   }
 
   return { status: HttpStatus.INTERNAL_SERVER_ERROR, ...RESPUESTA_INESPERADA };

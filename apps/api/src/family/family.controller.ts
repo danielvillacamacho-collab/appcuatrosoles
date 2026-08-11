@@ -12,6 +12,8 @@ import {
 import {
   AcceptWaiverRequest,
   CreateGuardianshipRequest,
+  CreateMinorRequest,
+  DependentResponse,
   GuardianshipResponse,
   PublishWaiverRequest,
   WaiverResponse,
@@ -55,6 +57,47 @@ export class GuardianshipsController {
     @Param("dependentPersonId") dependentPersonId: string,
   ): Promise<GuardianshipResponse[]> {
     return this.servicio.listarDeDependiente(clubDeLaSolicitud(req), dependentPersonId);
+  }
+}
+
+
+/**
+ * El perfil de un menor **sin cuenta propia** (T-076, HU-010-10).
+ *
+ * Controlador aparte y no una ruta de `/guardianships`: lo que se crea aquí es **una persona** —el
+ * vínculo con su acudiente viene incluido porque no puede faltar, no porque sea el recurso.
+ */
+@Controller("minors")
+@UseGuards(TenantGuard, SessionGuard, PermissionGuard)
+@UseInterceptors(AuditInterceptor)
+export class MinorsController {
+  constructor(private readonly servicio: GuardianshipsService) {}
+
+  /**
+   * Crear el perfil de un menor sin cuenta (T-076).
+   *
+   * Exige `user.create` y no `user.edit`: **está creando una persona en el club**, aunque no le
+   * cree una cuenta. Quien puede vincular un acudiente a alguien que ya existe no necesariamente
+   * puede dar de alta gente nueva.
+   */
+  @Post()
+  @RequirePermission("user.create")
+  @Auditable({ action: "minor_profile.created", entityType: "person" })
+  async crearMenor(
+    @Req() req: Solicitud,
+    @Body(new ZodValidationPipe(CreateMinorRequest)) cuerpo: CreateMinorRequest,
+  ): Promise<DependentResponse> {
+    const creado = await this.servicio.crearMenor(
+      clubDeLaSolicitud(req),
+      cuerpo,
+      usuario(req).userAccountId,
+    );
+
+    // La ruta no lleva parámetro y la respuesta trae `personId`, no `id`: el interceptor no puede
+    // adivinar la entidad. Es el hueco que T-023 dejó abierto para estos casos.
+    anotarEstadoPrevio(req, null, creado.personId);
+
+    return creado;
   }
 }
 

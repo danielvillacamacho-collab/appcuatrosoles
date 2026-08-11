@@ -1923,3 +1923,69 @@ ninguno de los que encolan.
 - **No hay preferencia por canal (correo / push / WhatsApp)** porque no hay más canal que el correo.
   La tabla tiene `type`, no `type` + `channel`; agregarlo cuando exista el segundo canal es una
   migración aditiva.
+
+---
+
+## T-076 — Perfiles de menores sin cuenta *(tarea agregada)*
+
+**Fecha:** 2026-08-11 · 9 tests de dominio + 14 de integración
+
+### Por qué existe esta tarea
+
+El plan no la tenía, y **HU-010-10 no se podía cumplir sin ella**. T-070 crea el vínculo entre dos
+personas que ya existen; no había forma de crear al menor. `POST /users` exige correo de acceso y
+crea una `UserAccount`, que es precisamente lo que un perfil de menor **no** tiene. El hueco se vio
+al empezar el E2E de T-102: el recorrido «un acudiente administra el perfil de su hijo» no tenía por
+dónde empezar.
+
+### Persona y vínculo, en la misma transacción
+
+Un menor sin acudiente es exactamente el estado roto que persigue el job de integridad de T-071:
+existe en el club, se le puede cobrar, y no hay a quién cobrarle. Partirlo en dos llamadas —crear la
+persona, después el vínculo— es dejar la puerta abierta a que la segunda no ocurra y que nadie se
+entere hasta que haya plata de por medio. Por eso el acudiente es obligatorio en el mismo cuerpo.
+
+`POST /minors` es un controlador aparte y no una ruta de `/guardianships`: lo que se crea es **una
+persona**; el vínculo viene incluido porque no puede faltar, no porque sea el recurso.
+
+### La edad es una regla, no una validación de formulario
+
+`cabeEnPerfilDeMenor` vive en el dominio y el límite sale de `identity.minor_profile_max_age`
+(`docs/08` §9, P-04) — un test comprueba que subirlo a 21 hace entrar el mismo perfil que con 18
+rebotaba, sin desplegar nada.
+
+Que la regla exista importa: un perfil de menor es una persona **sin cuenta propia, administrada por
+otro**. Dejar crear uno para un adulto es dejar que alguien administre la vida deportiva de una
+persona que debería tener su propia contraseña.
+
+La edad se calcula comparando texto `YYYY-MM-DD`, no restando instantes: `(hoy - nacimiento) /
+365.25` da 8 años el 28 de febrero de 2024 a quien nació el 29 de febrero de 2016, y no los tiene.
+
+### El recorte de «Perfiles a cargo» lo hace el vínculo, no el rol
+
+`GET /me/dependents` no exige permiso administrativo: es la lista de los propios hijos. Dos
+acudientes del **mismo club** no pueden verse los hijos entre sí — es un aislamiento que el arnés de
+tenant no cubriría, porque no es entre clubes. Y un vínculo terminado deja de mostrarse: quien dejó
+de ser acudiente el mes pasado no tiene por qué seguir viendo la ficha.
+
+`isPrimaryPayer` viaja en la respuesta porque es la pregunta que trae a alguien a esa pantalla: «¿a
+mí me van a cobrar lo de este niño?» (R-010-10).
+
+### De paso: 23 códigos de error que nunca llegaban al cliente
+
+Al escribir el test de «rechaza a un adulto» apareció que el filtro global **descartaba el `code`**
+de las excepciones de NestJS. Veintitrés sitios del API lanzan `throw new ConflictException({ code:
+"slug_en_uso" })` y todos respondían `CONFLICT` a secas: el frontend no tenía cómo distinguir «ese
+subdominio ya está tomado» de «ese nombre ya existe», y habría terminado leyendo mensajes en prosa.
+
+El filtro ahora conserva el `code` y sigue descartando el mensaje — son dos decisiones distintas: el
+mensaje de NestJS viene en inglés y describe la infraestructura; el código es nuestro. Un cuerpo sin
+`code`, o con uno vacío, sigue cayendo en el código genérico del estado. Dos tests del filtro y dos
+tests de integración que ahora afirman el código específico (`CSRF_TOKEN_INVALIDO`,
+`ambito_demasiado_especifico`) lo dejan fijo.
+
+### Pendiente declarado
+
+- **No hay ruta para editar ni archivar un perfil de menor.** Hoy se administra desde las rutas de
+  persona que ya existen; cuando la interfaz necesite «dar de baja al hijo», se decide si es una
+  ruta propia o la misma de usuarios con la persona sin cuenta.

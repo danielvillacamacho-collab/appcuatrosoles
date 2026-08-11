@@ -98,7 +98,7 @@ describe("Protección CSRF (T-025, docs/06 §1)", () => {
         .send({ name: "Cambio sin token" });
 
       expect(respuesta.status).toBe(403);
-      expect(respuesta.body.error.code).toBe("FORBIDDEN");
+      expect(respuesta.body.error.code).toBe("CSRF_TOKEN_INVALIDO");
     });
 
     it("con la cabecera correcta, pasa", async () => {

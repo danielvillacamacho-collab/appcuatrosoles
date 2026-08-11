@@ -14,6 +14,7 @@ import {
 } from "@nestjs/common";
 import {
   ConfirmEmailChangeRequest,
+  DependentResponse,
   MeResponse,
   RequestEmailChangeRequest,
   NotificationPreferenceResponse,
@@ -123,6 +124,18 @@ export class MeController {
   @SinPermiso("Cerrar una sesión propia no exige permiso: es la sesión de quien pide.")
   async cerrarSesion(@Req() req: Solicitud, @Param("id") id: string): Promise<void> {
     await this.servicio.cerrarSesion(usuario(req).userAccountId, id);
+  }
+
+  /**
+   * Los perfiles a cargo de quien pregunta (`spec.md` §10, T-076).
+   *
+   * No exige permiso administrativo: **es la lista de sus propios hijos**. El acotamiento no lo
+   * hace un rol, lo hace el vínculo — sólo devuelve los menores de quien pide, y sólo mientras el
+   * vínculo esté vigente.
+   */
+  @Get("dependents")
+  async dependientes(@Req() req: Solicitud): Promise<DependentResponse[]> {
+    return this.servicio.dependientes(usuario(req).userAccountId, clubDeLaSolicitud(req));
   }
 
   @Get("notification-preferences")

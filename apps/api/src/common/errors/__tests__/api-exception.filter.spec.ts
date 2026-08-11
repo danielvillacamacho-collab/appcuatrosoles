@@ -1,5 +1,13 @@
 import "reflect-metadata";
-import { Controller, Get, HttpException, HttpStatus, Module, UnauthorizedException } from "@nestjs/common";
+import {
+  ConflictException,
+  Controller,
+  Get,
+  HttpException,
+  HttpStatus,
+  Module,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
 import request from "supertest";
@@ -36,6 +44,21 @@ class ControladorDePruebas {
   @Get("roto")
   roto(): never {
     throw new Error(FUGA);
+  }
+
+  @Get("codigo-propio")
+  codigoPropio(): never {
+    throw new ConflictException({ code: "slug_en_uso" });
+  }
+
+  @Get("codigo-vacio")
+  codigoVacio(): never {
+    throw new ConflictException({ code: "" });
+  }
+
+  @Get("cuerpo-sin-codigo")
+  cuerpoSinCodigo(): never {
+    throw new ConflictException({ motivo: "no usa la convención" });
   }
 
   @Get("estado-raro")
@@ -124,6 +147,28 @@ describe("ApiExceptionFilter (docs/03 §2)", () => {
     expect(respuesta.body.error.code).toBe("INTERNAL_ERROR");
     expect(ApiErrorResponse.safeParse(respuesta.body).success).toBe(true);
     expect(JSON.stringify(respuesta.body)).not.toContain("teapot");
+  });
+
+  it("una excepción de NestJS con `code` propio lo conserva: es nuestro, no del framework", async () => {
+    // Conservar el código y descartar el mensaje son dos decisiones distintas. El mensaje de
+    // NestJS viene en inglés y describe la infraestructura; `slug_en_uso` es lo que necesita el
+    // frontend para decir «ese subdominio ya está tomado» en vez de «datos inválidos».
+    const respuesta = await request(app.getHttpServer()).get("/pruebas/codigo-propio");
+
+    expect(respuesta.status).toBe(409);
+    expect(respuesta.body.error.code).toBe("slug_en_uso");
+    expect(ApiErrorResponse.safeParse(respuesta.body).success).toBe(true);
+  });
+
+  it("un cuerpo sin `code`, o con uno vacío, cae en el código genérico del estado", async () => {
+    // Es un contrato con quien lanza, no una casualidad: cualquier otra forma de cuerpo tiene que
+    // seguir produciendo una respuesta válida.
+    for (const ruta of ["/pruebas/cuerpo-sin-codigo", "/pruebas/codigo-vacio"]) {
+      const respuesta = await request(app.getHttpServer()).get(ruta);
+
+      expect(respuesta.status).toBe(409);
+      expect(respuesta.body.error.code).toBe("CONFLICT");
+    }
   });
 
   it("ninguna respuesta anuncia con qué está construido el servidor", async () => {

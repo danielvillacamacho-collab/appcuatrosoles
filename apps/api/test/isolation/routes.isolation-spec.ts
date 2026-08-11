@@ -69,6 +69,14 @@ const CON_TEST_PROPIO = [
   // sola vez si quiere que le recuerden las prácticas.
   "GET /me/notification-preferences",
   "PATCH /me/notification-preferences",
+  // `minors.int-spec` → «no muestra a los hijos de otro: el recorte lo hace el vínculo, no el rol»
+  // y «un vínculo terminado deja de mostrarse». Aquí el aislamiento no es sólo por club: dos
+  // acudientes del MISMO club no pueden verse los hijos.
+  "GET /me/dependents",
+  // `minors.int-spec` → «un acudiente de otro club no existe desde aquí: 404, nunca 403». El
+  // recorrido genérico no sirve: la ruta necesita un cuerpo válido con una fecha de nacimiento
+  // coherente para llegar siquiera al servicio.
+  "POST /minors",
   // `users.int-spec` cubre el aislamiento de todas éstas: «nunca lista usuarios de otro club»,
   // «un usuario de otro club responde 404 por acceso directo» y «un administrador de organización
   // sólo ve a la gente de la suya». El recorrido genérico no sirve aquí porque cada ruta necesita

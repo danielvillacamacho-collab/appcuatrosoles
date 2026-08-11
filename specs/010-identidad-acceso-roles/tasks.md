@@ -294,6 +294,18 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > no guarda organización —no podría, audita cualquier entidad— así que ve lo que hicieron los
   > suyos y lo que se hizo sobre los suyos.
 
+- [x] **T-076** *(agregada 2026-08-11)* `POST /minors` y `GET /me/dependents`: crear el perfil de
+  un menor **sin cuenta propia** —persona y acudiente en una sola transacción— y la pantalla
+  «Perfiles a cargo» que pide `spec.md` §10. 14 tests de integración + 9 de dominio.
+  > **El plan no tenía esta tarea y HU-010-10 no se podía cumplir sin ella.** T-070 crea el vínculo
+  > entre dos personas que ya existen, pero *no había forma de crear al menor*: `POST /users` exige
+  > correo y crea cuenta, que es exactamente lo que un perfil de menor no tiene. Se descubrió al
+  > escribir el E2E de T-102, que no tenía por dónde empezar.
+  > Persona y vínculo se crean **juntos**: un menor sin acudiente es el estado roto que persigue el
+  > job de T-071 —existe, se le puede cobrar, y no hay a quién cobrarle—, y partirlo en dos llamadas
+  > es dejar que la segunda no ocurra.
+  > El límite de edad sale de `identity.minor_profile_max_age` (P-04): un club puede querer 21.
+
 ## J — Notificaciones del módulo base
 
 - [x] **T-090** Plantillas de correo (MJML) para: invitación, restablecimiento de contraseña,

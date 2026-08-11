@@ -1,5 +1,6 @@
 import { Inject, Injectable, NotFoundException, HttpStatus } from "@nestjs/common";
 import type {
+  DependentResponse,
   MeResponse,
   NotificationPreferenceResponse,
   SessionResponse,
@@ -17,6 +18,7 @@ import { OutboxRepository } from "../common/outbox/outbox.repository.js";
 import { PrismaService } from "../common/prisma/prisma.service.js";
 import { crearTokenDeSesion, hashDeTokenDeSesion } from "../common/auth/session-token.js";
 import { PasswordService } from "../auth/password.service.js";
+import { GuardianshipsService } from "../family/guardianships.service.js";
 
 /** El enlace de confirmación de correo dura un día: no es urgente, pero tampoco eterno. */
 const UN_DIA_MS = 24 * 60 * 60 * 1000;
@@ -27,6 +29,7 @@ export class MeService {
     private readonly prisma: PrismaService,
     private readonly passwords: PasswordService,
     private readonly outbox: OutboxRepository,
+    private readonly guardianships: GuardianshipsService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -262,6 +265,21 @@ export class MeService {
     if (cerradas.count === 0) {
       throw new NotFoundException();
     }
+  }
+
+  /**
+   * Los perfiles a cargo (T-076).
+   *
+   * La cuenta se traduce a persona aquí: quien es acudiente es **la persona**, no su cuenta. Si
+   * mañana alguien tiene dos cuentas, sus hijos siguen siendo los mismos.
+   */
+  async dependientes(userAccountId: string, clubId: string): Promise<DependentResponse[]> {
+    const cuenta = await this.prisma.userAccount.findUniqueOrThrow({
+      where: { id: userAccountId },
+      select: { personId: true },
+    });
+
+    return this.guardianships.listarDependientesDe(clubId, cuenta.personId);
   }
 
   /**
