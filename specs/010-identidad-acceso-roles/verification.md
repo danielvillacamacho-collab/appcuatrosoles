@@ -1989,3 +1989,52 @@ tests de integración que ahora afirman el código específico (`CSRF_TOKEN_INVA
 - **No hay ruta para editar ni archivar un perfil de menor.** Hoy se administra desde las rutas de
   persona que ya existen; cuando la interfaz necesite «dar de baja al hijo», se decide si es una
   ruta propia o la misma de usuarios con la persona sin cuenta.
+
+---
+
+## Sección K — End-to-end (T-100 a T-102)
+
+**Fecha:** 2026-08-11 · 8 tests en `test/e2e/identidad.e2e-spec.ts`
+
+### El buzón es de verdad
+
+Los tres recorridos leen el correo **del disco**, no de la tabla `outbox_message`: `MailerDeArchivo`
+escribe el `.html`, el test lo busca por destinatario y saca el token del `href`, exactamente como lo
+sacaría alguien haciendo clic. Es lo que hace que estos tests digan algo del producto — si el enlace
+sale mal armado (sin el subdominio del club, con el token en el sitio equivocado), aquí se cae;
+leyendo la tabla, no.
+
+### Qué cubre cada recorrido
+
+- **T-100**: la administradora crea el usuario → llega el correo → define contraseña → entra → ve su
+  panel con su nombre y su rol. Un segundo test comprueba que el enlace **no sirve dos veces**.
+- **T-101**: dos sesiones abiertas (celular y computador), se pide el enlace, se restablece, y
+  **las dos mueren** (R-010-09) — mientras que con la contraseña nueva sí entra. Es el caso que
+  justifica la regla: si la sesión robada sobreviviera al restablecimiento, restablecer no serviría
+  contra el único ataque del que protege. Un segundo test comprueba que pedir el enlace para un
+  correo inexistente responde igual que para uno real (P-12).
+- **T-102**: la madre entra con su cuenta, el club crea el perfil del hijo, ella lo ve entre los
+  suyos, firma el waiver **por él** y la lista lo refleja de inmediato. Un segundo test comprueba
+  que no ve a los hijos de nadie más y que el menor **no tiene cuenta** — no hay a quién invitar ni
+  contraseña que robar.
+
+### Del «consolidado» de T-102 se fija lo que existe hoy
+
+La tarea pedía ver el consolidado en el estado de cuenta con un *stub de cobro*. Lo que el recorrido
+afirma es que **la plataforma ya sabe a quién cobrarle**: el vínculo vigente con `isPrimaryPayer`
+viaja en `GET /me/dependents` (R-010-10). El cobro en sí es `specs/100`; inventar aquí un estado de
+cuenta de mentira sería un test que pasa contra un stub que nadie va a usar y que habría que borrar
+cuando llegue el módulo real.
+
+### El único paso «a mano», y por qué
+
+El club y su primera administradora se crean contra la base. En la vida real salen del arranque de la
+instalación (`prisma/bootstrap.ts`, T-232), que es idempotente **sólo cuando no hay ningún club** —
+así que no se puede usar contra la base que comparte toda la suite. El resto del recorrido, de la
+invitación al waiver firmado, pasa entero por el API.
+
+### Pendiente declarado
+
+- **No es el E2E de navegador** que pide `docs/05` §7. `apps/web` no tiene todavía estas pantallas;
+  el de Playwright entra cuando exista la interfaz, y estos recorridos quedan como su red de
+  seguridad del lado del API.

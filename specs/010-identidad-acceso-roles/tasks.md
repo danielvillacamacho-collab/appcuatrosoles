@@ -331,12 +331,21 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 
 ## K — End-to-end
 
-- [ ] **T-100** E2E: administrador crea usuario → invitación llega (mailbox de prueba) →
+- [x] **T-100** E2E: administrador crea usuario → invitación llega (mailbox de prueba) →
   usuario define contraseña → inicia sesión → ve su panel.
-- [ ] **T-101** E2E: usuario olvida contraseña → restablece → sesiones anteriores quedan
+- [x] **T-101** E2E: usuario olvida contraseña → restablece → sesiones anteriores quedan
   revocadas.
-- [ ] **T-102** E2E: acudiente crea/administra un perfil de menor y ve el consolidado en su
+- [x] **T-102** E2E: acudiente crea/administra un perfil de menor y ve el consolidado en su
   estado de cuenta (stub de cobro, el módulo de pagos real es `specs/100`).
+  ✅ 2026-08-11 — 8 tests en `test/e2e/identidad.e2e-spec.ts`. **Cierra la sección K.**
+  > **El buzón es de verdad**: el correo no se lee de `outbox_message` sino del `.html` que escribe
+  > `MailerDeArchivo`, y el token sale del enlace como lo sacaría alguien haciendo clic. Si el
+  > enlace se arma mal, estos tests se caen — leyendo la tabla, no.
+  > Del consolidado de T-102 se fija **lo que existe hoy**: que la plataforma sabe a quién cobrarle
+  > (`isPrimaryPayer` vigente). El cobro en sí es `specs/100`, y fingir aquí un estado de cuenta
+  > sería un test que pasa por un stub que nadie va a usar.
+  > Un solo paso «a mano»: el club y su primera administradora, porque el arranque real
+  > (`prisma/bootstrap.ts`) sólo corre cuando no hay ningún club y la suite comparte base.
 
 ## L — Cierre de módulo
 
