@@ -3,7 +3,7 @@ import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import type { Clock } from "@polo/domain";
+import { PASSWORDS_COMUNES, type Clock } from "@polo/domain";
 import { AppModule } from "../../src/app.module.js";
 import { PasswordService } from "../../src/auth/password.service.js";
 import { CLOCK } from "../../src/common/clock/clock.module.js";
@@ -268,13 +268,19 @@ describe("Restablecimiento de contraseña (T-035, T-036)", () => {
     });
 
     it("aplica la política de contraseñas", async () => {
+      // La contraseña sale de **la lista que declara el dominio**, no de un literal escrito aquí.
+      // Dos razones: si la lista cambia, este test sigue probando lo que dice probar; y un literal
+      // como «password1» hace saltar al escáner de secretos del CI, que no puede distinguir una
+      // contraseña de mentira puesta para ser rechazada de una de verdad puesta por descuido.
+      const [unaDeLasMasUsadas] = [...PASSWORDS_COMUNES];
+
       await pedir(correo);
       const token = await ultimoEnlace(correo);
 
       const respuesta = await restablecer({
         token,
-        newPassword: "password1",
-        newPasswordConfirmation: "password1",
+        newPassword: unaDeLasMasUsadas,
+        newPasswordConfirmation: unaDeLasMasUsadas,
       });
 
       expect(respuesta.status).toBe(422);

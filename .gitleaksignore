@@ -1,0 +1,15 @@
+# Hallazgos aceptados del escáner de secretos, uno por uno y con su motivo.
+#
+# **Esto NO es una excepción general.** Cada línea es la huella de un hallazgo concreto —commit,
+# archivo, regla y línea— así que sólo silencia ese, y cualquier secreto nuevo sigue rompiendo el
+# build. Bajar la regla o excluir el archivo entero está prohibido (CLAUDE.md, regla de oro 12).
+#
+# ── «password1» en el test de política de contraseñas ────────────────────────────────────────────
+# Es una contraseña de las más usadas del mundo, escrita a propósito para comprobar que el API la
+# RECHAZA. El escáner no puede distinguir una contraseña de mentira puesta para ser rechazada de
+# una de verdad puesta por descuido, y hace bien en no intentarlo.
+#
+# El código ya no la trae: hoy sale de `PASSWORDS_COMUNES`, la lista que declara el dominio. Estas
+# dos huellas son del commit donde todavía estaba, que sigue en el historial.
+d87934e17aad2896c1aa0a40b135b4ea45e39f92:apps/api/test/integration/password-reset.int-spec.ts:generic-api-key:279
+d87934e17aad2896c1aa0a40b135b4ea45e39f92:apps/api/test/integration/password-reset.int-spec.ts:generic-api-key:280
