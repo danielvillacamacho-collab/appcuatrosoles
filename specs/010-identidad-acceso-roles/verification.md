@@ -2153,9 +2153,10 @@ Los nombres entre «comillas» son el título literal del test; el archivo es su
    `audit_log` lo sostienen los triggers de T-004, no los permisos. Entra con el despliegue en AWS.
 2. **T-111 — demostración en staging desde un celular real.** No la puede hacer un agente. Es el
    punto 4 de `docs/10` §3 y queda para cuando el producto esté desplegado.
-3. **El E2E de navegador** (`docs/05` §7) y **las pantallas**: `specs/010` no tiene tareas de
-   frontend y `apps/web` no tiene ninguna de las siete pantallas que enumera `spec.md` §10. Es el
-   hueco más grande del módulo y el trabajo que sigue.
+3. ~~**El E2E de navegador y las pantallas.**~~ **Resuelto el mismo día**: la sección M
+   (`plan.md` §9) las agregó y están construidas — ver §M.1 a M.4 y T-128. De las siete pantallas de
+   `spec.md` §10 hay ocho, contando «confirmar correo». Al cerrar §L esto era «el hueco más grande
+   del módulo».
 4. **SES y MJML**, ambos con su motivo escrito en §J.
 
 ---
@@ -2344,3 +2345,49 @@ con fixtures propios termina probando su propio andamiaje.
 - **Corren contra el servidor de desarrollo de Vite**, no contra el build de producción. La
   diferencia que importaría —código dividido por rutas, minificación— la cubre `check:bundle`; si
   algún día un fallo se escapa por ahí, se cambia el `webServer` para servir `dist`.
+
+---
+
+## Cierre del módulo 010
+
+**Fecha:** 2026-08-11
+
+| | |
+|---|---|
+| Tareas | 92 de 94. Las dos abiertas son **T-007** (rol de base de datos de privilegio mínimo, entra con el despliegue) y **T-111** (demostración en staging desde un celular real, que la hace una persona). |
+| Dominio | 226 tests · 98.45 % de líneas, 100 % de ramas |
+| API | 378 tests · 92.31 % de líneas · 3 de aislamiento de tenant · 8 E2E |
+| Interfaz | 87 tests de componente · 3 E2E de navegador · bundle inicial 119.6 KB de 200 |
+| Gates | `lint`, `typecheck`, `test:cov`, `check:isolation`, `check:arch`, `check:bundle`, `test:e2e` |
+
+### Los siete hallazgos que valió la pena escribir
+
+Ninguno salió de leer código. Todos salieron de construir la pieza siguiente y encontrar que la
+anterior no encajaba.
+
+1. **Una cuenta de otro club podía entrar por este subdominio** y leer su estructura. Lo encontró el
+   arnés de aislamiento al registrar `POST /auth/login` (§D).
+2. **`GET /organizations/:id/settings` devolvía la configuración de otro club.** El mismo arnés.
+3. **El índice único de `setting` no protegía el ámbito de plataforma**, porque PostgreSQL trata los
+   `NULL` como distintos entre sí.
+4. **El filtro global descartaba el `code` de 23 errores del API**, así que el frontend no podía
+   distinguir «ese subdominio ya está tomado» de «ese nombre ya existe» (T-076).
+5. **Cuatro criterios de aceptación no estaban implementados**, no sin probar. Los destapó el mapa
+   de T-110 y se resolvieron en T-077 antes de marcar nada.
+6. **Tailwind nunca estuvo conectado**: producía CSS y ninguna utilidad, así que `bg-cream` no daba
+   error, no aparecía en ningún log y el componente salía sin fondo (T-123).
+7. **Los enlaces de los correos no funcionaban**, dos veces y por dos motivos: apuntaban a rutas en
+   español que no existen (§M.1) y les faltaba el puerto (T-128).
+
+Los cuatro últimos vivían **en el pegamento entre capas**. Es el patrón que deja este módulo: los
+tests de un lado solo —por buenos que sean— no ven lo que pasa entre dos lados.
+
+### Lo que queda escrito como deuda, con su motivo
+
+- **T-007** — rol de base de datos de privilegio mínimo. El `append-only` de `audit_log` hoy lo
+  sostienen los triggers de T-004, no los permisos.
+- **SES y MJML** — el correo se escribe a disco (`MailerDeArchivo`) para poder terminar y probar el
+  producto sin depender de AWS.
+- **La foto de perfil** — el contrato acepta `photoKey` y no hay dónde subir el archivo.
+- **Editar la ficha y otorgar roles desde ella** — el API lo soporta; la pantalla sólo lee y retira.
+- **Los E2E de navegador corren contra el servidor de desarrollo**, no contra el build.
