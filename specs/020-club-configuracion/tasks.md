@@ -77,11 +77,14 @@ su número y dos módulos con `T-021` harían ambiguo el historial.
   > no. Y `auth.session_idle_timeout_hours` quedó en `null` —sin cierre por inactividad—, que es lo
   > que el sistema hace hoy: poner un número anunciaría un comportamiento inexistente.
 
-- [ ] **T-213** `resolveSetting`: dada la lista de valores fijados y un instante, resuelve el
+- [x] **T-213** `resolveSetting`: dada la lista de valores fijados y un instante, resuelve el
   vigente siguiendo organización → club → plataforma → default (R-020-10) e informa **de dónde
   salió** (explícito, heredado, default). Tests: los cuatro niveles, un valor con vigencia futura
   que todavía no rige, dos valores del mismo ámbito con vigencias distintas, y la consulta sobre
-  una fecha pasada (HU-020-08).
+  una fecha pasada (HU-020-08). ✅ 2026-08-11 — 19 tests, ver `verification.md` §T-213.
+  > «Explícito» resultó depender de **quién pregunta**, no sólo de dónde está el dato: el mismo
+  > valor de club es explícito visto desde el club y heredado visto desde una organización.
+  > **Con esto cierra la sección B**; sigue T-220/T-221, el `TenantGuard`.
 
 ## C — El tenant en la aplicación
 

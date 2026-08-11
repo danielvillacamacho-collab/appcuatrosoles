@@ -363,3 +363,57 @@ ancho. Lo atrapó `pnpm typecheck`: los tests pasaban, porque Vitest no comprueb
   ventana como parámetro y el llamador la inventará hasta que exista el servicio de configuración.
 - `docs/08` no distingue qué claves ya están en el catálogo y cuáles no. Cuando el catálogo crezca
   conviene generar esa tabla desde el código, para que no haya dos listas que se contradigan.
+
+---
+
+## T-213 — `resolveSetting`: qué valor rige, y de dónde salió
+
+**Fecha:** 2026-08-11 · 19 tests · dominio al 100 % (181 tests) · **cierra la sección B**
+
+La herencia va de lo específico a lo general —organización → club → plataforma → default del
+catálogo— y dentro de un mismo ámbito gana la vigencia más reciente que ya haya empezado. Los
+cuatro niveles tienen test, y también el barrido que los recorre quitando uno por uno.
+
+### «Explícito» depende de quién pregunta
+
+Fue el hallazgo de diseño de la tarea. El mismo valor fijado en el club es **explícito** visto desde
+el club y **heredado** visto desde una organización: la respuesta no depende sólo de dónde está el
+dato sino de desde dónde se lo mira. Para el club es una decisión suya, que se respeta; para la
+organización es algo que le viene dado y que quizá quiera cambiar.
+
+Y la distinción que justifica todo el campo: **«el club decidió 18» no es lo mismo que «nadie
+decidió nada y 18 es lo que trae el sistema»**, aunque el valor sea idéntico. La primera se respeta;
+la segunda se revisa. Sin ese dato, la pantalla de configuración no puede decir cuál es cuál — es
+la mitad de HU-020-08, y la mitad que se olvida.
+
+### La historia se consulta, no se reconstruye
+
+Preguntar por una fecha pasada devuelve lo que regía entonces. Es lo que permite explicar un cobro
+viejo sin reconstruir nada: «en marzo regía 16». Con test en dos fechas distintas, más el borde del
+instante exacto de vigencia (rige **desde** ese momento, no después) y el caso del valor con
+vigencia futura, que todavía no rige.
+
+### Dos tests que cubren lo que ningún caso suelto cubre
+
+- **No depende del orden en que lleguen las filas.** Una consulta sin `ORDER BY` no promete
+  ninguno, y el código no puede asumirlo. Lo delató la cobertura: la rama «esta fila es más vieja
+  que la mejor hasta ahora» no se ejecutaba nunca, porque todos los casos escritos a mano venían
+  ordenados. Tres órdenes distintos, mismo resultado.
+- **Ninguna combinación de valores ajenos se cuela** (P-05): valores de otro club y de otra
+  organización, mezclados y con vigencias distintas, y el resultado sigue siendo el default.
+
+### El `null` se propaga tal cual
+
+`auth.session_idle_timeout_hours` vale `null` en el catálogo —«desactivado»— y `resolveSetting` lo
+devuelve así, sin convertirlo en `0`. Quien lo lea tiene que poder distinguir «no hay cierre por
+inactividad» de «cerrar de inmediato», que es exactamente lo contrario.
+
+### Pendiente declarado
+
+- La función recibe las filas ya cargadas: **no consulta nada**. Traer sólo las filas relevantes
+  —la clave, y los ámbitos del contexto— es trabajo del repositorio (T-250). Pasarle todas las
+  filas de la tabla funcionaría, pero convierte una consulta indexada en un recorrido en memoria.
+- **`SettingValueRow.key` es `string` y no `SettingKey`**: las filas vienen de la base, donde puede
+  haber una clave que el catálogo ya no declara (una que se retiró). Se ignoran al filtrar por
+  clave, que es el comportamiento correcto, pero conviene que T-250 las reporte en vez de que
+  desaparezcan en silencio.
