@@ -2213,3 +2213,76 @@ una revisión leyendo el diff.
 
 - **La foto de perfil no se puede cambiar todavía.** El contrato acepta `photoKey`, pero no hay
   dónde subir el archivo: entra con el almacenamiento de objetos, en el despliegue.
+
+---
+
+## Sección M.4 — La administración del club
+
+**Fecha:** 2026-08-11 · 87 tests de interfaz · bundle inicial 119.3 KB de 200
+
+### La paginación se decidió en el API, no en la pantalla (T-078)
+
+`GET /users` **no tenía tope de ningún tipo** — ni siquiera el de 200 que `verification.md` daba por
+hecho al cerrar la sección F. Un club con dos mil socios respondía dos mil filas en cada carga de la
+pantalla de administración.
+
+`docs/03` §7 ya lo tenía resuelto y el API no lo cumplía: página por defecto 25, máximo 100, y
+**pedir más de 100 es un `400`, no un recorte silencioso**. La diferencia importa: un recorte calla,
+y quien pidió 500 se queda creyendo que el club tiene 100 socios.
+
+Dos detalles que se ven poco y se notan mucho:
+
+- El `total` se cuenta con el **mismo** `where` que lista. Contar con un filtro distinto es la forma
+  clásica de mostrar «137 resultados» sobre una tabla que enseña otra cosa.
+- El orden desempata por identificador. Sin eso, dos personas llamadas igual pueden intercambiarse
+  entre consultas y aparecer dos veces en una página y ninguna en la siguiente.
+
+**La exportación no se pagina**, y va por un método aparte con tope de 5000. Un CSV cortado en la
+página 1 no es una exportación: quien lo abre no tiene forma de saber que le faltan filas.
+
+### Los filtros viven en la URL
+
+No en un `useState`. Es lo que hace que «mándame el enlace de los invitados que faltan por aceptar»
+funcione, que el botón «atrás» devuelva al filtro anterior y que recargar no borre la búsqueda. En
+una pantalla de administración eso se nota el primer día.
+
+La opción «Todos» de cada filtro manda cadena vacía y el cliente la **omite** del query: un
+`?status=` vacío llegaría al API como un estado inexistente y devolvería cero resultados sin que
+nada fallara. Es el fallo típico de un `<select>` con opción «Todos», y hay un test que lo fija.
+
+### Lo que el API rechazaría, no se ofrece
+
+- El selector de roles muestra sólo lo que quien lo usa puede otorgar, calculado con
+  `canAssignRole` de `packages/domain` — la misma función que aplica el API (R-010-04). Verificado
+  contra el club sembrado: a la administradora del club le ofrece administrador de club, comisario,
+  jugador y tesorero, y **no** superadministrador.
+- En la ficha, sobre la propia cuenta no hay ninguna acción (R-010-05); «reactivar» sólo aparece si
+  está suspendida y «reenviar invitación» sólo si sigue invitada.
+
+**Esconder no es proteger**: el API decide en cada petición (`docs/06` §4). Pero ofrecer algo que va
+a fallar hace perder el tiempo dos veces y enseña a desconfiar de la pantalla.
+
+### El presupuesto de bundle, y por qué entra ahora (T-137)
+
+`pnpm check:bundle` mide **gzip** —lo que viaja por el cable— y sólo la **carga inicial**: las 27
+pantallas que llegan por importación dinámica no las paga quien entra a ver su panel. Hoy son
+119.3 KB de los 200 que fija `ADR-014`.
+
+Entró con las pantallas y no después a propósito: un presupuesto que se agrega tarde ya viene
+incumplido, y bajarlo para que pase el build está prohibido (regla de oro 12). El script también
+falla si no encuentra ningún archivo referenciado en el HTML — un gate que no puede fallar es peor
+que no tenerlo, porque da confianza sin avisar de nada.
+
+### Una pantalla en blanco no dice nada
+
+Al abrir el listado contra un API desactualizado —la respuesta traía la forma vieja— la aplicación
+entera quedó **negra**: React desmontó el árbol y no quedó ni un texto ni un enlace para salir. La
+raíz del árbol de rutas ahora tiene `errorComponent`: dice que algo se rompió y ofrece recargar.
+
+### Pendiente declarado
+
+- **La ficha no permite editar los datos de la persona** (nombre, teléfono, categoría). El API lo
+  soporta (`PATCH /users/:id`); la pantalla sólo lee. Entra cuando haga falta, y probablemente junto
+  con la edición en línea de la categoría de membresía.
+- **Otorgar un rol desde la ficha** está pendiente: se pueden retirar, pero para agregar uno hoy hay
+  que crear la cuenta con él. El endpoint existe (`POST /users/:id/roles`).

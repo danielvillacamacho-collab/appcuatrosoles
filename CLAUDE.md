@@ -96,6 +96,7 @@ pnpm db:migrate:dev
 pnpm db:seed        # datos demo de un club de ejemplo
 pnpm check:isolation # prueba de aislamiento de tenant por endpoint
 pnpm check:arch      # fitness functions de dependencias entre capas
+pnpm check:bundle    # presupuesto de 200 KB comprimidos de la interfaz (ADR-014)
 ```
 
 ## Cómo pedirme trabajo

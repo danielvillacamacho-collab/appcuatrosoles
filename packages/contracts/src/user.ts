@@ -123,3 +123,34 @@ export const AssignRoleRequest = z
   });
 
 export type AssignRoleRequest = z.infer<typeof AssignRoleRequest>;
+
+/**
+ * Los parámetros de paginación del listado (`docs/03` §7).
+ *
+ * **Pedir más de 100 es un `400`, no un recorte silencioso.** La diferencia importa: un recorte
+ * calla, y quien pidió 500 se queda creyendo que el club tiene 100 socios. Que falle obliga a
+ * quien integra a paginar de verdad.
+ *
+ * `coerce` porque llegan como texto en la URL; `int` porque «página 1.5» no significa nada.
+ */
+export const PaginationQuery = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+export type PaginationQuery = z.infer<typeof PaginationQuery>;
+
+/**
+ * Una página del listado de usuarios.
+ *
+ * Trae `total` porque la pantalla necesita decir «1–25 de 137»: sin el total, lo único que se puede
+ * mostrar es «siguiente», y nadie sabe si el club tiene treinta socios o tres mil.
+ */
+export const UserListResponse = z.object({
+  items: z.array(UserResponse),
+  total: z.number().int(),
+  page: z.number().int(),
+  limit: z.number().int(),
+});
+
+export type UserListResponse = z.infer<typeof UserListResponse>;

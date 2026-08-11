@@ -20,6 +20,7 @@ export const copy = {
     guardado: "Guardado.",
     cancelar: "Cancelar",
     reintentar: "Reintentar",
+    recargar: "Recargar la página",
     noSePudoCargar: "No pudimos cargar esta información.",
   },
 
@@ -39,6 +40,76 @@ export const copy = {
     groom: "Petisero",
     treasurer: "Tesorero",
   } as Record<string, string>,
+
+  usuarios: {
+    titulo: "Usuarios del club",
+    descripcion: "Busca, filtra y administra las cuentas.",
+    buscar: "Buscar por nombre",
+    estado: "Estado",
+    rol: "Rol",
+    organizacion: "Organización",
+    todos: "Todos",
+    exportar: "Exportar a CSV",
+    nuevo: "Crear o invitar",
+    ninguno: "No hay usuarios que cumplan ese filtro.",
+    // «1–25 de 137»: sin el total, lo único que se puede mostrar es «siguiente», y nadie sabe si
+    // el club tiene treinta socios o tres mil.
+    rango: (desde: number, hasta: number, total: number) => `${desde}–${hasta} de ${total}`,
+    anterior: "Anterior",
+    siguiente: "Siguiente",
+    estados: {
+      invited: "Invitado",
+      active: "Activo",
+      suspended: "Suspendido",
+      archived: "Archivado",
+    } as Record<string, string>,
+    invitadoDesde: "Invitación enviada el",
+    sinCategoria: "Sin categoría",
+  },
+
+  nuevoUsuario: {
+    titulo: "Crear o invitar",
+    descripcion: "Con el correo alcanza: la persona completa sus datos al aceptar la invitación.",
+    correo: "Correo",
+    nombre: "Nombre completo",
+    nombreAyuda: "Opcional. Si lo dejas en blanco, lo pone la persona al aceptar.",
+    telefono: "Teléfono",
+    categoria: "Categoría de membresía",
+    organizacion: "Organización",
+    organizacionAyuda: "Obligatoria si le das un rol de organización.",
+    roles: "Roles",
+    // El selector muestra sólo lo que quien lo usa puede otorgar (R-010-04): ofrecer un rol que el
+    // API va a rechazar es hacer perder el tiempo dos veces.
+    rolesAyuda: "Sólo aparecen los roles que puedes otorgar.",
+    crear: "Crear e invitar",
+    creando: "Creando…",
+    creado: "Listo. Le enviamos la invitación a",
+  },
+
+  fichaUsuario: {
+    volver: "← Volver a usuarios",
+    estado: "Estado",
+    correo: "Correo de acceso",
+    telefono: "Teléfono",
+    categoria: "Categoría de membresía",
+    organizaciones: "Organizaciones",
+    roles: "Roles",
+    otorgarRol: "Otorgar rol",
+    retirar: "Retirar",
+    acciones: "Acciones",
+    suspender: "Suspender",
+    reactivar: "Reactivar",
+    archivar: "Archivar",
+    restaurar: "Restaurar",
+    reinvitar: "Reenviar invitación",
+    reinvitada: "Invitación reenviada.",
+    historial: "Historial de esta persona",
+    sinHistorial: "Todavía no hay acciones registradas.",
+    porElSistema: "el sistema",
+    // Nadie puede suspenderse ni archivarse a sí mismo (R-010-05). El API lo rechaza igual; aquí
+    // se esconde el botón para no ofrecer algo que va a fallar.
+    esTuCuenta: "Esta es tu cuenta: las acciones sobre ella las hace otro administrador.",
+  },
 
   perfil: {
     titulo: "Mi perfil",

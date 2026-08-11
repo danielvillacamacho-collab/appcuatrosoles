@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "test": "vitest run",
     "lint": "eslint src",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "check:bundle": "node scripts/check-bundle.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",

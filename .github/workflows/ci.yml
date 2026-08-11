@@ -88,6 +88,11 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Presupuesto de bundle (ADR-014 punto 9)
+        # Después del build, porque mide lo que el build produjo. Va en el mismo trabajo para que
+        # un `pnpm build` que pasa y un bundle que engorda no se reporten como cosas distintas.
+        run: pnpm --filter @polo/web check:bundle
+
       - name: Escaneo de secretos en el diff
         uses: gitleaks/gitleaks-action@v2
 

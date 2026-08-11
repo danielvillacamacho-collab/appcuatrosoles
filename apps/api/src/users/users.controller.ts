@@ -19,6 +19,8 @@ import {
   AcceptInvitationRequest,
   AssignRoleRequest,
   CreateUserRequest,
+  PaginationQuery,
+  UserListResponse,
   UpdateUserRequest,
   UserResponse,
 } from "@polo/contracts";
@@ -57,19 +59,27 @@ export class UsersController {
   @RequirePermission("user.edit", { ambitoAmplio: true })
   async listar(
     @Req() req: Solicitud,
+    // La paginación se valida con su esquema: pedir `limit=500` responde `400` con el detalle del
+    // campo, no una página recortada en silencio (`docs/03` §7).
+    @Query(new ZodValidationPipe(PaginationQuery)) pagina: PaginationQuery,
     @Query("status") status?: string,
     @Query("role") role?: string,
     @Query("organizationId") organizationId?: string,
     @Query("membershipCategoryId") membershipCategoryId?: string,
     @Query("q") q?: string,
-  ): Promise<UserResponse[]> {
-    return this.servicio.listar(await this.actor(req), clubDeLaSolicitud(req), {
-      ...(status === undefined ? {} : { status: status as UserAccountStatus }),
-      ...(role === undefined ? {} : { role: role as RoleName }),
-      ...(organizationId === undefined ? {} : { organizationId }),
-      ...(membershipCategoryId === undefined ? {} : { membershipCategoryId }),
-      ...(q === undefined ? {} : { q }),
-    });
+  ): Promise<UserListResponse> {
+    return this.servicio.listar(
+      await this.actor(req),
+      clubDeLaSolicitud(req),
+      {
+        ...(status === undefined ? {} : { status: status as UserAccountStatus }),
+        ...(role === undefined ? {} : { role: role as RoleName }),
+        ...(organizationId === undefined ? {} : { organizationId }),
+        ...(membershipCategoryId === undefined ? {} : { membershipCategoryId }),
+        ...(q === undefined ? {} : { q }),
+      },
+      pagina,
+    );
   }
 
   /**
@@ -89,7 +99,9 @@ export class UsersController {
     @Query("organizationId") organizationId?: string,
     @Query("q") q?: string,
   ): Promise<string> {
-    const usuarios = await this.servicio.listar(await this.actor(req), clubDeLaSolicitud(req), {
+    // Sin paginar: un CSV cortado en la página 1 no es una exportación — quien lo abre no tiene
+    // forma de saber que le faltan filas.
+    const usuarios = await this.servicio.listarTodo(await this.actor(req), clubDeLaSolicitud(req), {
       ...(status === undefined ? {} : { status: status as UserAccountStatus }),
       ...(role === undefined ? {} : { role: role as RoleName }),
       ...(organizationId === undefined ? {} : { organizationId }),

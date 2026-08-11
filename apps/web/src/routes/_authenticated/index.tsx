@@ -1,4 +1,5 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import type { MeResponse } from "@polo/contracts";
 import { Button } from "@polo/ui";
 import { useSesion } from "../../features/session/api/useSesion.js";
 import { useSalir } from "../../features/auth/api/useSalir.js";
@@ -11,12 +12,18 @@ import { copy } from "../../i18n/es-CO.js";
  * Es la pantalla que cierra el recorrido de T-100 y la que contesta, de un vistazo, las tres cosas
  * que alguien quiere saber al entrar: **quién soy aquí, qué puedo hacer, y a dónde voy**.
  *
- * Los accesos aparecen a medida que existen sus pantallas — la administración entra con T-134 —
- * y cuando dependan del rol, eso será comodidad y no seguridad: esconder un enlace no protege
- * nada, el API decide en cada petición (`docs/06` §4). Pero ofrecerle a un jugador «Usuarios del
- * club» para después responderle `403` es mentirle.
+ * El acceso a la administración **se muestra según los roles, y eso es comodidad y no seguridad**:
+ * esconder un enlace no protege nada —el API decide en cada petición (`docs/06` §4)— pero ofrecerle
+ * a un jugador «Usuarios del club» para después responderle `403` es mentirle.
  */
 export const Route = createFileRoute("/_authenticated/")({ component: Panel });
+
+/** Quién ve la administración de usuarios. Se pregunta por **todos** sus roles, no por el primero. */
+function administraGente(usuario: MeResponse): boolean {
+  return usuario.roles.some((rol) =>
+    ["superadmin", "club_admin", "organization_admin"].includes(rol.role),
+  );
+}
 
 function Panel(): React.JSX.Element {
   const sesion = useSesion();
@@ -115,6 +122,22 @@ function Panel(): React.JSX.Element {
         </ul>
       </nav>
 
+      {administraGente(usuario) && (
+        <nav aria-labelledby="administracion">
+          <h2
+            id="administracion"
+            className="text-sm font-semibold uppercase tracking-[0.15em] text-muted"
+          >
+            {copy.panel.administracion}
+          </h2>
+          <ul className="mt-2 flex flex-col">
+            <li>
+              <Acceso a="/users">{copy.panel.usuarios}</Acceso>
+            </li>
+          </ul>
+        </nav>
+      )}
+
       <footer className="mt-auto">
         <Button variante="secundaria" onClick={() => void cerrar()} cargando={salir.isPending}>
           {copy.comun.salir}
@@ -135,7 +158,7 @@ function Acceso({
   a,
   children,
 }: {
-  a: "/me/profile" | "/me/sessions" | "/me/notifications" | "/me/dependents";
+  a: "/me/profile" | "/me/sessions" | "/me/notifications" | "/me/dependents" | "/users";
   children: string;
 }): React.JSX.Element {
   return (

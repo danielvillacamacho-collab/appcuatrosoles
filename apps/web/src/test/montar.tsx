@@ -13,7 +13,7 @@ import { routeTree } from "../routeTree.gen.js";
  * Cada test trae su propio `QueryClient` **sin reintentos**: con los reintentos por defecto, un
  * test de «qué pasa cuando el API falla» tarda segundos y a veces pasa por casualidad.
  */
-export function montar(ruta: string): void {
+export function montar(ruta: string): { ubicacion: () => string } {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -27,6 +27,11 @@ export function montar(ruta: string): void {
       <RouterProvider router={router as never} />
     </QueryClientProvider>,
   );
+
+  // El historial es de memoria, así que `window.location` no refleja nada: quien quiera comprobar
+  // que algo viaja en la URL —los filtros del listado, por ejemplo— tiene que preguntárselo al
+  // router.
+  return { ubicacion: () => router.state.location.searchStr };
 }
 
 /**

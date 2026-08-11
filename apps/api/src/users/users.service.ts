@@ -30,6 +30,15 @@ import { SettingsService } from "../settings/settings.service.js";
 
 const UN_DIA_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Tope de la exportación (T-059).
+ *
+ * Alto, pero **no infinito**: una consulta sin límite es la que un día tumba el servidor sin que
+ * nadie haya cambiado nada. Si un club llegara a superarlo, el CSV se cortaría en silencio — así
+ * que el día que pase hay que paginar la exportación, no subir el número.
+ */
+const TOPE_DE_EXPORTACION = 5000;
+
 export interface Actor {
   userAccountId: string;
   roles: RoleAssignmentRef[];
@@ -290,37 +299,80 @@ export class UsersService {
     ]);
   }
 
-  /** Listado con filtros (T-054). **Siempre acotado al club**, y a la organización si el actor es de una. */
-  async listar(actor: Actor, clubId: string, filtros: FiltrosDeUsuarios): Promise<UserResponse[]> {
+  /**
+   * Listado con filtros (T-054). **Siempre acotado al club**, y a la organización si el actor es de
+   * una.
+   *
+   * Devuelve **una página**, no todo (`docs/03` §7). Antes no tenía tope: un club con dos mil
+   * socios respondía dos mil filas en cada carga de la pantalla de administración, y el día que
+   * eso empezara a doler ya sería tarde para cambiar el contrato.
+   *
+   * `total` sale de un `count` con el **mismo** `where`, en la misma transacción: contar con un
+   * filtro distinto del que se lista es la forma clásica de mostrar «137 resultados» sobre una
+   * tabla que enseña otra cosa.
+   */
+  async listar(
+    actor: Actor,
+    clubId: string,
+    filtros: FiltrosDeUsuarios,
+    pagina: { page: number; limit: number } = { page: 1, limit: 25 },
+  ): Promise<{ items: UserResponse[]; total: number; page: number; limit: number }> {
     const organizacionesDelActor = organizacionesDe(actor);
     const soloDeSusOrganizaciones = mandaSoloEnOrganizaciones(actor);
 
-    const cuentas = await this.prisma.userAccount.findMany({
-      where: {
-        person: {
-          clubId,
-          ...(filtros.q === undefined
-            ? {}
-            : { fullName: { contains: filtros.q, mode: "insensitive" } }),
-          ...filtroDeOrganizacion(soloDeSusOrganizaciones, organizacionesDelActor, filtros.organizationId),
-          ...(filtros.membershipCategoryId === undefined
-            ? {}
-            : {
-                membershipHistory: {
-                  some: { effectiveTo: null, membershipCategoryId: filtros.membershipCategoryId },
-                },
-              }),
-        },
-        ...(filtros.status === undefined ? {} : { status: filtros.status }),
-        ...(filtros.role === undefined
+    const donde: Prisma.UserAccountWhereInput = {
+      person: {
+        clubId,
+        ...(filtros.q === undefined
           ? {}
-          : { roleAssignments: { some: { role: filtros.role, revokedAt: null } } }),
+          : { fullName: { contains: filtros.q, mode: "insensitive" } }),
+        ...filtroDeOrganizacion(soloDeSusOrganizaciones, organizacionesDelActor, filtros.organizationId),
+        ...(filtros.membershipCategoryId === undefined
+          ? {}
+          : {
+              membershipHistory: {
+                some: { effectiveTo: null, membershipCategoryId: filtros.membershipCategoryId },
+              },
+            }),
       },
+      ...(filtros.status === undefined ? {} : { status: filtros.status }),
+      ...(filtros.role === undefined
+        ? {}
+        : { roleAssignments: { some: { role: filtros.role, revokedAt: null } } }),
+    };
+
+    const cuentas = await this.prisma.userAccount.findMany({
+      where: donde,
       select: SELECCION,
-      orderBy: { person: { fullName: "asc" } },
+      // Por nombre y, a igualdad de nombre, por identificador: sin el desempate, dos personas
+      // llamadas igual pueden intercambiarse entre consultas y aparecer dos veces en una página y
+      // ninguna en la siguiente.
+      orderBy: [{ person: { fullName: "asc" } }, { id: "asc" }],
+      skip: (pagina.page - 1) * pagina.limit,
+      take: pagina.limit,
     });
 
-    return cuentas.map((cuenta) => aRespuesta(cuenta));
+    const total = await this.prisma.userAccount.count({ where: donde });
+
+    return {
+      items: cuentas.map((cuenta) => aRespuesta(cuenta)),
+      total,
+      page: pagina.page,
+      limit: pagina.limit,
+    };
+  }
+
+  /**
+   * Todos los que cumplen el filtro, sin paginar — sólo para la exportación (T-059).
+   *
+   * Un CSV que se corta en la página 1 no es una exportación: quien lo abre no tiene forma de
+   * saber que le faltan filas. Por eso este método existe aparte y **no** se usa desde ninguna
+   * pantalla.
+   */
+  async listarTodo(actor: Actor, clubId: string, filtros: FiltrosDeUsuarios): Promise<UserResponse[]> {
+    const { items } = await this.listar(actor, clubId, filtros, { page: 1, limit: TOPE_DE_EXPORTACION });
+
+    return items;
   }
 
   async detalle(clubId: string, id: string): Promise<UserResponse> {

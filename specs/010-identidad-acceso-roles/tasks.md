@@ -322,6 +322,19 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > tiempo —estalló cuando esta tarea agregó seis usuarios más y el mensaje propio quedó fuera del
   > lote. Ahora el tope se **cuenta**.
 
+- [x] **T-078** *(agregada 2026-08-11)* Paginar `GET /users` según `docs/03` §7: página por defecto
+  25, máximo 100, y **pedir más es `400`**, no un recorte silencioso. Respuesta `{ items, total,
+  page, limit }`.
+  ✅ 2026-08-11 — 6 tests. Salió de T-134: el listado **no tenía tope de ningún tipo** —ni el de 200
+  que `verification.md` daba por hecho— así que un club con dos mil socios respondía dos mil filas
+  en cada carga de la pantalla de administración.
+  > `total` se cuenta con el **mismo** `where` que lista: contar con un filtro distinto es la forma
+  > clásica de mostrar «137 resultados» sobre una tabla que enseña otra cosa.
+  > El orden desempata por identificador: sin eso, dos personas llamadas igual pueden intercambiarse
+  > entre consultas y salir dos veces en una página y ninguna en la siguiente.
+  > **La exportación no se pagina** y va por su propio método, con tope de 5000: un CSV cortado en la
+  > página 1 no es una exportación, porque quien lo abre no tiene forma de saber que le faltan filas.
+
 ## J — Notificaciones del módulo base
 
 - [x] **T-090** Plantillas de correo (MJML) para: invitación, restablecimiento de contraseña,
@@ -524,13 +537,36 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
 
 ### M.4 — La administración del club
 
-- [ ] **T-134** **Listado de usuarios** (`/users`): filtros por estado, rol y texto, con exportación.
-  Paginación real —el API tiene tope de 200 sin cursor, así que esta tarea decide si el cursor entra
-  aquí o se declara como límite conocido.
-- [ ] **T-135** **Crear/invitar** (`/users/new`): formulario mínimo, invitación ligera con sólo el
+- [x] **T-134** **Listado de usuarios** (`/users`): filtros por estado, rol y texto, con exportación.
+  Paginación real.
+  ✅ 2026-08-11 — 7 tests. La decisión sobre la paginación se tomó **en el API**, ver T-078.
+  > **Los filtros viven en la URL**, no en un `useState`: es lo que hace que «mándame el enlace de
+  > los invitados que faltan» funcione, que «atrás» devuelva al filtro anterior y que recargar no
+  > borre la búsqueda. En una pantalla de administración eso se nota el primer día.
+  > La opción «Todos» manda cadena vacía y el cliente la **omite** del query: un `?status=` vacío
+  > filtraría por un estado inexistente y devolvería cero resultados sin que nada falle.
+  > La exportación es un `<a href>` y no una llamada de JavaScript: el navegador ya sabe guardar un
+  > archivo que llega con `Content-Disposition`.
+- [x] **T-135** **Crear/invitar** (`/users/new`): formulario mínimo, invitación ligera con sólo el
   correo, y el selector de roles **acotado a lo que quien lo usa puede otorgar**.
-- [ ] **T-136** **Ficha de usuario** (`/users/$userId`): datos, roles, estado, acciones (suspender,
+  ✅ 2026-08-11 — 3 tests. El acotamiento usa `canAssignRole` de `packages/domain`, **la misma
+  función que aplica el API** (R-010-04). Esconder un rol no es la protección —el API decide en cada
+  petición— pero ofrecer uno que va a rechazar hace perder el tiempo dos veces.
+  > Verificado con la administradora del club sembrada: le ofrece administrador de club, comisario,
+  > jugador y tesorero, y **no** superadministrador ni los de organización hasta elegir una.
+- [x] **T-136** **Ficha de usuario** (`/users/$userId`): datos, roles, estado, acciones (suspender,
   archivar, reenviar invitación con su fecha de envío) e historial de auditoría de esa persona.
-- [ ] **T-137** Presupuesto de bundle como gate de CI (200 KB comprimidos, `ADR-014` punto 9).
-  > Entra con la primera pantalla y no después: un presupuesto que se agrega tarde ya viene
-  > incumplido, y bajarlo estaría prohibido por la regla de oro 12.
+  ✅ 2026-08-11 — 5 tests. **Las acciones que el API rechazaría no se ofrecen**: sobre la propia
+  cuenta no hay ninguna (R-010-05), «reactivar» sólo aparece si está suspendida, y «reenviar
+  invitación» sólo si sigue invitada. Un botón que existe para responder un error es una promesa
+  incumplida.
+  > El historial muestra la acción con su nombre técnico (`user.suspended`) y no traducida: la lista
+  > crece con cada módulo, y una traducción incompleta miente peor que un identificador. Ponerles
+  > nombre es su propia tarea, cuando estén todas.
+- [x] **T-137** Presupuesto de bundle como gate de CI (200 KB comprimidos, `ADR-014` punto 9).
+  ✅ 2026-08-11 — `pnpm check:bundle`. **Hoy: 119.3 KB de 200.** Mide **gzip**, que es lo que viaja
+  por el cable, y sólo la **carga inicial** —lo que `index.html` referencia—: las 27 pantallas que
+  llegan por importación dinámica no las paga quien sólo entra a ver su panel.
+  > El script falla si no encuentra ningún archivo referenciado: un gate que no puede fallar es peor
+  > que no tenerlo, porque da confianza sin avisar de nada.
+  **Cierra la sección M.4.**

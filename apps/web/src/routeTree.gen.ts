@@ -20,6 +20,9 @@ import { Route as AuthenticatedMeDependentsRouteImport } from './routes/_authent
 import { Route as AuthenticatedMeNotificationsRouteImport } from './routes/_authenticated/me/notifications'
 import { Route as AuthenticatedMeProfileRouteImport } from './routes/_authenticated/me/profile'
 import { Route as AuthenticatedMeSessionsRouteImport } from './routes/_authenticated/me/sessions'
+import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authenticated/users/index'
+import { Route as AuthenticatedUsersUserIdRouteImport } from './routes/_authenticated/users/$userId'
+import { Route as AuthenticatedUsersNewRouteImport } from './routes/_authenticated/users/new'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -78,6 +81,22 @@ const AuthenticatedMeSessionsRoute = AuthenticatedMeSessionsRouteImport.update({
   path: '/me/sessions',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedUsersIndexRoute = AuthenticatedUsersIndexRouteImport.update({
+  id: '/users/',
+  path: '/users/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedUsersUserIdRoute =
+  AuthenticatedUsersUserIdRouteImport.update({
+    id: '/users/$userId',
+    path: '/users/$userId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedUsersNewRoute = AuthenticatedUsersNewRouteImport.update({
+  id: '/users/new',
+  path: '/users/new',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -90,6 +109,9 @@ export interface FileRoutesByFullPath {
   '/me/notifications': typeof AuthenticatedMeNotificationsRoute
   '/me/profile': typeof AuthenticatedMeProfileRoute
   '/me/sessions': typeof AuthenticatedMeSessionsRoute
+  '/users/$userId': typeof AuthenticatedUsersUserIdRoute
+  '/users/new': typeof AuthenticatedUsersNewRoute
+  '/users/': typeof AuthenticatedUsersIndexRoute
 }
 export interface FileRoutesByTo {
   '/accept-invitation': typeof AcceptInvitationRoute
@@ -102,6 +124,9 @@ export interface FileRoutesByTo {
   '/me/notifications': typeof AuthenticatedMeNotificationsRoute
   '/me/profile': typeof AuthenticatedMeProfileRoute
   '/me/sessions': typeof AuthenticatedMeSessionsRoute
+  '/users/$userId': typeof AuthenticatedUsersUserIdRoute
+  '/users/new': typeof AuthenticatedUsersNewRoute
+  '/users': typeof AuthenticatedUsersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +141,9 @@ export interface FileRoutesById {
   '/_authenticated/me/notifications': typeof AuthenticatedMeNotificationsRoute
   '/_authenticated/me/profile': typeof AuthenticatedMeProfileRoute
   '/_authenticated/me/sessions': typeof AuthenticatedMeSessionsRoute
+  '/_authenticated/users/$userId': typeof AuthenticatedUsersUserIdRoute
+  '/_authenticated/users/new': typeof AuthenticatedUsersNewRoute
+  '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -130,6 +158,9 @@ export interface FileRouteTypes {
     | '/me/notifications'
     | '/me/profile'
     | '/me/sessions'
+    | '/users/$userId'
+    | '/users/new'
+    | '/users/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/accept-invitation'
@@ -142,6 +173,9 @@ export interface FileRouteTypes {
     | '/me/notifications'
     | '/me/profile'
     | '/me/sessions'
+    | '/users/$userId'
+    | '/users/new'
+    | '/users'
   id:
     | '__root__'
     | '/_authenticated'
@@ -155,6 +189,9 @@ export interface FileRouteTypes {
     | '/_authenticated/me/notifications'
     | '/_authenticated/me/profile'
     | '/_authenticated/me/sessions'
+    | '/_authenticated/users/$userId'
+    | '/_authenticated/users/new'
+    | '/_authenticated/users/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -244,6 +281,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMeSessionsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/users/': {
+      id: '/_authenticated/users/'
+      path: '/users'
+      fullPath: '/users/'
+      preLoaderRoute: typeof AuthenticatedUsersIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/users/$userId': {
+      id: '/_authenticated/users/$userId'
+      path: '/users/$userId'
+      fullPath: '/users/$userId'
+      preLoaderRoute: typeof AuthenticatedUsersUserIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/users/new': {
+      id: '/_authenticated/users/new'
+      path: '/users/new'
+      fullPath: '/users/new'
+      preLoaderRoute: typeof AuthenticatedUsersNewRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
@@ -254,6 +312,9 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMeNotificationsRoute: typeof AuthenticatedMeNotificationsRoute
   AuthenticatedMeProfileRoute: typeof AuthenticatedMeProfileRoute
   AuthenticatedMeSessionsRoute: typeof AuthenticatedMeSessionsRoute
+  AuthenticatedUsersUserIdRoute: typeof AuthenticatedUsersUserIdRoute
+  AuthenticatedUsersNewRoute: typeof AuthenticatedUsersNewRoute
+  AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -263,6 +324,9 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedMeNotificationsRoute: AuthenticatedMeNotificationsRoute,
   AuthenticatedMeProfileRoute: AuthenticatedMeProfileRoute,
   AuthenticatedMeSessionsRoute: AuthenticatedMeSessionsRoute,
+  AuthenticatedUsersUserIdRoute: AuthenticatedUsersUserIdRoute,
+  AuthenticatedUsersNewRoute: AuthenticatedUsersNewRoute,
+  AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

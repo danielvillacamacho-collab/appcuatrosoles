@@ -3,7 +3,7 @@ import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { UserResponse } from "@polo/contracts";
+import { UserListResponse, UserResponse } from "@polo/contracts";
 import type { Clock, RoleName, ScopeKind } from "@polo/domain";
 import { AppModule } from "../../src/app.module.js";
 import { CLOCK } from "../../src/common/clock/clock.module.js";
@@ -421,8 +421,64 @@ describe("Gestión de usuarios (sección F)", () => {
       const porTexto = await con(tokenAdmin).get("/api/users?q=Buscable");
       const porEstado = await con(tokenAdmin).get("/api/users?status=invited");
 
-      expect(porTexto.body.some((u: { fullName: string }) => u.fullName === "Buscable Singular")).toBe(true);
-      expect(porEstado.body.every((u: { status: string }) => u.status === "invited")).toBe(true);
+      expect(porTexto.body.items.some((u: { fullName: string }) => u.fullName === "Buscable Singular")).toBe(true);
+      expect(porEstado.body.items.every((u: { status: string }) => u.status === "invited")).toBe(true);
+    });
+
+    describe("paginación (`docs/03` §7)", () => {
+      it("devuelve una página con su total, no todo el club", async () => {
+        // Antes no tenía tope: un club con dos mil socios respondía dos mil filas en cada carga de
+        // la pantalla de administración.
+        const respuesta = await con(tokenAdmin).get("/api/users?limit=2");
+
+        expect(respuesta.status).toBe(200);
+        expect(UserListResponse.safeParse(respuesta.body).success).toBe(true);
+        expect(respuesta.body.items.length).toBeLessThanOrEqual(2);
+        expect(respuesta.body.total).toBeGreaterThanOrEqual(respuesta.body.items.length);
+        expect(respuesta.body.limit).toBe(2);
+      });
+
+      it("la segunda página trae gente distinta de la primera", async () => {
+        const primera = await con(tokenAdmin).get("/api/users?limit=2&page=1");
+        const segunda = await con(tokenAdmin).get("/api/users?limit=2&page=2");
+
+        const ids = (respuesta: { body: { items: { id: string }[] } }): string[] =>
+          respuesta.body.items.map((usuario) => usuario.id);
+
+        expect(ids(primera).filter((id) => ids(segunda).includes(id))).toEqual([]);
+      });
+
+      it("pedir más de 100 es un 400, no un recorte silencioso", async () => {
+        // Un recorte calla, y quien pidió 500 se queda creyendo que el club tiene 100 socios.
+        const respuesta = await con(tokenAdmin).get("/api/users?limit=500");
+
+        expect(respuesta.status).toBe(400);
+        expect(respuesta.body.error.details.fields).toHaveProperty("limit");
+      });
+
+      it("sin parámetros trae la primera página de 25", async () => {
+        const respuesta = await con(tokenAdmin).get("/api/users");
+
+        expect(respuesta.body.page).toBe(1);
+        expect(respuesta.body.limit).toBe(25);
+      });
+
+      it("el total cuenta lo mismo que lista: el filtro es el mismo", async () => {
+        // Contar con un filtro distinto del que se lista es la forma clásica de mostrar «137
+        // resultados» sobre una tabla que enseña otra cosa.
+        const filtrada = await con(tokenAdmin).get("/api/users?status=invited&limit=100");
+
+        expect(filtrada.body.total).toBe(filtrada.body.items.length);
+        expect(filtrada.body.items.every((u: { status: string }) => u.status === "invited")).toBe(true);
+      });
+
+      it("la exportación NO se pagina: un CSV cortado no es una exportación", async () => {
+        const csv = await con(tokenAdmin).get("/api/users/export?limit=1");
+        const lista = await con(tokenAdmin).get("/api/users?limit=100");
+
+        // El encabezado más una fila por usuario.
+        expect(csv.text.trim().split("\n")).toHaveLength(lista.body.total + 1);
+      });
     });
 
     it("nunca lista usuarios de otro club (T-054, aislamiento)", async () => {
@@ -440,7 +496,7 @@ describe("Gestión de usuarios (sección F)", () => {
 
       const lista = await con(tokenAdmin).get("/api/users");
 
-      expect(lista.body.some((u: { fullName: string }) => u.fullName === "Ajena Invisible")).toBe(false);
+      expect(lista.body.items.some((u: { fullName: string }) => u.fullName === "Ajena Invisible")).toBe(false);
     });
 
     it("un administrador de organización sólo ve a la gente de la suya (HU-010-08)", async () => {
@@ -451,7 +507,7 @@ describe("Gestión de usuarios (sección F)", () => {
       const delClub = await con(tokenAdmin).post("/api/users").send(datosDeUsuario());
 
       const lista = await con(token).get("/api/users");
-      const ids = lista.body.map((u: { id: string }) => u.id);
+      const ids = lista.body.items.map((u: { id: string }) => u.id);
 
       expect(ids).toContain(deLaOrganizacion.body.id);
       expect(ids).not.toContain(delClub.body.id);
