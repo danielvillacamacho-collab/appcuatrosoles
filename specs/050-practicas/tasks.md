@@ -223,17 +223,37 @@ proceso de decisión— es la más delicada, y llega cuando ya hay con qué prob
 
 ## F — Interfaz
 
-- [ ] **T-550** Tablero de prácticas: sólo las que la persona puede ver.
-- [ ] **T-551** Detalle con «estás dentro» o «estás en espera, en la posición N», y el botón de
+- [x] **T-550** Tablero de prácticas: sólo las que la persona puede ver.
+- [x] **T-551** Detalle con «estás dentro» o «estás en espera, en la posición N», y el botón de
   postularse o retirarse según corresponda.
   > Un tablero que sólo dice «postulado» deja a la gente sin saber si preparar los caballos, que es
   > el problema que este módulo viene a resolver.
-- [ ] **T-552** Crear y publicar una práctica.
+  ✅ 2026-08-11 — 12 tests. **Y verificado en un navegador de verdad, que fue donde apareció el
+  bug**: la pantalla decía «Administradora del club te propuso compartir puesto» sobre uno mismo.
+  > Eran dos cosas. La comparación de dos nulos daba verdadero y casaba con el primer postulado. Y
+  > detrás había algo peor: **la respuesta no traía con qué saber quién me propuso** —el compañero
+  > sólo aparece cuando la pareja ya está formada—, así que aceptar una pareja era **inalcanzable
+  > desde la interfaz**, con el endpoint construido y probado. Se agregó `propuestaRecibida`.
+  > Es el mismo hallazgo que en `specs/030`, donde el comisario no podía llegar a su pantalla: el
+  > API estaba bien y lo que faltaba era el camino. Los tests de contrato no lo ven; abrir la
+  > pantalla, sí.
+- [x] **T-552** Crear y publicar una práctica.
+
+> **Sección F cerrada el 2026-08-11.** 147 tests de interfaz.
 
 ## G — Cierre
 
-- [ ] **T-560** E2E de navegador: el administrador publica, dos jugadores se postulan, uno se
+- [x] **T-560** E2E de navegador: el administrador publica, dos jugadores se postulan, uno se
   retira, y el de la espera queda dentro.
   > Con motivo único por corrida y un paso que lleva el estado a un punto conocido: la lección del
   > E2E de `specs/030`.
-- [ ] **T-561** `verification.md` con cada criterio mapeado a su test.
+  ✅ 2026-08-11 — el recorrido completo, incluida **la propiedad central del módulo**: el primero se
+  retira y el de la espera queda dentro sin que corra nada.
+  > Tres tropiezos, los tres reales. La hora de decisión quedaba **después del inicio** y el API la
+  > rechazó —la regla que agregué en T-530 funcionando—. `page.url()` devolvía `/practices/new`
+  > aunque la pantalla ya fuera la del detalle, porque la navegación la hace el router con
+  > `pushState`: el test se llevaba esa ruta y volvía al formulario tres pasos después, con un
+  > síntoma que no se parecía a la causa. Y con un rango chico de horas, **dos corridas chocaban por
+  > la cancha** una de cada tres veces; ahora el día se elige entre 500. Comprobado cinco veces
+  > seguidas.
+- [x] **T-561** `verification.md` con cada criterio mapeado a su test.

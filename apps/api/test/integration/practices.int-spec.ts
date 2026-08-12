@@ -593,6 +593,40 @@ describe("Prácticas · API (T-530 a T-535)", () => {
       expect(vista.body.miPostulacion.medioHombre).toMatchObject({ aceptada: true });
     });
 
+    it("quien recibe una propuesta la VE, que es lo que la hace aceptable", async () => {
+      // El compañero sólo aparece en `postulados` cuando la pareja **ya está formada**, así que sin
+      // este campo una propuesta pendiente era invisible y el endpoint de aceptarla no se podía
+      // alcanzar desde ninguna pantalla. Lo destapó abrir la pantalla en un navegador de verdad.
+      const practica = await crearPractica({ targetPlayers: 3, minPlayers: 2 });
+      await publicar(practica.id);
+
+      await postularse(jugadores[0] as Cuenta, practica.id, {
+        halfManPartnerPersonId: jugadores[1]?.personId,
+      });
+      await postularse(jugadores[1] as Cuenta, practica.id);
+
+      const quienRecibe = await detalle(jugadores[1] as Cuenta, practica.id);
+      const quienPropuso = await detalle(jugadores[0] as Cuenta, practica.id);
+
+      expect(quienRecibe.body.miPostulacion.propuestaRecibida).toMatchObject({
+        personId: jugadores[0]?.personId,
+      });
+      // Y quien propuso no ve una propuesta recibida: la suya es la que espera respuesta.
+      expect(quienPropuso.body.miPostulacion.propuestaRecibida).toBeNull();
+    });
+
+    it("nadie ve una propuesta de sí mismo", async () => {
+      // El bug que apareció en el navegador: comparar dos nulos daba verdadero y la pantalla decía
+      // «te propusiste compartir puesto» sobre uno mismo.
+      const practica = await crearPractica();
+      await publicar(practica.id);
+      await postularse(jugadores[0] as Cuenta, practica.id);
+
+      const vista = await detalle(jugadores[0] as Cuenta, practica.id);
+
+      expect(vista.body.miPostulacion.propuestaRecibida).toBeNull();
+    });
+
     it("aceptar una propuesta que nadie hizo se rechaza", async () => {
       // Sin esta comprobación, cualquiera podría emparejarse con quien quisiera con sólo escribir
       // su identificador.

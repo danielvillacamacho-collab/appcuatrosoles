@@ -365,6 +365,7 @@ export class PracticesService {
               posicion: mio.posicion,
               chukkersOffered: miPostulacion.chukkersOffered,
               medioHombre: elMedioHombreDe(miPostulacion.personId, reparto, nombres, miPostulacion),
+              propuestaRecibida: laPropuestaRecibidaPor(miPostulacion, practica.applications, nombres),
             },
 
       postulados: [...reparto.dentro, ...reparto.enEspera].flatMap((puesto, indice) =>
@@ -429,6 +430,35 @@ function elMedioHombreDe(
     fullName: nombres.get(miPostulacion.halfManPartnerPersonId) ?? "",
     aceptada: formada,
   };
+}
+
+/**
+ * Quién le propuso compartir puesto a esta persona **y sigue esperando respuesta**.
+ *
+ * No se puede deducir de la lista de postulados: ahí el compañero sólo aparece cuando la pareja ya
+ * es recíproca. Sin este dato, una propuesta pendiente es invisible y aceptarla es imposible desde
+ * la interfaz — el endpoint existía y no había forma de llegar a él.
+ */
+function laPropuestaRecibidaPor(
+  mia: { personId: string; halfManPartnerPersonId: string | null },
+  todas: readonly { personId: string; halfManPartnerPersonId: string | null }[],
+  nombres: ReadonlyMap<string, string>,
+): { personId: string; fullName: string } | null {
+  if (mia.halfManPartnerPersonId !== null) {
+    // Ya elegí compañero: o la pareja está formada, o la que espera respuesta es la mía.
+    return null;
+  }
+
+  const quienMePropuso = todas.find(
+    (otra) => otra.personId !== mia.personId && otra.halfManPartnerPersonId === mia.personId,
+  );
+
+  return quienMePropuso === undefined
+    ? null
+    : {
+        personId: quienMePropuso.personId,
+        fullName: nombres.get(quienMePropuso.personId) ?? "",
+      };
 }
 
 function aParametros(datos: {

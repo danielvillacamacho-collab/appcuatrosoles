@@ -98,6 +98,14 @@ export const PracticeResponse = z.object({
       medioHombre: z
         .object({ personId: z.string(), fullName: z.string(), aceptada: z.boolean() })
         .nullable(),
+      /**
+       * Quién **me** propuso compartir puesto y todavía no le respondí.
+       *
+       * Va explícito porque no se puede deducir de `postulados`: ahí el compañero sólo aparece
+       * cuando la pareja **ya está formada**, así que una propuesta pendiente era invisible y el
+       * endpoint de aceptarla no se podía alcanzar desde ninguna pantalla.
+       */
+      propuestaRecibida: z.object({ personId: z.string(), fullName: z.string() }).nullable(),
     })
     .nullable(),
 

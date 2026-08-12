@@ -124,6 +124,9 @@ function Panel(): React.JSX.Element {
             <Acceso a="/me/dependents">{copy.panel.misPerfilesACargo}</Acceso>
           </li>
           <li>
+            <Acceso a="/practices">{copy.panel.practicas}</Acceso>
+          </li>
+          <li>
             <Acceso a="/calendar">{copy.panel.calendario}</Acceso>
           </li>
           <li>
@@ -176,7 +179,7 @@ function Acceso({
   a,
   children,
 }: {
-  a: "/me/profile" | "/me/sessions" | "/me/notifications" | "/me/dependents" | "/users" | "/calendar" | "/fields" | "/handicaps";
+  a: "/me/profile" | "/me/sessions" | "/me/notifications" | "/me/dependents" | "/users" | "/calendar" | "/fields" | "/handicaps" | "/practices";
   children: string;
 }): React.JSX.Element {
   return (

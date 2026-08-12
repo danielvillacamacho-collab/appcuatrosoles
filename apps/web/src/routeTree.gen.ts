@@ -23,6 +23,9 @@ import { Route as AuthenticatedMeDependentsRouteImport } from './routes/_authent
 import { Route as AuthenticatedMeNotificationsRouteImport } from './routes/_authenticated/me/notifications'
 import { Route as AuthenticatedMeProfileRouteImport } from './routes/_authenticated/me/profile'
 import { Route as AuthenticatedMeSessionsRouteImport } from './routes/_authenticated/me/sessions'
+import { Route as AuthenticatedPracticesIndexRouteImport } from './routes/_authenticated/practices/index'
+import { Route as AuthenticatedPracticesPracticeIdRouteImport } from './routes/_authenticated/practices/$practiceId'
+import { Route as AuthenticatedPracticesNewRouteImport } from './routes/_authenticated/practices/new'
 import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authenticated/users/index'
 import { Route as AuthenticatedUsersUserIdRouteImport } from './routes/_authenticated/users/$userId'
 import { Route as AuthenticatedUsersNewRouteImport } from './routes/_authenticated/users/new'
@@ -99,6 +102,24 @@ const AuthenticatedMeSessionsRoute = AuthenticatedMeSessionsRouteImport.update({
   path: '/me/sessions',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedPracticesIndexRoute =
+  AuthenticatedPracticesIndexRouteImport.update({
+    id: '/practices/',
+    path: '/practices/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPracticesPracticeIdRoute =
+  AuthenticatedPracticesPracticeIdRouteImport.update({
+    id: '/practices/$practiceId',
+    path: '/practices/$practiceId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPracticesNewRoute =
+  AuthenticatedPracticesNewRouteImport.update({
+    id: '/practices/new',
+    path: '/practices/new',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedUsersIndexRoute = AuthenticatedUsersIndexRouteImport.update({
   id: '/users/',
   path: '/users/',
@@ -130,8 +151,11 @@ export interface FileRoutesByFullPath {
   '/me/notifications': typeof AuthenticatedMeNotificationsRoute
   '/me/profile': typeof AuthenticatedMeProfileRoute
   '/me/sessions': typeof AuthenticatedMeSessionsRoute
+  '/practices/$practiceId': typeof AuthenticatedPracticesPracticeIdRoute
+  '/practices/new': typeof AuthenticatedPracticesNewRoute
   '/users/$userId': typeof AuthenticatedUsersUserIdRoute
   '/users/new': typeof AuthenticatedUsersNewRoute
+  '/practices/': typeof AuthenticatedPracticesIndexRoute
   '/users/': typeof AuthenticatedUsersIndexRoute
 }
 export interface FileRoutesByTo {
@@ -148,8 +172,11 @@ export interface FileRoutesByTo {
   '/me/notifications': typeof AuthenticatedMeNotificationsRoute
   '/me/profile': typeof AuthenticatedMeProfileRoute
   '/me/sessions': typeof AuthenticatedMeSessionsRoute
+  '/practices/$practiceId': typeof AuthenticatedPracticesPracticeIdRoute
+  '/practices/new': typeof AuthenticatedPracticesNewRoute
   '/users/$userId': typeof AuthenticatedUsersUserIdRoute
   '/users/new': typeof AuthenticatedUsersNewRoute
+  '/practices': typeof AuthenticatedPracticesIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
 }
 export interface FileRoutesById {
@@ -168,8 +195,11 @@ export interface FileRoutesById {
   '/_authenticated/me/notifications': typeof AuthenticatedMeNotificationsRoute
   '/_authenticated/me/profile': typeof AuthenticatedMeProfileRoute
   '/_authenticated/me/sessions': typeof AuthenticatedMeSessionsRoute
+  '/_authenticated/practices/$practiceId': typeof AuthenticatedPracticesPracticeIdRoute
+  '/_authenticated/practices/new': typeof AuthenticatedPracticesNewRoute
   '/_authenticated/users/$userId': typeof AuthenticatedUsersUserIdRoute
   '/_authenticated/users/new': typeof AuthenticatedUsersNewRoute
+  '/_authenticated/practices/': typeof AuthenticatedPracticesIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
 }
 export interface FileRouteTypes {
@@ -188,8 +218,11 @@ export interface FileRouteTypes {
     | '/me/notifications'
     | '/me/profile'
     | '/me/sessions'
+    | '/practices/$practiceId'
+    | '/practices/new'
     | '/users/$userId'
     | '/users/new'
+    | '/practices/'
     | '/users/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -206,8 +239,11 @@ export interface FileRouteTypes {
     | '/me/notifications'
     | '/me/profile'
     | '/me/sessions'
+    | '/practices/$practiceId'
+    | '/practices/new'
     | '/users/$userId'
     | '/users/new'
+    | '/practices'
     | '/users'
   id:
     | '__root__'
@@ -225,8 +261,11 @@ export interface FileRouteTypes {
     | '/_authenticated/me/notifications'
     | '/_authenticated/me/profile'
     | '/_authenticated/me/sessions'
+    | '/_authenticated/practices/$practiceId'
+    | '/_authenticated/practices/new'
     | '/_authenticated/users/$userId'
     | '/_authenticated/users/new'
+    | '/_authenticated/practices/'
     | '/_authenticated/users/'
   fileRoutesById: FileRoutesById
 }
@@ -338,6 +377,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMeSessionsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/practices/': {
+      id: '/_authenticated/practices/'
+      path: '/practices'
+      fullPath: '/practices/'
+      preLoaderRoute: typeof AuthenticatedPracticesIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/practices/$practiceId': {
+      id: '/_authenticated/practices/$practiceId'
+      path: '/practices/$practiceId'
+      fullPath: '/practices/$practiceId'
+      preLoaderRoute: typeof AuthenticatedPracticesPracticeIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/practices/new': {
+      id: '/_authenticated/practices/new'
+      path: '/practices/new'
+      fullPath: '/practices/new'
+      preLoaderRoute: typeof AuthenticatedPracticesNewRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/users/': {
       id: '/_authenticated/users/'
       path: '/users'
@@ -372,8 +432,11 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMeNotificationsRoute: typeof AuthenticatedMeNotificationsRoute
   AuthenticatedMeProfileRoute: typeof AuthenticatedMeProfileRoute
   AuthenticatedMeSessionsRoute: typeof AuthenticatedMeSessionsRoute
+  AuthenticatedPracticesPracticeIdRoute: typeof AuthenticatedPracticesPracticeIdRoute
+  AuthenticatedPracticesNewRoute: typeof AuthenticatedPracticesNewRoute
   AuthenticatedUsersUserIdRoute: typeof AuthenticatedUsersUserIdRoute
   AuthenticatedUsersNewRoute: typeof AuthenticatedUsersNewRoute
+  AuthenticatedPracticesIndexRoute: typeof AuthenticatedPracticesIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
 }
 
@@ -387,8 +450,11 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedMeNotificationsRoute: AuthenticatedMeNotificationsRoute,
   AuthenticatedMeProfileRoute: AuthenticatedMeProfileRoute,
   AuthenticatedMeSessionsRoute: AuthenticatedMeSessionsRoute,
+  AuthenticatedPracticesPracticeIdRoute: AuthenticatedPracticesPracticeIdRoute,
+  AuthenticatedPracticesNewRoute: AuthenticatedPracticesNewRoute,
   AuthenticatedUsersUserIdRoute: AuthenticatedUsersUserIdRoute,
   AuthenticatedUsersNewRoute: AuthenticatedUsersNewRoute,
+  AuthenticatedPracticesIndexRoute: AuthenticatedPracticesIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
 }
 

@@ -31,6 +31,11 @@ export const queryKeys = {
 
   canchas: ["fields"] as const,
 
+  practicas: {
+    todas: ["practices"] as const,
+    detalle: (id: string) => ["practices", id] as const,
+  },
+
   handicaps: {
     todos: ["handicaps"] as const,
     dePersona: (personId: string) => ["handicaps", personId] as const,
