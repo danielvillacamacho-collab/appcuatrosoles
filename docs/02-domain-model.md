@@ -110,6 +110,11 @@ puede_inscribir_copas, requiere_aptitud, puede_reservar_taqueo…), `active`.
 **practice_eligibility** — `club_id`, `person_id`, `max_handicap_halves` (nivel hasta el que puede
 jugar), `granted_by_id`, `granted_at`, `revoked_at`, `revoked_by_id`.
 > El "apto para práctica" del estudiante.
+> `granted_by_id`, `granted_at`, `revoked_by_id`, `revoked_at`: **se revoca, no se borra** (P-06).
+> «Quién lo habilitó y cuándo» es exactamente lo que hay que poder responder si un estudiante se
+> lastima en una práctica que no le correspondía.
+> **Es un filtro duro, no una preferencia** (`specs/050` R-050-05), y va aparte del rango sugerido
+> de la práctica: el rango orienta y esto prohíbe.
 
 **audit_log** — `club_id`, `actor_user_id`, `on_behalf_of_id`, `action`, `entity_type`,
 `entity_id`, `before jsonb`, `after jsonb`, `occurred_at`, `request_id`.

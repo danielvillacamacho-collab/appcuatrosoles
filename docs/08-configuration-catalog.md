@@ -18,6 +18,10 @@ inserta una fila nueva, nunca sobreescribe la vigente (histórico consultable si
 | `practice.applications_close_offset_hours` | club | a definir con el club | PRD Parte I §7 |
 | `practice.half_man_cost_share_pct` | club | 50 / 50 | PRD Parte I §7 |
 | `practice.min_players_default` | club | igual a jugadores objetivo, ajustable por práctica | PRD Parte I §7 |
+| `practice.target_players_default` | club | 8 | `specs/050` |
+> Los valores de `practice.*` los lee `specs/050` al **crear** una práctica, para proponer los
+> campos por defecto. Una vez creada, la práctica guarda los suyos: cambiar la configuración del
+> club no altera lo ya publicado, porque la gente ya se postuló contando con esos números.
 
 ## 2. Copas y torneos
 

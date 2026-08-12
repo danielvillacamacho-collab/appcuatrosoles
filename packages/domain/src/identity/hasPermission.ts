@@ -45,6 +45,14 @@ export const PERMISSIONS = [
    * es la del comisario» (`docs/source` §5).
    */
   "handicap.edit",
+  /**
+   * Crear, publicar, editar y cancelar prácticas (`specs/050`).
+   *
+   * **A diferencia de `handicap.edit`, éste sí es de los dos**: «el administrador del club (o el
+   * comisario) crea la práctica» (`docs/source` §7). El comisario manda en lo deportivo y el
+   * administrador organiza la semana del club; una práctica es las dos cosas a la vez.
+   */
+  "practice.manage",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -171,7 +179,7 @@ const AUTORIDAD_POR_ROL: Record<RoleName, AutoridadDelRol> = {
    * por sus condiciones. Nada de la administración (`docs/06` §4).
    */
   commissioner: {
-    permisos: ["field.block", "handicap.edit"],
+    permisos: ["field.block", "handicap.edit", "practice.manage"],
     alcanza: (asignacion, target) =>
       asignacion.scope === "club" && asignacion.scopeId === target.clubId,
   },

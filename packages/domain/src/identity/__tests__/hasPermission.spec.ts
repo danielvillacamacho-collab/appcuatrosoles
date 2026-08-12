@@ -41,6 +41,7 @@ describe("hasPermission · superadministrador", () => {
   it("puede todo lo administrativo, en la plataforma, en cualquier club y en cualquier organización", () => {
     const administrativos = PERMISSIONS.filter((permiso) => permiso !== "handicap.edit");
 
+
     for (const permiso of administrativos) {
       for (const ambito of [PLATAFORMA, EN_EL_CLUB, EN_OTRO_CLUB, EN_LA_ORG, EN_ORG_DE_OTRO_CLUB]) {
         expect(hasPermission(actor(SUPERADMIN), permiso, ambito).ok).toBe(true);
@@ -173,6 +174,7 @@ describe("hasPermission · quién NO tiene autoridad administrativa", () => {
     const DEPORTIVOS: string[] = [
       "commissioner/club → field.block",
       "commissioner/club → handicap.edit",
+      "commissioner/club → practice.manage",
     ];
     const infractores: string[] = [];
 
@@ -201,7 +203,7 @@ describe("hasPermission · quién NO tiene autoridad administrativa", () => {
     const comisario = actor({ role: "commissioner", scope: "club", scopeId: CLUB });
     const suyos = PERMISSIONS.filter((permiso) => hasPermission(comisario, permiso, EN_EL_CLUB).ok);
 
-    expect(suyos).toEqual(["field.block", "handicap.edit"]);
+    expect(suyos).toEqual(["field.block", "handicap.edit", "practice.manage"]);
   });
 
   it("el comisario de un club no fija handicaps de otro", () => {
@@ -298,25 +300,66 @@ describe("hasPermission · el catálogo de permisos", () => {
   });
 
   it("cada rol administrativo tiene un conjunto EXACTO de permisos, escrito a mano", () => {
-    // **Este test es el que faltaba, y su ausencia es lo que hizo falta descubrir para escribirlo.**
+    // **Este test es el que faltaba, y hubo que arreglarlo dos veces.**
     //
-    // El recorrido de «quién NO tiene autoridad» sólo camina los roles operativos, así que un
-    // permiso concedido de más a un administrador era invisible: al agregar `handicap.edit` la
-    // suite entera pasó en verde, con el administrador del club pudiendo fijar handicaps.
+    // Primero, porque no existía: el recorrido de «quién NO tiene autoridad» sólo camina los roles
+    // operativos, así que un permiso concedido de más a un administrador era invisible. Al agregar
+    // `handicap.edit` la suite entera pasó en verde, con el administrador del club pudiendo fijar
+    // handicaps.
     //
-    // Las tres filas administrativas se definen por resta, así que sus permisos crecen solos. Con
-    // la lista escrita a mano, agregar un permiso obliga a decidir explícitamente qué pasa con cada
-    // rol: el test falla hasta que alguien lo escriba.
+    // Y después, porque la primera versión **seguía sin servir**: las listas esperadas de
+    // `superadmin` y `club_admin` se calculaban con `PERMISSIONS.filter(...)`, así que un permiso
+    // nuevo entraba a la vez en lo esperado y en lo real, y el test pasaba igual. Lo destapó
+    // `practice.manage`, y sólo `organization_admin` —cuya lista sí estaba escrita a mano— habría
+    // avisado.
+    //
+    // Por eso las tres van **escritas a mano y completas**. Es verbosa a propósito: las filas
+    // administrativas se definen por resta, así que sus permisos crecen solos, y la única forma de
+    // que agregar uno sea una decisión y no un descuido es que el test no compile la respuesta
+    // sola.
     const esperado: Record<string, { ambito: PermissionTarget; permisos: Permission[] }> = {
       superadmin: {
         ambito: PLATAFORMA,
-        permisos: PERMISSIONS.filter((permiso) => permiso !== "handicap.edit"),
+        // Todo menos la autoridad deportiva: `handicap.edit` es del comisario (`specs/030` R-030-02).
+        permisos: [
+          "user.create",
+          "user.edit",
+          "user.suspend",
+          "user.archive",
+          "user.export",
+          "role.assign",
+          "audit.view",
+          "club.edit",
+          "organization.manage",
+          "season.manage",
+          "membership.manage",
+          "setting.edit",
+          "platform.club.manage",
+          "field.edit",
+          "field.block",
+          "practice.manage",
+        ],
       },
       club_admin: {
         ambito: EN_EL_CLUB,
-        permisos: PERMISSIONS.filter(
-          (permiso) => permiso !== "platform.club.manage" && permiso !== "handicap.edit",
-        ),
+        // Ni la plataforma ni el handicap. Las prácticas **sí**: las organiza él (`specs/050`).
+        permisos: [
+          "user.create",
+          "user.edit",
+          "user.suspend",
+          "user.archive",
+          "user.export",
+          "role.assign",
+          "audit.view",
+          "club.edit",
+          "organization.manage",
+          "season.manage",
+          "membership.manage",
+          "setting.edit",
+          "field.edit",
+          "field.block",
+          "practice.manage",
+        ],
       },
       organization_admin: {
         ambito: EN_LA_ORG,

@@ -63,24 +63,50 @@ proceso de decisión— es la más delicada, y llega cuando ya hay con qué prob
 
 ## B — Permisos
 
-- [ ] **T-510** `practice.manage`, para el administrador del club **y** el comisario.
+- [x] **T-510** `practice.manage`, para el administrador del club **y** el comisario.
   Verificación: el test de conjunto exacto de `specs/030` **va a fallar**, y se actualiza escribiendo
   la decisión —`practice.manage` en las listas de `superadmin` y `club_admin`, y
   `commissioner/club → practice.manage` en `DEPORTIVOS`—. Un jugador es denegado.
   > A diferencia de `handicap.edit`, este permiso **sí** le corresponde al administrador. Que el
   > test falle igual es lo que se busca: obliga a escribir la decisión en vez de heredarla.
+  ✅ 2026-08-11 — **y la predicción volvió a ser falsa, por segunda vez y por otro motivo.** El test
+  de conjunto exacto **no falló**: sus listas esperadas para `superadmin` y `club_admin` se
+  calculaban con `PERMISSIONS.filter(...)`, así que el permiso nuevo entraba a la vez en lo esperado
+  y en lo real. **El test que escribí en `specs/030` para atrapar justo esto seguía sin atraparlo.**
+  > Sólo `organization_admin` —cuya lista sí estaba escrita a mano— habría avisado. Las tres quedaron
+  > escritas a mano y completas: verboso a propósito, porque las filas administrativas se definen por
+  > resta y la única forma de que agregar un permiso sea una decisión y no un descuido es que el test
+  > no compile la respuesta solo.
+  > Verificado agregando un permiso de mentira al catálogo: ahora sí falla, diciendo «los permisos de
+  > superadmin cambiaron sin que nadie lo decidiera».
+  > Lo que sí falló como estaba previsto fueron los dos tests del comisario, y se actualizaron con la
+  > excepción explícita `commissioner/club → practice.manage`.
 
 ## C — Datos
 
-- [ ] **T-520** `Practice`, `PracticeApplication` y `PracticeEligibility` (`plan.md` §1), con la
+- [x] **T-520** `Practice`, `PracticeApplication` y `PracticeEligibility` (`plan.md` §1), con la
   migración y **el índice único parcial escrito a mano**.
   Verificación: `up`/`down`/`up` contra Postgres real; una segunda postulación vigente de la misma
   persona se rechaza; **quien se retiró puede volver a postularse**, que es lo que el índice parcial
   permite y uno total impediría.
   > Revisar la migración por el `DROP DEFAULT` sobre `time_range` que Prisma vuelve a meter y que
   > PostgreSQL rechaza con 42601. Ver la cabecera de `20260811234305_handicaps`.
+  ✅ 2026-08-11 — 10 tests contra la base. **La trajo otra vez**: es la tercera migración seguida.
+  Queda escrito en la cabecera de ésta también.
+  > El índice parcial se verificó **cambiándolo por uno total**: el test «quien se retiró puede
+  > volver a postularse» falla. Sin él, retirarse sería irreversible, que no es lo que dice
+  > HU-050-03.
+  > La edición del esquema volvió a acotarse al bloque de cada modelo, comprobando que el ancla sea
+  > única — la lección del esquema de handicaps, donde un ancla repetida en ocho modelos dejó siete
+  > columnas de basura por tabla.
 
-- [ ] **T-521** `docs/02` con `practice_eligibility`, y `docs/08` con lo que este módulo lee.
+- [x] **T-521** `docs/02` con `practice_eligibility`, y `docs/08` con lo que este módulo lee.
+  ✅ 2026-08-11 — **cierra las secciones B y C.** En `docs/08` quedó anotado algo que no estaba y
+  vale para todo el catálogo: los valores de `practice.*` se leen **al crear** una práctica, para
+  proponer los campos; una vez creada, la práctica guarda los suyos. Cambiar la configuración del
+  club no altera lo ya publicado, porque la gente ya se postuló contando con esos números.
+
+> **Secciones B y C cerradas el 2026-08-11.** 358 tests de dominio, 457 de integración.
 
 ## D — API
 

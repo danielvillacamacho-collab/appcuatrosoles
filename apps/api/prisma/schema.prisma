@@ -68,6 +68,9 @@ model Person {
 
   /// Handicaps (`specs/030`). La **ausencia** de filas significa que nadie ha calificado a esta
   /// persona todavía, y se lee como −2 goles (R-030-05). No se crean al darla de alta.
+  practiceApplications PracticeApplication[]
+  practiceEligibility  PracticeEligibility[]
+
   handicaps       PlayerHandicap[]
   handicapChanges HandicapHistory[]
 
@@ -138,12 +141,12 @@ model UserAccount {
   auditEntries         AuditLog[]               @relation("AuditActor")
   auditEntriesOnBehalf AuditLog[]               @relation("AuditOnBehalfOf")
 
-  settingsCreated         Setting[]
-  oneTimeTokens           OneTimeToken[]
-  notificationPreferences NotificationPreference[]
-  fieldBookingsCreated    FieldBooking[]
-  handicapChangesMade      HandicapHistory[] @relation("HandicapChangedBy")
-  handicapChangesDelegated HandicapHistory[] @relation("HandicapOnBehalfOf")
+  settingsCreated          Setting[]
+  oneTimeTokens            OneTimeToken[]
+  notificationPreferences  NotificationPreference[]
+  fieldBookingsCreated     FieldBooking[]
+  handicapChangesMade      HandicapHistory[]        @relation("HandicapChangedBy")
+  handicapChangesDelegated HandicapHistory[]        @relation("HandicapOnBehalfOf")
 
   @@map("user_account")
 }
@@ -616,6 +619,9 @@ model Club {
   auditEntries            AuditLog[]
   fields                  Field[]
   fieldBookings           FieldBooking[]
+  practices               Practice[]
+  practiceApplications    PracticeApplication[]
+  practiceEligibility     PracticeEligibility[]
   playerHandicaps         PlayerHandicap[]
   handicapHistory         HandicapHistory[]
 
@@ -689,12 +695,12 @@ model Season {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  club Club @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  club            Club              @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  handicapChanges HandicapHistory[]
+  practices       Practice[]
 
   @@unique([clubId, name])
   @@index([clubId, startsOn])
-  handicapChanges HandicapHistory[]
-
   @@map("season")
 }
 
@@ -874,8 +880,9 @@ model Field {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  club     Club           @relation(fields: [clubId], references: [id], onDelete: Restrict)
-  bookings FieldBooking[]
+  club      Club           @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  bookings  FieldBooking[]
+  practices Practice[]
 
   /// Dos canchas del mismo club no se llaman igual: «¿reservaste la Cancha 2?» tiene que tener una
   /// sola respuesta posible.
@@ -938,6 +945,8 @@ model FieldBooking {
   club      Club        @relation(fields: [clubId], references: [id], onDelete: Restrict)
   field     Field       @relation(fields: [fieldId], references: [id], onDelete: Restrict)
   createdBy UserAccount @relation(fields: [createdById], references: [id])
+  /// La práctica que creó esta reserva, si la creó una (`specs/050` R-050-01).
+  practice  Practice?
 
   /// El calendario de un día es siempre «este club, este rango»: sin este índice es un recorrido
   /// completo de una tabla que crece con cada práctica del año.
@@ -1026,4 +1035,139 @@ model HandicapHistory {
   @@index([personId, type, changedAt(sort: Desc)])
   @@index([clubId, changedAt(sort: Desc)])
   @@map("handicap_history")
+}
+
+/// En qué punto de su vida está una práctica (`specs/050`).
+///
+/// `played` y `settled` llegan con `051` y con Fase 3. **No se declaran todavía**: un estado que
+/// nada produce ni consume es una invitación a que alguien lo use para otra cosa.
+enum PracticeStatus {
+  /// Sólo la ve quien la creó. No ocupa cancha (R-050-03).
+  draft
+  /// Visible, recibiendo postulados, con la cancha reservada.
+  published
+  confirmed
+  cancelled
+
+  @@map("practice_status")
+}
+
+/// Cómo terminó una postulación. **Nulo hasta que la práctica se decide** (`plan.md` §0.1).
+enum PracticeOutcome {
+  accepted
+  rejected
+  no_show
+
+  @@map("practice_outcome")
+}
+
+/// Una práctica oficial del club (`specs/050`).
+model Practice {
+  id       String  @id @default(uuid(7))
+  clubId   String  @map("club_id")
+  seasonId String? @map("season_id")
+  fieldId  String  @map("field_id")
+
+  startsAt DateTime @map("starts_at") @db.Timestamptz(3)
+  endsAt   DateTime @map("ends_at") @db.Timestamptz(3)
+
+  chukkers     Int
+  handicapType HandicapType @map("handicap_type")
+
+  /// El rango **orienta**, no filtra (R-050-04). Se muestra; no rechaza a nadie.
+  suggestedMinHalves Int? @map("suggested_handicap_min_halves")
+  suggestedMaxHalves Int? @map("suggested_handicap_max_halves")
+
+  /// **Esto sí filtra, pero sólo a estudiantes** (R-050-05). Va aparte del rango sugerido a
+  /// propósito: son dos cosas distintas que en una sola columna se verían iguales, y alguien las
+  /// confundiría al leerlas.
+  maxLevelHalves Int? @map("max_level_halves")
+
+  /// Cupos en **puestos**, no en personas: una pareja de medios hombres ocupa uno (R-050-07).
+  targetPlayers Int @map("target_players")
+  minPlayers    Int @map("min_players")
+
+  applicationsCloseAt DateTime @map("applications_close_at") @db.Timestamptz(3)
+  decisionAt          DateTime @map("decision_at") @db.Timestamptz(3)
+
+  status             PracticeStatus @default(draft)
+  cancellationReason String?        @map("cancellation_reason")
+
+  /// La reserva de cancha que creó al publicarse. Nula en borrador (R-050-03).
+  fieldBookingId String? @unique @map("field_booking_id")
+
+  /// **Declarado y sin usar** hasta Fase 3, con el criterio de `handicap_history.on_behalf_of_id`.
+  pricePolicyId String? @map("price_policy_id")
+
+  decidedAt   DateTime? @map("decided_at") @db.Timestamptz(3)
+  createdById String    @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  club         Club                  @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  season       Season?               @relation(fields: [seasonId], references: [id], onDelete: Restrict)
+  field        Field                 @relation(fields: [fieldId], references: [id], onDelete: Restrict)
+  fieldBooking FieldBooking?         @relation(fields: [fieldBookingId], references: [id], onDelete: Restrict)
+  applications PracticeApplication[]
+
+  @@index([clubId, startsAt])
+  /// La consulta del proceso de decisión: lo vencido y todavía publicado (`plan.md` §0.2).
+  @@index([status, decisionAt])
+  @@map("practice")
+}
+
+/// La postulación de una persona a una práctica.
+model PracticeApplication {
+  id         String @id @default(uuid(7))
+  clubId     String @map("club_id")
+  practiceId String @map("practice_id")
+  personId   String @map("person_id")
+
+  chukkersOffered Int @map("chukkers_offered")
+
+  /// Medio hombre. La pareja **sólo existe si es recíproca** (R-050-08), y la reciprocidad se
+  /// comprueba en el dominio y no con una restricción: una que exigiera que el otro lo hubiera
+  /// escrito primero haría imposible escribir el primero.
+  halfManPartnerPersonId String? @map("half_man_partner_person_id")
+
+  appliedAt   DateTime  @default(now()) @map("applied_at") @db.Timestamptz(3)
+  withdrawnAt DateTime? @map("withdrawn_at") @db.Timestamptz(3)
+
+  /// **Nulo hasta que la práctica se decide** (`plan.md` §0.1). Antes de eso, quién está dentro se
+  /// calcula del orden de llegada; guardarlo obligaría a mantenerlo con cada retiro.
+  outcome PracticeOutcome?
+
+  club     Club     @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  practice Practice @relation(fields: [practiceId], references: [id], onDelete: Restrict)
+  person   Person   @relation(fields: [personId], references: [id], onDelete: Restrict)
+
+  /// El orden de la fila. El desempate por identificador lo hace el dominio (uuid v7).
+  @@index([practiceId, appliedAt])
+  @@map("practice_application")
+}
+
+/// Hasta qué nivel está habilitado un estudiante para jugar prácticas (`docs/02` §B, R-050-05).
+///
+/// **Es un filtro duro**, no una preferencia: un estudiante que entra a una práctica por encima de
+/// su nivel se puede lastimar.
+model PracticeEligibility {
+  id       String @id @default(uuid(7))
+  clubId   String @map("club_id")
+  personId String @map("person_id")
+
+  maxHandicapHalves Int @map("max_handicap_halves")
+
+  grantedById String   @map("granted_by_id")
+  grantedAt   DateTime @default(now()) @map("granted_at") @db.Timestamptz(3)
+
+  /// Se revoca, no se borra (P-06): «quién lo habilitó y cuándo» es exactamente lo que hay que
+  /// poder responder si un estudiante se lastima en una práctica que no le correspondía.
+  revokedById String?   @map("revoked_by_id")
+  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz(3)
+
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  person Person @relation(fields: [personId], references: [id], onDelete: Restrict)
+
+  @@index([personId, revokedAt])
+  @@map("practice_eligibility")
 }
