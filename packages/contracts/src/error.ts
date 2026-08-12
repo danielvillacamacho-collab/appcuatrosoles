@@ -76,6 +76,20 @@ export const CODIGOS_DE_ERROR = [
   "handicap_sin_cambio",
   "handicap_sin_motivo",
 
+  // Prácticas (`specs/050`).
+  "practica_rango_invalido",
+  "practica_minimo_mayor_que_objetivo",
+  "practica_cierre_despues_de_decision",
+  "practica_decision_despues_de_empezar",
+  "practica_no_editable",
+  "practica_ya_publicada",
+  "postulacion_cerrada",
+  "ya_estas_postulado",
+  "no_estas_postulado",
+  "supera_su_habilitacion",
+  "practica_sin_nivel_declarado",
+  "pareja_no_valida",
+
   // Club, temporadas y configuración (`specs/020`, `specs/140`).
   "nombre_en_uso",
   "codigo_en_uso",

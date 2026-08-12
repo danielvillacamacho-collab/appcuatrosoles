@@ -114,13 +114,29 @@ export class BookingsService {
    * desde aquí (P-05).
    */
   async cancelar(clubId: string, bookingId: string): Promise<void> {
-    const canceladas = await this.prisma.fieldBooking.updateMany({
+    return this.cancelarEn(this.prisma, clubId, bookingId);
+  }
+
+  /**
+   * Lo mismo, **dentro de una transacción ajena**.
+   *
+   * Existe para `specs/050`: cancelar una práctica tiene que liberar la cancha **en la misma
+   * transacción** que el cambio de estado (R-050-12). Con dos transacciones separadas, un fallo
+   * entre medio deja una práctica cancelada con la cancha todavía ocupada, y eso se descubre
+   * cuando alguien intenta programar ahí y no puede.
+   */
+  async cancelarEn(
+    tx: Prisma.TransactionClient,
+    clubId: string,
+    bookingId: string,
+  ): Promise<void> {
+    const canceladas = await tx.fieldBooking.updateMany({
       where: { id: bookingId, clubId, cancelledAt: null },
       data: { cancelledAt: this.clock.now() },
     });
 
     if (canceladas.count === 0) {
-      const existe = await this.prisma.fieldBooking.count({ where: { id: bookingId, clubId } });
+      const existe = await tx.fieldBooking.count({ where: { id: bookingId, clubId } });
 
       if (existe === 0) {
         throw new NotFoundException();

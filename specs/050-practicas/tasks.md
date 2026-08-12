@@ -110,32 +110,59 @@ proceso de decisión— es la más delicada, y llega cuando ya hay con qué prob
 
 ## D — API
 
-- [ ] **T-530** Crear y editar una práctica en borrador.
+- [x] **T-530** Crear y editar una práctica en borrador.
   Verificación: `min_players` mayor que `target_players` se rechaza; cierre posterior a decisión se
   rechaza (R-050-02); una práctica en borrador **no aparece** en el listado de nadie más.
+  ✅ 2026-08-11 — 32 tests en total para la sección. Las validaciones viven en el dominio
+  (`validarParametrosDePractica`), no en el contrato: que `minPlayers` no supere a `targetPlayers`
+  depende del otro campo y de lo que significan.
+  > Se agregó una regla que **no estaba en el spec**: decidir después de que la práctica empezó no
+  > describe ninguna situación real, y sin ella el club puede crear una práctica que nunca se decide
+  > a tiempo sin que nada avise.
 
-- [ ] **T-531** Publicar: reserva la cancha **en la misma transacción** (R-050-01).
+- [x] **T-531** Publicar: reserva la cancha **en la misma transacción** (R-050-01).
   Verificación: publicar sobre una franja ocupada se rechaza diciendo con qué choca **y la práctica
   sigue en borrador**; publicar dos veces no reserva dos veces; la práctica publicada aparece en el
   calendario de `specs/040`.
+  ✅ 2026-08-11 — la reserva se crea con `BookingsService`, el mismo camino que todo lo demás. Un
+  choque deshace la transacción entera y la práctica **sigue en borrador**, comprobado leyendo la
+  fila después del rechazo.
 
-- [ ] **T-532** Cancelar: libera la cancha y avisa (R-050-12).
+- [x] **T-532** Cancelar: libera la cancha y avisa (R-050-12).
   Verificación: inmediatamente después de cancelar **se puede programar otra cosa en esa franja** —
   se comprueba programándola, no leyendo un campo.
+  ✅ 2026-08-11 — hizo falta un `cancelarEn(tx, …)` en `BookingsService`: el que existía abría su
+  propia transacción, y con dos transacciones separadas un fallo entre medio deja una práctica
+  cancelada con la cancha ocupada.
 
-- [ ] **T-533** Postularse y retirarse.
+- [x] **T-533** Postularse y retirarse.
   Verificación: postularse dos veces se rechaza; después del cierre no se entra ni se sale
   (R-050-09); retirarse y volver a postularse deja a la persona **al final** de la fila; un
   estudiante no habilitado recibe 404 **pidiendo la práctica por su identificador**, no sólo
   ausencia en el listado.
+  ✅ 2026-08-11 — el estudiante recibe **404 y no 403** pidiendo la práctica por su identificador:
+  decir «no podés ver ésta» ya revela que existe y de qué nivel es.
+  > Un bug real: postularse dos veces daba **500** en vez de 409. El índice único parcial lo crea la
+  > migración a mano, así que Prisma no lo conoce por nombre y su mensaje no lo menciona — buscar el
+  > texto no servía. Se detecta por el **código** `P2002`.
 
-- [ ] **T-534** El medio hombre: proponer y aceptar (R-050-08).
+- [x] **T-534** El medio hombre: proponer y aceptar (R-050-08).
   Verificación: una propuesta sin aceptar **no ocupa puesto**; aceptada, los dos ocupan uno; si uno
   se retira, el otro queda suelto **en la misma posición de la fila**.
+  ✅ 2026-08-11 — aceptar una propuesta que nadie hizo se rechaza: sin esa comprobación, cualquiera
+  podría emparejarse con quien quisiera con sólo escribir su identificador.
 
-- [ ] **T-535** El listado y el detalle, con «dónde estoy yo».
+- [x] **T-535** El listado y el detalle, con «dónde estoy yo».
   Verificación: la respuesta dice `dentro` o `en_espera` **con la posición**; dos personas distintas
   ven la misma práctica con su propio lugar; las rutas quedan en el arnés de aislamiento.
+  ✅ 2026-08-11 — **cierra la sección D.** Las nueve rutas declaradas, cada una con test propio.
+  > **Dos horas perdidas en el andamiaje del test, y las dos por buenas razones.** Con una franja
+  > fija, las prácticas de distintos tests chocaban al publicar y el síntoma aparecía tres tests más
+  > adelante disfrazado de otra cosa. Y al separarlas, las horas nuevas caían **fuera del horario
+  > del club**: se escriben en UTC y el horario se mide en la zona del club, así que las 08:00 UTC
+  > son las 03:00 en Bogotá. Las dos quedaron explicadas en el archivo.
+
+> **Sección D cerrada el 2026-08-11.** 513 tests de integración, `src/practices` al 85 %.
 
 ## E — La decisión automática
 

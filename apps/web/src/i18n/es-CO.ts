@@ -440,6 +440,24 @@ export const copy = {
     handicap_sin_cambio: "Ese jugador ya tiene ese handicap.",
     handicap_sin_motivo: "Escribe el motivo del cambio.",
 
+    // ── Prácticas ────────────────────────────────────────────────────────────
+    practica_rango_invalido: "La hora de fin tiene que ser posterior a la de inicio.",
+    practica_minimo_mayor_que_objetivo:
+      "El mínimo de jugadores no puede ser mayor que el objetivo: así la práctica nunca se confirmaría.",
+    practica_cierre_despues_de_decision:
+      "El cierre de postulaciones tiene que ser antes de la hora de decisión.",
+    practica_decision_despues_de_empezar:
+      "La hora de decisión tiene que ser antes de que empiece la práctica.",
+    practica_no_editable: "Esta práctica ya no se puede editar.",
+    practica_ya_publicada: "Esta práctica ya está publicada.",
+    postulacion_cerrada: "Las postulaciones para esta práctica ya cerraron.",
+    ya_estas_postulado: "Ya estás postulado a esta práctica.",
+    no_estas_postulado: "No estás postulado a esta práctica.",
+    supera_su_habilitacion: "Esta práctica es de un nivel superior al que te habilitaron.",
+    practica_sin_nivel_declarado:
+      "Esta práctica no declara su nivel, así que no se puede verificar que te corresponda.",
+    pareja_no_valida: "Esa persona no te propuso compartir puesto.",
+
     // ── Club, temporadas y configuración ─────────────────────────────────────
     nombre_en_uso: "Ya existe algo con ese nombre en el club.",
     codigo_en_uso: "Ese código ya está en uso.",

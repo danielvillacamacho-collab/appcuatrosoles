@@ -93,6 +93,23 @@ const CON_TEST_PROPIO = [
   "GET /api/people/:id/handicaps/history",
   "PUT /api/people/:id/handicaps/:type",
   "GET /api/handicaps",
+  // `practices.int-spec` → «una práctica de otro club responde 404 (P-05)», «un borrador NO aparece
+  // en el listado de nadie» y «no ve en el listado las prácticas de nivel superior».
+  //
+  // Las ocho van con test propio. El recorrido genérico no sirve para ninguna: crear y editar
+  // necesitan un cuerpo con fechas coherentes **y dentro del horario del club**; publicar y cancelar
+  // dependen del estado; postularse y retirarse se acotan además **por persona** —el aislamiento no
+  // es sólo por club, sino por quién es cada quien— y el listado no recibe identificadores, así que
+  // su aislamiento es por lo que devuelve.
+  "GET /api/practices",
+  "GET /api/practices/:id",
+  "POST /api/practices",
+  "PATCH /api/practices/:id",
+  "POST /api/practices/:id/publish",
+  "POST /api/practices/:id/cancel",
+  "POST /api/practices/:id/applications",
+  "DELETE /api/practices/:id/applications/mine",
+  "POST /api/practices/:id/applications/mine/accept-partner",
   "POST /api/field-bookings/block",
   "DELETE /api/field-bookings/:id",
   // `minors.int-spec` → «un acudiente de otro club no existe desde aquí: 404, nunca 403». El
