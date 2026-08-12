@@ -30,3 +30,6 @@ export * from "./handicap/halves.js";
 export * from "./handicap/change.js";
 export * from "./handicap/team.js";
 export * from "./handicap/visibility.js";
+export * from "./practice/slots.js";
+export * from "./practice/eligibility.js";
+export * from "./practice/decision.js";

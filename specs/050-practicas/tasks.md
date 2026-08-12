@@ -12,33 +12,54 @@ proceso de decisión— es la más delicada, y llega cuando ya hay con qué prob
 
 ## A — Dominio puro
 
-- [ ] **T-501** `armarPuestos`: agrupa postulaciones sueltas y parejas **recíprocas** en puestos
+- [x] **T-501** `armarPuestos`: agrupa postulaciones sueltas y parejas **recíprocas** en puestos
   (R-050-07, R-050-08).
   Verificación: dos postulaciones recíprocas son **un** puesto; una propuesta sin aceptar deja a los
   dos como puestos sueltos —o al proponente suelto y al otro sin postulación—; una propuesta a
   alguien que no se postuló no forma pareja; A propone a B y B propone a C **no** forma nada.
   > El caso del triángulo es el que se olvida y el que produce cupos fantasma.
+  ✅ 2026-08-11 — 9 tests. **El titular de una pareja es quien llegó primero**, y la consecuencia
+  vale la pena: el puesto se queda donde estaba y el compañero entra a ese mismo lugar. Nadie se
+  corre, porque el número de puestos **no crece** al formarse una pareja — dos postulaciones sueltas
+  que se emparejan pasan a ser una, así que la fila se acorta y alguien de la espera entra.
+  > Con el criterio contrario —la posición del segundo— quien ofreció compartir perdería el lugar
+  > que ya se había ganado, que es lo contrario de lo que conviene premiar.
 
-- [ ] **T-502** `repartirCupos`: quién está dentro y quién en espera, por orden de llegada
+- [x] **T-502** `repartirCupos`: quién está dentro y quién en espera, por orden de llegada
   (R-050-06).
   Verificación: con 12 puestos y 8 cupos, entran los 8 primeros; el orden es por `applied_at` y
   **desempata por identificador**; retirar a uno de los de adentro promueve al primero de la espera
   **sin correr nada**; con menos puestos que cupos, todos entran y la espera va vacía.
   > **Dos postulaciones en el mismo milisegundo** tienen que dar siempre el mismo corte: si el orden
   > no es estable, la misma persona ve «dentro» y «en espera» en dos pantallazos seguidos.
+  ✅ 2026-08-11 — 11 tests, más `posicionDe` para responder «¿dónde quedé yo?». El desempate por
+  identificador hacía falta **en dos lugares**, no en uno: al ordenar la fila y al armar la pareja.
+  El segundo lo destapó la cobertura de ramas, que quedó en 97.77 % con una sola rama sin recorrer.
 
-- [ ] **T-503** `puedePostularse` (R-050-04, R-050-05).
+- [x] **T-503** `puedePostularse` (R-050-04, R-050-05).
   Verificación: un jugador fuera del rango sugerido **sí** puede; un estudiante habilitado hasta 4
   goles no puede en una de 6; el mismo estudiante sí puede en una de 4 —el borde es inclusivo—; una
   persona sin habilitación de estudiante no está limitada por ella.
   > El rango orienta y el tope del estudiante prohíbe. Son dos campos distintos justamente para que
   > no se confundan al leerlos.
+  ✅ 2026-08-11 — 7 tests. **Falla cerrado**: si la persona tiene tope de estudiante y la práctica
+  no declara su nivel, se rechaza. Es incómodo a propósito —obliga al club a declarar el nivel de
+  las prácticas donde quiera estudiantes— y la alternativa es dejar entrar a un estudiante a algo
+  que nadie verificó. Las dos razones de rechazo se distinguen para que la pantalla pueda decir
+  cuál fue.
 
-- [ ] **T-504** `decidirPractica` y `estaAbiertaLaPostulacion`.
+- [x] **T-504** `decidirPractica` y `estaAbiertaLaPostulacion`.
   Verificación: con puestos suficientes, `confirmar`; sin ellos, `cancelar`; antes de la hora,
   `todavia_no`; ya decidida, `ya_decidida`. La ventana de postulación con sus dos bordes exactos.
   > No escribe ni avisa: devuelve qué hay que hacer. Es lo que permite probar los cuatro casos sin
   > base de datos.
+  ✅ 2026-08-11 — **cierra la sección A.** 14 tests, incluidos los dos que prueban R-050-11: tres
+  horas tarde y una semana tarde, decide igual. Es la prueba de que no hay nada programado que se
+  pueda perder — la decisión depende de que la hora haya pasado, no de que alguien la haya disparado
+  en ese instante.
+
+> **Sección A cerrada el 2026-08-11.** 41 tests, `packages/domain/src/practice` al 100 % de líneas
+> y ramas. Ninguna de estas cuatro reglas toca la base de datos ni sabe de roles.
 
 ## B — Permisos
 
