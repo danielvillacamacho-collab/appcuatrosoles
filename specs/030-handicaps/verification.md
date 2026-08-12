@@ -3,8 +3,8 @@
 > Cada criterio de aceptación de `spec.md`, con el archivo y el título literal del test que lo
 > cubre. Un criterio sin test **se resuelve**, no se anota.
 
-**Fecha de cierre:** 2026-08-11 · 317 tests de dominio · 472 de integración · 124 de interfaz ·
-5 E2E de navegador (1 de handicaps) · `packages/domain/src/handicap` al 100 % · `apps/api/src/handicaps` al 95 %
+**Fecha de cierre:** 2026-08-11 · 317 tests de dominio · 472 de integración · 130 de interfaz ·
+6 E2E de navegador (2 de handicaps) · `packages/domain/src/handicap` al 100 % · `apps/api/src/handicaps` al 95 %
 
 ## HU-030-01 — El comisario fija el handicap de un jugador
 
@@ -30,6 +30,7 @@
 
 | Criterio | Dónde se prueba |
 |---|---|
+| Cualquiera con sesión ve el listado del club | `handicaps-club.spec.tsx` «es la puerta de entrada del comisario, que NO puede abrir el listado de usuarios» · E2E «el administrador del club ve el handicap pero no puede fijarlo» |
 | Cualquiera con sesión ve los dos vigentes | `handicaps.int-spec` «el vigente SÍ es público: se ve el número, no la historia» · `handicaps.spec.tsx` «muestra los dos valores, en goles y con coma» |
 | El historial de otro se rechaza | `visibility.spec` «otro jugador NO» · `handicaps.int-spec` «otro jugador NO lo ve, y recibe 404 y no 403» |
 | La propia persona ve el suyo | `visibility.spec` «la propia persona sí» · `handicaps.int-spec` «la propia persona ve el suyo» |
@@ -75,7 +76,15 @@
    un paso que lleva el handicap a un valor conocido antes de empezar. Comprobado tres veces
    seguidas.
 
-Los cuatro se verificaron rompiendo a propósito lo que decían proteger. Un test que pasa igual con y
+5. **El módulo no lo podía usar el comisario.** Las pantallas de handicap colgaban de la ficha de
+   usuario, y `GET /users` exige `user.edit` — que el comisario no tiene ni debe tener. El único rol
+   que puede fijar un handicap no tenía cómo llegar a la pantalla donde se fija. Lo destapó el E2E
+   **al entrar como comisario de verdad**, en vez de con un administrador al que se le había puesto
+   el rol a mano en la base local: pasaba en local y falló en CI, que siembra desde cero. Se agregó
+   la pantalla de handicaps del club (T-343), sobre un endpoint que ya existía y ya era público
+   dentro del club.
+
+Los cinco se verificaron rompiendo a propósito lo que decían proteger. Un test que pasa igual con y
 sin la garantía que dice probar es peor que no tenerlo.
 
 ## Pendientes declarados

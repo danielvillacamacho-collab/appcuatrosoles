@@ -42,6 +42,17 @@ export const copy = {
     treasurer: "Tesorero",
   } as Record<string, string>,
 
+  handicapsDelClub: {
+    titulo: "Handicaps del club",
+    descripcion: "Con cuánto juega cada quien. El comisario es el único que puede cambiarlo.",
+    tipo: "Qué handicap ver",
+    deTotal: (pagina: number, paginas: number, total: number) =>
+      `Página ${pagina} de ${paginas} · ${total} personas`,
+    anterior: "Anterior",
+    siguiente: "Siguiente",
+    paginacion: "Paginación",
+  },
+
   handicaps: {
     titulo: "Handicaps",
     internacional: "Internacional",
@@ -288,6 +299,7 @@ export const copy = {
     misPerfilesACargo: "Perfiles a cargo",
     calendario: "Calendario de canchas",
     canchas: "Canchas",
+    handicaps: "Handicaps del club",
     administracion: "Administración",
     usuarios: "Usuarios del club",
   },

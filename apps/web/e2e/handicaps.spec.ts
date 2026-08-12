@@ -6,37 +6,43 @@ import { copy } from "../src/i18n/es-CO.js";
  *
  * El comisario sube a un jugador, el valor nuevo se ve en el perfil, el cambio aparece en el
  * historial con su motivo, y **un administrador no ve el botón de editar** — que es la regla
- * central del módulo (R-030-02) comprobada donde el usuario la vive.
+ * central del módulo (R-030-02) comprobada donde el usuario la vive — en el segundo test.
  *
  * **El valor se restaura al terminar, pero el historial no se puede limpiar** — y ése es el punto
  * del módulo: es append-only. Por eso cada corrida usa un motivo único; con un texto fijo, la
  * segunda corrida encontraría dos entradas iguales y la aserción se rompería. Pasó, y el arreglo no
  * es aflojar la aserción: es reconocer que el historial crece y nombrar cada cambio.
  */
-const ADMIN = { email: "admin@club-demo.test", password: "demo1234" };
+/**
+ * Las dos cuentas del seed, y son dos a propósito.
+ *
+ * La primera versión de este test entraba como administrador y **le asignaba el rol de comisario a
+ * mano en la base local**. Pasaba en local y falló en CI, que siembra desde cero — que es
+ * exactamente para lo que sirve CI. El seed ya trae un comisario propio; usarlo hace que el test
+ * pruebe la separación de autoridad en vez de esconderla.
+ */
+const COMISARIO = { email: "comisario@club-demo.test", password: "demo1234" };
+const ADMINISTRADOR = { email: "admin@club-demo.test", password: "demo1234" };
 
-async function entrar(pagina: Page): Promise<void> {
+async function entrar(pagina: Page, quien: { email: string; password: string }): Promise<void> {
   await pagina.goto("/login");
-  await pagina.getByLabel(copy.ingreso.correo).fill(ADMIN.email);
-  await pagina.getByLabel(copy.ingreso.contrasena).fill(ADMIN.password);
+  await pagina.getByLabel(copy.ingreso.correo).fill(quien.email);
+  await pagina.getByLabel(copy.ingreso.contrasena).fill(quien.password);
   await pagina.getByRole("button", { name: copy.ingreso.entrar }).click();
   await expect(pagina.getByRole("heading", { level: 1 })).toContainText(copy.panel.saludo);
 }
 
 /**
- * Abre la ficha del primer usuario del listado.
+ * Abre a la primera persona desde el listado de handicaps del club.
  *
- * Se localiza por el `href` y no por el texto del enlace: el listado tiene dos formas —tarjetas en
- * el celular, tabla en el monitor— y el texto visible cambia entre ellas.
- *
- * Se excluye `/users/new`, que es el botón de crear y también empieza por `/users/`. Y se pide el
- * **visible**: el listado pinta las dos formas a la vez y esconde una con CSS, así que sin esto
- * `.first()` elige la que no se ve y el clic se queda esperando para siempre.
+ * **Se entra por `/handicaps` y no por `/users`**, y eso es lo que este test destapó: `/users` exige
+ * `user.edit`, que el comisario no tiene ni debe tener. Entrando por ahí, el único rol que puede
+ * fijar un handicap no llegaba nunca a la pantalla donde se fija.
  */
-async function abrirUnJugador(pagina: Page): Promise<void> {
-  await pagina.goto("/users");
-  await pagina.locator('a[href^="/users/"]:not([href="/users/new"]):visible').first().click();
-  await expect(pagina.getByRole("heading", { name: copy.handicaps.titulo })).toBeVisible();
+async function abrirUnaPersona(pagina: Page): Promise<void> {
+  await pagina.goto("/handicaps");
+  await pagina.getByRole("button", { expanded: false }).first().click();
+  await expect(pagina.getByRole("heading", { name: copy.handicaps.titulo, exact: true })).toBeVisible();
 }
 
 async function fijar(pagina: Page, goles: string, motivo: string): Promise<void> {
@@ -69,8 +75,8 @@ test("el comisario sube un handicap y queda en el historial", async ({ page }) =
   // Único por corrida: el historial es append-only y las entradas de corridas anteriores siguen ahí.
   const marca = `E2E-${Date.now()}`;
 
-  await entrar(page);
-  await abrirUnJugador(page);
+  await entrar(page, COMISARIO);
+  await abrirUnaPersona(page);
   await asegurarEn(page, "-2");
 
   await test.step("sube a 3 goles con su motivo", async () => {
@@ -107,4 +113,19 @@ test("el comisario sube un handicap y queda en el historial", async ({ page }) =
 
     await expect(page.getByText("−2").first()).toBeVisible();
   });
+});
+
+test("el administrador del club ve el handicap pero no puede fijarlo", async ({ page }) => {
+  // La otra mitad de R-030-02, donde el usuario la vive: el administrador puede todo en el club y
+  // **esto no**. Un botón que existe para responder un 403 es una promesa incumplida.
+  await entrar(page, ADMINISTRADOR);
+  await abrirUnaPersona(page);
+
+  await expect(page.getByRole("heading", { name: copy.handicaps.titulo, exact: true })).toBeVisible();
+  await expect(page.getByRole("term").filter({ hasText: copy.handicaps.internacional })).toBeVisible();
+  await expect(page.getByRole("button", { name: copy.handicaps.fijar })).toHaveCount(0);
+
+  // Pero sí ve el historial: leerlo le corresponde, editarlo no.
+  await page.getByRole("button", { name: copy.handicaps.verHistorial }).click();
+  await expect(page.getByRole("alert")).toHaveCount(0);
 });

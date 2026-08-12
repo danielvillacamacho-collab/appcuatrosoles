@@ -6,6 +6,7 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import type {
+  ClubHandicapListResponse,
   HandicapHistoryResponse,
   HandicapTypeName,
   PersonHandicapsResponse,
@@ -55,5 +56,23 @@ export function useFijarHandicap(
       // El vigente y el historial cambian juntos en el servidor; que se refresquen juntos aquí.
       await queryClient.invalidateQueries({ queryKey: queryKeys.handicaps.todos });
     },
+  });
+}
+
+/**
+ * El handicap de todo el club, paginado.
+ *
+ * No exige permiso administrativo: el vigente es público dentro del club (R-030-09). Es la puerta
+ * de entrada del **comisario**, que no puede abrir el listado de usuarios porque ése sí exige
+ * `user.edit`.
+ */
+export function useHandicapsDelClub(
+  tipo: HandicapTypeName,
+  page: number,
+): UseQueryResult<ClubHandicapListResponse, Error> {
+  return useQuery({
+    queryKey: [...queryKeys.handicaps.todos, "club", tipo, page],
+    queryFn: () =>
+      api<ClubHandicapListResponse>(`/handicaps?type=${tipo}&page=${page}`),
   });
 }

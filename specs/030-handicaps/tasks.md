@@ -219,6 +219,20 @@ Conviene que ocurra cuando no hay nada más a medio hacer.
   API le responde 404, y reintentarlo sólo demora el momento en que la pantalla deja de decir
   «cargando». Hay un test que cuenta los intentos.
 
+- [x] **T-343** *(no estaba en el plan)* La pantalla de **handicaps del club**, como puerta de
+  entrada del comisario.
+  ✅ 2026-08-11 — 6 tests. **Existe porque sin ella el módulo no lo puede usar quien tiene que
+  usarlo.** Los handicaps vivían sólo dentro de la ficha de usuario, y `GET /users` exige
+  `user.edit` — un permiso que el comisario **no tiene y no debe tener**, porque su autoridad es
+  deportiva y no administrativa. El único rol que puede fijar un handicap no tenía cómo llegar a la
+  pantalla donde se fija.
+  > Lo destapó el E2E, y sólo al hacerlo bien: la primera versión entraba como administrador y le
+  > ponía el rol de comisario **a mano en la base local**. Pasaba en local y falló en CI, que
+  > siembra desde cero. El seed ya traía una cuenta de comisario; usarla convirtió el test en una
+  > prueba de la separación de autoridad en vez de un disfraz de ella.
+  > Usa `GET /handicaps`, que ya existía y ya era `@SinPermiso` (T-335): la pantalla no necesitó
+  > ningún permiso nuevo, que es la señal de que el API estaba bien y lo que faltaba era el camino.
+
 ## F — Cierre
 
 - [x] **T-350** E2E de navegador: el comisario sube a un jugador medio gol, el valor nuevo se ve en

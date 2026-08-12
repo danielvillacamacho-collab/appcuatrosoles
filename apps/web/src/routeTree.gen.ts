@@ -17,6 +17,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedFieldsRouteImport } from './routes/_authenticated/fields'
+import { Route as AuthenticatedHandicapsRouteImport } from './routes/_authenticated/handicaps'
 import { Route as AuthenticatedMeConfirmEmailRouteImport } from './routes/_authenticated/me/confirm-email'
 import { Route as AuthenticatedMeDependentsRouteImport } from './routes/_authenticated/me/dependents'
 import { Route as AuthenticatedMeNotificationsRouteImport } from './routes/_authenticated/me/notifications'
@@ -63,6 +64,11 @@ const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
 const AuthenticatedFieldsRoute = AuthenticatedFieldsRouteImport.update({
   id: '/fields',
   path: '/fields',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedHandicapsRoute = AuthenticatedHandicapsRouteImport.update({
+  id: '/handicaps',
+  path: '/handicaps',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedMeConfirmEmailRoute =
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/fields': typeof AuthenticatedFieldsRoute
+  '/handicaps': typeof AuthenticatedHandicapsRoute
   '/me/confirm-email': typeof AuthenticatedMeConfirmEmailRoute
   '/me/dependents': typeof AuthenticatedMeDependentsRoute
   '/me/notifications': typeof AuthenticatedMeNotificationsRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/fields': typeof AuthenticatedFieldsRoute
+  '/handicaps': typeof AuthenticatedHandicapsRoute
   '/': typeof AuthenticatedIndexRoute
   '/me/confirm-email': typeof AuthenticatedMeConfirmEmailRoute
   '/me/dependents': typeof AuthenticatedMeDependentsRoute
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/fields': typeof AuthenticatedFieldsRoute
+  '/_authenticated/handicaps': typeof AuthenticatedHandicapsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/me/confirm-email': typeof AuthenticatedMeConfirmEmailRoute
   '/_authenticated/me/dependents': typeof AuthenticatedMeDependentsRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/calendar'
     | '/fields'
+    | '/handicaps'
     | '/me/confirm-email'
     | '/me/dependents'
     | '/me/notifications'
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/calendar'
     | '/fields'
+    | '/handicaps'
     | '/'
     | '/me/confirm-email'
     | '/me/dependents'
@@ -207,6 +218,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_authenticated/calendar'
     | '/_authenticated/fields'
+    | '/_authenticated/handicaps'
     | '/_authenticated/'
     | '/_authenticated/me/confirm-email'
     | '/_authenticated/me/dependents'
@@ -284,6 +296,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFieldsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/handicaps': {
+      id: '/_authenticated/handicaps'
+      path: '/handicaps'
+      fullPath: '/handicaps'
+      preLoaderRoute: typeof AuthenticatedHandicapsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/me/confirm-email': {
       id: '/_authenticated/me/confirm-email'
       path: '/me/confirm-email'
@@ -346,6 +365,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedFieldsRoute: typeof AuthenticatedFieldsRoute
+  AuthenticatedHandicapsRoute: typeof AuthenticatedHandicapsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedMeConfirmEmailRoute: typeof AuthenticatedMeConfirmEmailRoute
   AuthenticatedMeDependentsRoute: typeof AuthenticatedMeDependentsRoute
@@ -360,6 +380,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedFieldsRoute: AuthenticatedFieldsRoute,
+  AuthenticatedHandicapsRoute: AuthenticatedHandicapsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedMeConfirmEmailRoute: AuthenticatedMeConfirmEmailRoute,
   AuthenticatedMeDependentsRoute: AuthenticatedMeDependentsRoute,
