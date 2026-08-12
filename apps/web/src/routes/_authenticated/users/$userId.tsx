@@ -10,6 +10,7 @@ import {
   useUsuario,
   type AccionDeCuenta,
 } from "../../../features/users/api/useUsuarios.js";
+import { HandicapDePersona } from "../../../features/handicaps/HandicapDePersona.js";
 import { Estado } from "./index.js";
 import { useFecha } from "../../../lib/fechas.js";
 import { mensajeDeError } from "../../../lib/error-message.js";
@@ -102,6 +103,8 @@ function Contenido({
           }
         />
       </dl>
+
+      <HandicapDePersona personId={usuario.personId} />
 
       <div className="grid gap-6 md:grid-cols-2">
       <section aria-labelledby="roles">

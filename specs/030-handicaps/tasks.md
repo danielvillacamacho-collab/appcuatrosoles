@@ -194,28 +194,55 @@ Conviene que ocurra cuando no hay nada más a medio hacer.
 
 ## E — Interfaz
 
-- [ ] **T-340** El handicap en el perfil de una persona: los dos valores, y «sin calificar» cuando
+- [x] **T-340** El handicap en el perfil de una persona: los dos valores, y «sin calificar» cuando
   corresponde.
   Verificación: `1.5` se muestra «1,5» en es-CO; `−2` se muestra con el signo correcto; quien no ha
   sido calificado se distingue de quien fue calificado en −2.
   > La conversión a texto es de la interfaz, no del dominio (constitución, regla 1).
+  ✅ 2026-08-11 — 8 tests de conversión + 4 de pantalla. Se engancha a la ficha de usuario que ya
+  existe: el handicap es un dato de la persona, y una pantalla aparte obligaría a navegar para
+  responder «¿con cuánto juega?».
+  > El signo es el menos de verdad (−, U+2212) y no un guión: en «−2» un guión se lee como
+  > separador.
 
-- [ ] **T-341** Fijar el handicap (sólo comisario), con el motivo obligatorio en el formulario.
+- [x] **T-341** Fijar el handicap (sólo comisario), con el motivo obligatorio en el formulario.
   Verificación: **la pantalla no existe para quien no es comisario** —ni el botón—; sin motivo no
   viaja nada; los cuatro rechazos se explican con el texto del club y no con el del servidor.
+  ✅ 2026-08-11 — **el comisario escribe goles y el API recibe medios goles.** La conversión rechaza
+  «2,3» en vez de redondearlo, igual que el dominio: redondear dejaría al jugador con un valor que
+  nadie eligió.
 
-- [ ] **T-342** El historial, del más nuevo al más viejo, con motivo, autor, fecha y temporada.
+- [x] **T-342** El historial, del más nuevo al más viejo, con motivo, autor, fecha y temporada.
   Verificación: un historial vacío dice «nunca ha sido calificado» y no queda en blanco; a quien no
   puede verlo no se le ofrece el enlace.
+  ✅ 2026-08-11 — **cierra la sección E.** `retry: false` en la consulta: a quien no puede verlo el
+  API le responde 404, y reintentarlo sólo demora el momento en que la pantalla deja de decir
+  «cargando». Hay un test que cuenta los intentos.
 
 ## F — Cierre
 
-- [ ] **T-350** E2E de navegador: el comisario sube a un jugador medio gol, el valor nuevo se ve en
+- [x] **T-350** E2E de navegador: el comisario sube a un jugador medio gol, el valor nuevo se ve en
   el perfil, el cambio aparece en el historial con su motivo, y un administrador **no** ve el botón
   de editar.
   > Deja el jugador como estaba al terminar: la base de desarrollo no se limpia entre corridas.
+  ✅ 2026-08-11 — sube, verifica el historial, choca contra «ya tiene ese handicap», rechaza «2,3» y
+  vuelve a dejarlo en −2.
+  > Tres tropiezos de localización, los tres reales: el primer `a[href^="/users/"]` era el botón de
+  > **crear**; el listado pinta **las dos formas a la vez** —tarjetas y tabla— y `.first()` elegía la
+  > oculta, con el clic esperando para siempre; y `getByText("Handicaps")` casaba con tres elementos.
+  > Se localiza por rol y por visibilidad.
+  > **Y no era repetible.** El motivo era fijo, así que la segunda corrida encontraba dos entradas
+  > iguales en el historial —que es append-only y no se puede limpiar, y eso es el punto del
+  > módulo—. Peor: dependía del valor con que lo dejó la corrida anterior, así que una corrida que
+  > fallara a mitad rompía la siguiente. Se arregló con un motivo único por corrida y un paso que
+  > **lleva el handicap a un valor conocido venga de donde venga**. Comprobado corriéndolo tres
+  > veces seguidas.
 
-- [ ] **T-351** `verification.md` con cada criterio de aceptación mapeado a su test.
+- [x] **T-351** `verification.md` con cada criterio de aceptación mapeado a su test.
   Cualquier criterio sin test identificado **se resuelve antes** de dar el módulo por terminado.
   > En `specs/010` esta tarea destapó cuatro criterios que no estaban implementados. En `specs/040`
   > confirmó que los tres tests importantes se habían verificado a sí mismos. No es papeleo.
+  ✅ 2026-08-11 — **cierra el módulo 030.** Mapa completo, más una sección de lo que se descubrió
+  construyendo y no estaba en el plan, y cuatro pendientes declarados — el mayor: el `REVOKE` de
+  append-only depende de T-007, así que **la intención está escrita y la garantía todavía no
+  existe**.

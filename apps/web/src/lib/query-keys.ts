@@ -30,6 +30,13 @@ export const queryKeys = {
   categorias: ["membership-categories"] as const,
 
   canchas: ["fields"] as const,
+
+  handicaps: {
+    todos: ["handicaps"] as const,
+    dePersona: (personId: string) => ["handicaps", personId] as const,
+    /** Cuelga del anterior: invalidar la raíz alcanza al vigente y al historial de una vez. */
+    historial: (personId: string) => ["handicaps", personId, "history"] as const,
+  },
   /** Un día por clave: cambiar de día es otra consulta, y bloquear una franja invalida sólo el suyo. */
   calendario: (date: string) => ["calendar", date] as const,
 } as const;

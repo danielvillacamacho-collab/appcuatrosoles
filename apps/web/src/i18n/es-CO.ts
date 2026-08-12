@@ -42,6 +42,34 @@ export const copy = {
     treasurer: "Tesorero",
   } as Record<string, string>,
 
+  handicaps: {
+    titulo: "Handicaps",
+    internacional: "Internacional",
+    delClub: "Del club",
+    /** −2 es un handicap real; «sin calificar» es otra cosa (R-030-05). */
+    sinCalificar: "Sin calificar",
+    sinCalificarAyuda: "Nadie lo ha calificado todavía. Juega como −2 hasta que el comisario lo fije.",
+    fijar: "Fijar handicap",
+    verHistorial: "Ver historial",
+    historial: "Historial de handicap",
+    historialVacio: "Nunca ha sido calificado: no hay cambios que mostrar.",
+    // El comisario escribe goles —«2,5»—, no medios goles. La conversión es del código.
+    nuevoValor: "Nuevo handicap (en goles)",
+    nuevoValorAyuda: "De −2 a 10, en medios goles: 2 o 2,5, no 2,3.",
+    motivo: "Motivo del cambio",
+    motivoAyuda: "Queda en el historial. Es lo que va a leer quien pregunte con cuánto estaba jugando.",
+    motivoRequerido: "Escribe el motivo del cambio.",
+    valorInvalido: "El handicap va de −2 a 10, en medios goles.",
+    guardar: "Guardar",
+    guardando: "Guardando…",
+    cambio: (anterior: string, nuevo: string) => `${anterior} → ${nuevo}`,
+    porQuien: (quien: string) => `por ${quien}`,
+    tipos: {
+      international: "Internacional",
+      club: "Del club",
+    } as Record<string, string>,
+  },
+
   calendario: {
     titulo: "Calendario de canchas",
     descripcion: "Qué hay programado en cada cancha, y qué está libre.",
