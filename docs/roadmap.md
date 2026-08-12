@@ -16,7 +16,7 @@ cliente cero lo use.
 
 ```
 010 identidad ──┬── 020 club/config ──┬── 030 handicaps ──┐
-                │                     ├── 040 canchas ────┼── 050 prácticas ── 060 copas
+                │                     ├── 040 canchas ────┼── 050 prácticas ─┬─ 051 equipos ── 060 copas
                 │                     │                   ├── 070 clases ── 080 coaches
                 │                     │                   └── 090 caballos
                 ├── 100 pagos ── 105 liquidaciones ── 110 políticas ── 120 avisos ── 130 reportes
