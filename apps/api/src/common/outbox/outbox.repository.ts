@@ -6,7 +6,10 @@ export type TipoDeMensaje =
   | "identity.send-invitation"
   | "identity.send-password-reset"
   | "identity.notify-password-changed"
-  | "identity.notify-account-status-changed";
+  | "identity.notify-account-status-changed"
+  /** Prácticas (`specs/050`). A diferencia de los de identidad, **éstos sí se pueden silenciar**. */
+  | "practice.confirmed"
+  | "practice.cancelled";
 
 export interface MensajeAEncolar {
   tipo: TipoDeMensaje;

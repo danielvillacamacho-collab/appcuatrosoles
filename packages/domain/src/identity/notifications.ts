@@ -9,6 +9,13 @@ export const NOTIFICATION_TYPES = [
   "identity.send-password-reset",
   "identity.notify-password-changed",
   "identity.notify-account-status-changed",
+  /**
+   * Prácticas (`specs/050`). **No entran a `SIEMPRE_SE_ENVIAN`**: son avisos de actividad, no de
+   * seguridad, y alguien tiene derecho a silenciar los correos del club sin perder «tu contraseña
+   * cambió».
+   */
+  "practice.confirmed",
+  "practice.cancelled",
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
@@ -40,9 +47,9 @@ export function esAvisoInevitable(tipo: string): boolean {
  * **Sin preferencia guardada, se manda.** Es una lista de exclusiones y no de inclusiones: al revés
  * —tener que activar cada aviso— la gente se queda sin enterarse de nada y culpa a la plataforma.
  *
- * Hoy los cuatro avisos del módulo son inevitables, así que esta función siempre dice que sí. No es
- * código muerto: es el punto por donde van a pasar los avisos de prácticas, clases y copas, y
- * dejarlo escrito ahora es lo que evita que cada módulo invente su propia regla.
+ * Los cuatro avisos de identidad son inevitables; **los de prácticas no**, y son los primeros que
+ * de verdad se pueden silenciar. Hasta `specs/050` esta función siempre decía que sí, y eso escondió
+ * durante un tiempo un atajo en el procesador que hacía inevitable todo lo que pasara por él.
  */
 export function debeEnviarse(tipo: string, preferencias: { type: string; enabled: boolean }[]): boolean {
   if (esAvisoInevitable(tipo)) {

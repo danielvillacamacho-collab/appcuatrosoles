@@ -107,8 +107,25 @@ describe("Preferencias de aviso (T-091)", () => {
 
   it("marca como no apagables los avisos de seguridad y los que son el mecanismo", async () => {
     const respuesta = await con(await entrar()).get("/api/me/notification-preferences");
+    const apagables = respuesta.body
+      .filter((fila: { canDisable: boolean }) => fila.canDisable)
+      .map((fila: { type: string }) => fila.type);
 
-    expect(respuesta.body.filter((fila: { canDisable: boolean }) => fila.canDisable)).toEqual([]);
+    // **Ninguno de identidad se puede apagar.** Dos son seguridad y dos son el mecanismo de acceso.
+    expect(apagables.filter((tipo: string) => tipo.startsWith("identity."))).toEqual([]);
+  });
+
+  it("y marca como apagables los del club: son actividad, no seguridad", async () => {
+    // **Este test llegó con `specs/050`**, y es el que faltaba: hasta entonces *todos* los avisos
+    // eran inevitables, así que la pantalla de preferencias no tenía nada que ofrecer y el camino
+    // de apagar uno nunca se recorría de punta a punta.
+    const respuesta = await con(await entrar()).get("/api/me/notification-preferences");
+    const delClub = respuesta.body.filter(
+      (fila: { type: string }) => !fila.type.startsWith("identity."),
+    );
+
+    expect(delClub.length).toBeGreaterThan(0);
+    expect(delClub.every((fila: { canDisable: boolean }) => fila.canDisable)).toBe(true);
   });
 
   it("un intento de apagar un aviso inevitable no lo apaga, y no falla", async () => {

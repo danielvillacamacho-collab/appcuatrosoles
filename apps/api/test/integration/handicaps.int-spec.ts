@@ -351,6 +351,14 @@ describe("Handicaps · API (T-330 a T-335)", () => {
       const puedeTerminarA = new Promise<void>((resolver) => {
         soltarA = resolver;
       });
+      // **A avisa cuando ya tiene el candado**, y B no arranca hasta entonces. Sin esta señal las
+      // dos transacciones salían a la vez y a veces B ganaba la carrera: el test fallaba de forma
+      // intermitente diciendo «el candado no está haciendo nada», cuando el candado estaba bien y
+      // el que estaba mal era el test.
+      let avisarQueAGarro = (): void => undefined;
+      const aTieneElCandado = new Promise<void>((resolver) => {
+        avisarQueAGarro = resolver;
+      });
 
       const a = prisma.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT id FROM "person" WHERE id = ${persona.id} FOR UPDATE`;
@@ -358,8 +366,11 @@ describe("Handicaps · API (T-330 a T-335)", () => {
           where: { personId_type: { personId: persona.id, type: "club" } },
           data: { valueHalves: 4 },
         });
+        avisarQueAGarro();
         await puedeTerminarA;
       });
+
+      await aTieneElCandado;
 
       let leidoPorB: number | null = null;
       const b = prisma.$transaction(async (tx) => {

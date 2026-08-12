@@ -56,6 +56,28 @@ export function construirCorreo(tipo: string, payload: Prisma.JsonValue): Mensaj
         "",
       );
 
+    case "practice.confirmed":
+      return correo(
+        para,
+        "La práctica se confirmó",
+        datos.dentro === true
+          ? `${nombre}, la práctica del ${fechaLegible(datos.startsAt)} se confirmó y estás dentro. Prepará los caballos.`
+          : `${nombre}, la práctica del ${fechaLegible(datos.startsAt)} se confirmó, pero quedaste en la lista de espera. Si alguien se baja, entrás vos.`,
+        "",
+        "",
+      );
+
+    case "practice.cancelled":
+      // Se le avisa **a todos los postulados**, hayan quedado dentro o en espera: el punto del
+      // aviso es que nadie prepare caballos en vano.
+      return correo(
+        para,
+        "La práctica se canceló",
+        `${nombre}, la práctica del ${fechaLegible(datos.startsAt)} se canceló porque no se alcanzó el mínimo de jugadores. No prepares los caballos.`,
+        "",
+        "",
+      );
+
     default:
       // Un tipo desconocido es un error de programación, no un correo raro: se prefiere que falle
       // el envío —y que quede en `last_error`— a mandar un mensaje vacío que nadie entiende.
@@ -118,4 +140,18 @@ function comoObjeto(payload: Prisma.JsonValue): Record<string, unknown> {
 
 function texto(valor: unknown): string {
   return typeof valor === "string" ? valor : "";
+}
+
+/**
+ * La fecha de una práctica, para el cuerpo de un correo.
+ *
+ * En la zona del club **no**: el correo se arma en la bandeja de salida, que no sabe de qué club
+ * es. Se manda el instante en ISO y quien lo lee lo interpreta; ponerle una zona adivinada sería
+ * peor que no ponerle ninguna. Cuando `specs/120` traiga el enrutamiento de avisos, esto se
+ * resuelve ahí con la zona real.
+ */
+function fechaLegible(valor: unknown): string {
+  const iso = texto(valor);
+
+  return iso === "" ? "" : iso.replace("T", " ").slice(0, 16);
 }

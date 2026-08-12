@@ -166,28 +166,60 @@ proceso de decisión— es la más delicada, y llega cuando ya hay con qué prob
 
 ## E — La decisión automática
 
-- [ ] **T-540** El proceso: la consulta de lo vencido, con la forma del `OutboxProcessor`
+- [x] **T-540** El proceso: la consulta de lo vencido, con la forma del `OutboxProcessor`
   (`plan.md` §0.2, §6).
   Verificación: una práctica con suficientes se confirma; sin suficientes se cancela **y libera la
   cancha**; una que todavía no vence no se toca.
+  ✅ 2026-08-11 — 13 tests. El reparto **se materializa aquí y sólo aquí**: hasta ese momento era
+  una vista sobre el orden de llegada, y a partir de ahí es un hecho —«ésta es la gente que jugó»—
+  que tiene que quedar estable.
+  > En una práctica **cancelada nadie queda aceptado**: marcar «dentro» a quien nunca jugó
+  > ensuciaría la estadística que `051` va a leer de aquí.
 
-- [ ] **T-541** **El sistema estuvo caído** (R-050-11).
+- [x] **T-541** **El sistema estuvo caído** (R-050-11).
   Verificación: con el reloj adelantado tres horas respecto de la hora de decisión, la práctica se
   decide igual. Es la prueba de que no hay nada programado que se pueda perder.
+  ✅ 2026-08-11 — tres horas tarde y una semana tarde, con un reloj que el test mueve a mano.
 
-- [ ] **T-542** **No avisa dos veces** (R-050-10).
+- [x] **T-542** **No avisa dos veces** (R-050-10).
   Verificación: correr el proceso dos veces seguidas deja **un** aviso por persona. Se cuentan los
   mensajes encolados, no se confía en el estado.
+  ✅ 2026-08-11 — la idempotencia sale sola de que la consulta pide `status = published` y la propia
+  transacción lo cambia. **No hace falta una marca de «ya avisado»**, y no tenerla es mejor: una
+  marca puede quedar desincronizada del estado.
 
-- [ ] **T-543** La decisión y un retiro **simultáneos**.
+- [x] **T-543** La decisión y un retiro **simultáneos**.
   Verificación: el solape se **fuerza a mano**, no con `Promise.all` — la lección de `specs/030`
   T-332, donde ese atajo hacía pasar el test con y sin la garantía. Y se comprueba que el test falla
   sin el `FOR UPDATE`.
+  ✅ 2026-08-11 — verificado quitándoselo: falla con «el retiro no esperó».
+  > **Y de paso destapó una intermitencia en el test de `specs/030` T-332**, que tenía el mismo
+  > defecto: las dos transacciones salían a la vez y nada garantizaba cuál agarraba el candado
+  > primero. A veces ganaba la segunda y el test fallaba diciendo «el candado no está haciendo
+  > nada» — con el candado funcionando perfectamente. Ahora la primera **avisa cuando ya lo tiene**
+  > y la segunda no arranca antes. Comprobado corriéndolo tres veces seguidas.
 
-- [ ] **T-544** Los avisos `practice.confirmed` y `practice.cancelled`.
+- [x] **T-544** Los avisos `practice.confirmed` y `practice.cancelled`.
   Verificación: **se pueden silenciar** desde las preferencias. En `specs/010` un atajo hacía que
   todo aviso se considerara inevitable y las preferencias no se podían apagar; lo destapó un test de
   integración y éste es el que lo impide volver.
+  ✅ 2026-08-11 — **cierra la sección E.** `practice.confirmed` y `practice.cancelled` son los
+  **primeros avisos silenciables** del producto: hasta ahora los cuatro de identidad eran
+  inevitables, así que la pantalla de preferencias no tenía nada que ofrecer y el camino de apagar
+  uno no se recorría nunca de punta a punta.
+  > Dos tests anteriores afirmaban «todos los avisos son inevitables» y **dejaron de ser ciertos a
+  > propósito**. Se reescribieron con la distinción —identidad inevitable, club silenciable— en vez
+  > de aflojarlos.
+  > El aviso distingue a quien quedó dentro de quien quedó en espera: «prepará los caballos» y «si
+  > alguien se baja, entrás vos» no son el mismo mensaje.
+
+> **Sección E cerrada el 2026-08-11.** 502 tests de integración, 371 de dominio.
+>
+> Y una lección de andamiaje que costó encontrar: **el proceso de decisión es global por diseño**
+> —pide «las publicadas que ya vencieron», sin filtrar por club—, así que su spec tiene que usar una
+> ventana de fechas **anterior a la de todos los demás**. Con fechas posteriores encontraba primero
+> las prácticas de `practices.int-spec`, se llevaba el cupo de `take` y no llegaba a las propias: el
+> síntoma era una práctica que se quedaba en `published` sin ningún error.
 
 ## F — Interfaz
 

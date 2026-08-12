@@ -6,10 +6,22 @@ describe("El catálogo de avisos", () => {
     expect(new Set(NOTIFICATION_TYPES).size).toBe(NOTIFICATION_TYPES.length);
   });
 
-  it("todos los avisos de hoy son inevitables, y cada uno por su motivo", () => {
+  it("los avisos de identidad son inevitables, y cada uno por su motivo", () => {
     // Dos son seguridad —«tu contraseña cambió», «tu cuenta fue suspendida»— y dos son el
     // mecanismo mismo: apagar la invitación o el restablecimiento deja a la persona sin entrar.
-    expect(NOTIFICATION_TYPES.filter((tipo) => !esAvisoInevitable(tipo))).toEqual([]);
+    const deIdentidad = NOTIFICATION_TYPES.filter((tipo) => tipo.startsWith("identity."));
+
+    expect(deIdentidad.filter((tipo) => !esAvisoInevitable(tipo))).toEqual([]);
+  });
+
+  it("y los del club NO lo son: la lista de inevitables es corta a propósito", () => {
+    // **Este test cambió al llegar `specs/050`**, y el cambio es la noticia: hasta entonces todos
+    // los avisos eran inevitables, y eso escondía que la única forma de comprobar las preferencias
+    // era con un aviso que se pudiera apagar. Los de prácticas son los primeros.
+    const delClub = NOTIFICATION_TYPES.filter((tipo) => !tipo.startsWith("identity."));
+
+    expect(delClub.length).toBeGreaterThan(0);
+    expect(delClub.filter((tipo) => esAvisoInevitable(tipo))).toEqual([]);
   });
 });
 
@@ -60,5 +72,24 @@ describe("debeEnviarse", () => {
     const apagado = [{ type: "identity.notify-password-changed", enabled: false }];
 
     expect(debeEnviarse("identity.notify-password-changed", apagado)).toBe(true);
+  });
+});
+
+describe("los avisos de prácticas SÍ se pueden silenciar (`specs/050` T-544)", () => {
+  it("«la práctica se confirmó» no es un aviso inevitable", () => {
+    // Los cuatro de identidad lo son porque son seguridad o son el mecanismo mismo. Éste es
+    // actividad del club: quien no quiere correos del club tiene derecho a no recibirlos.
+    expect(esAvisoInevitable("practice.confirmed")).toBe(false);
+    expect(esAvisoInevitable("practice.cancelled")).toBe(false);
+  });
+
+  it("con la preferencia apagada, no se manda", () => {
+    expect(
+      debeEnviarse("practice.confirmed", [{ type: "practice.confirmed", enabled: false }]),
+    ).toBe(false);
+  });
+
+  it("sin preferencia guardada, se manda: es una lista de exclusiones", () => {
+    expect(debeEnviarse("practice.confirmed", [])).toBe(true);
   });
 });
