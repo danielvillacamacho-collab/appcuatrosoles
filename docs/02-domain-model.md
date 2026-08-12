@@ -107,7 +107,7 @@ puede_inscribir_copas, requiere_aptitud, puede_reservar_taqueo…), `active`.
 > una versión **una sola vez** (`UNIQUE(person_id, waiver_version_id)`), pero sí puede tener
 > aceptaciones de versiones distintas — eso es el historial.
 
-**practice_eligibility** — `person_id`, `max_handicap_halves` (nivel hasta el que puede
+**practice_eligibility** — `club_id`, `person_id`, `max_handicap_halves` (nivel hasta el que puede
 jugar), `granted_by_id`, `granted_at`, `revoked_at`, `revoked_by_id`.
 > El "apto para práctica" del estudiante.
 
@@ -192,9 +192,14 @@ Se prueba con un test que serializa la respuesta y verifica que no aparece ning�
 
 **practice_application** — `practice_id`, `person_id`, `chukkers_offered`,
 `half_man_partner_person_id` (nullable), `horses_requested`,
-`status` (applied | withdrawn | accepted | rejected | no_show), `applied_at`, `withdrawn_at`.
-> Invariante: `UNIQUE(practice_id, person_id)` sobre las no retiradas.
+`outcome` (nullable: accepted | rejected | no_show), `applied_at`, `withdrawn_at`.
+> Invariante: `UNIQUE(practice_id, person_id)` sobre las no retiradas — índice **parcial**, para
+> que quien se retiró pueda volver a postularse (`specs/050` HU-050-03).
 > Invariante: si hay `half_man_partner`, la relación es recíproca o la propuesta queda pendiente.
+> **`outcome` es nulo hasta que la práctica se decide** (`specs/050` §0.1 del plan): antes de eso,
+> quién está dentro y quién en espera **se calcula** del orden de postulación, no se guarda. Así un
+> retiro promueve al siguiente sin que corra ningún proceso, y no hay estado que pueda quedar mal.
+> Al decidir se materializa, porque ahí deja de ser una vista y pasa a ser un hecho.
 
 **practice_team** — `practice_id`, `label` (A | B), `handicap_total_halves` (calculado),
 `approved_by_id`, `approved_at`.
