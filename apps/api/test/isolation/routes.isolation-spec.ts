@@ -81,6 +81,18 @@ const CON_TEST_PROPIO = [
   // no sirve: esta ruta no recibe identificadores, recibe una fecha — su aislamiento es por lo que
   // devuelve, no por lo que se le pide.
   "GET /api/calendar",
+  // `handicaps.int-spec` → «una persona de otro club responde 404, nunca 403 (P-05)», «LA RESPUESTA
+  // ENTERA no filtra nada de un historial ajeno» y «no incluye personas de otro club».
+  //
+  // Las tres van con test propio por motivos distintos. El `PUT` necesita cuerpo válido **y** un
+  // actor con `handicap.edit` —que el recorrido genérico no tiene, porque el comisario es el único
+  // que lo tiene y no es un rol administrativo—. El historial se acota además **por persona**: dos
+  // jugadores del mismo club tampoco se ven el de otro, que el recorrido genérico no probaría. Y el
+  // listado del club no recibe identificadores, así que su aislamiento es por lo que devuelve.
+  "GET /api/people/:id/handicaps",
+  "GET /api/people/:id/handicaps/history",
+  "PUT /api/people/:id/handicaps/:type",
+  "GET /api/handicaps",
   "POST /api/field-bookings/block",
   "DELETE /api/field-bookings/:id",
   // `minors.int-spec` → «un acudiente de otro club no existe desde aquí: 404, nunca 403». El

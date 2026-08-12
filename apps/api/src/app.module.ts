@@ -6,6 +6,7 @@ import { PrismaModule } from "./common/prisma/prisma.module.js";
 import { AuthApiModule } from "./auth/auth.module.js";
 import { MeModule } from "./me/me.module.js";
 import { AuditLogModule } from "./audit/audit-log.module.js";
+import { HandicapsModule } from "./handicaps/handicaps.module.js";
 import { FieldsModule } from "./fields/fields.module.js";
 import { FamilyModule } from "./family/family.module.js";
 import { UsersModule } from "./users/users.module.js";
@@ -27,6 +28,7 @@ import { HealthModule } from "./health/health.module.js";
  */
 @Module({
   imports: [PrismaModule, ClockModule, OutboxModule, TenantModule, AuthModule, AuditModule, PlatformModule, ClubModule, SettingsModule, AuthApiModule, MeModule, UsersModule, FamilyModule,
-    FieldsModule, AuditLogModule, HealthModule],
+    FieldsModule,
+    HandicapsModule, AuditLogModule, HealthModule],
 })
 export class AppModule {}

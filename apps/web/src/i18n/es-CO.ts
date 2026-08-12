@@ -393,6 +393,13 @@ export const copy = {
     fuera_del_horario: "Ese horario está fuera de las horas de operación del club.",
     rango_invalido: "La hora de fin tiene que ser posterior a la de inicio.",
 
+    // ── Handicaps ────────────────────────────────────────────────────────────
+    handicap_fuera_de_rango: "El handicap va de −2 a 10 goles.",
+    handicap_no_es_medio_gol: "El handicap se mueve en medios goles: 1,5 sí, 1,3 no.",
+    // `details.actualHalves` trae el valor que ya rige, para poder nombrarlo.
+    handicap_sin_cambio: "Ese jugador ya tiene ese handicap.",
+    handicap_sin_motivo: "Escribe el motivo del cambio.",
+
     // ── Club, temporadas y configuración ─────────────────────────────────────
     nombre_en_uso: "Ya existe algo con ese nombre en el club.",
     codigo_en_uso: "Ese código ya está en uso.",

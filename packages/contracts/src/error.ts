@@ -69,6 +69,13 @@ export const CODIGOS_DE_ERROR = [
   "fuera_del_horario",
   "rango_invalido",
 
+  // Handicaps (`specs/030`). Los cuatro rechazos del dominio, cada uno distinguible: la interfaz
+  // tiene que poder decir cuál falló, no un «handicap inválido» que no le dice nada al comisario.
+  "handicap_fuera_de_rango",
+  "handicap_no_es_medio_gol",
+  "handicap_sin_cambio",
+  "handicap_sin_motivo",
+
   // Club, temporadas y configuración (`specs/020`, `specs/140`).
   "nombre_en_uso",
   "codigo_en_uso",

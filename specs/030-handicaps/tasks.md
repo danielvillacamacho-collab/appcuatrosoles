@@ -119,40 +119,78 @@ Conviene que ocurra cuando no hay nada más a medio hacer.
 
 ## D — API
 
-- [ ] **T-330** `HandicapsService`: el **único** escritor, con la transacción de `plan.md` §5.
+- [x] **T-330** `HandicapsService`: el **único** escritor, con la transacción de `plan.md` §5.
   Verificación: el vigente y el historial quedan escritos juntos; el «anterior» del registro es el
   que de verdad regía; la temporada vigente queda anotada, y **un club sin temporada abierta no
   bloquea el cambio** (R-030-12).
+  ✅ 2026-08-11 — 30 tests. Un rechazo **no deja rastro** en el historial: la transacción no se abre
+  a medias.
 
-- [ ] **T-331** Vigente e historial **no divergen**, comprobado contra la base.
+- [x] **T-331** Vigente e historial **no divergen**, comprobado contra la base.
   Verificación: tras N cambios, **se reconstruye el vigente desde el historial** y se compara con la
   fila denormalizada. No basta con leer las dos y ver que coinciden: hay que recalcular.
   > Es el test que protege la promesa del módulo. Si algún día alguien agrega un camino de
   > escritura que se salta el historial, éste es el que lo dice.
+  ✅ 2026-08-11 — reconstruye la cadena encadenando cinco cambios: cada «anterior» tiene que ser el
+  «nuevo» del paso previo, empezando en −4.
 
-- [ ] **T-332** Dos cambios **concurrentes** sobre la misma persona y tipo.
+- [x] **T-332** Dos cambios **concurrentes** sobre la misma persona y tipo.
   Verificación: los dos quedan registrados, en orden, y ninguno anota un «anterior» que ya no era el
   actual. **Y se comprueba que el test falla** si el vigente se lee antes de abrir la transacción —
   con el mismo método de `specs/040` T-422: un test que pasa igual con y sin la garantía que dice
   probar es peor que no tenerlo.
+  ✅ 2026-08-11 — **y aquí apareció el hallazgo del módulo.** El primer test de concurrencia lanzaba
+  dos peticiones con `Promise.all`, y **pasaba igual con la versión ingenua del servicio** —el
+  vigente leído *antes* de abrir la transacción—. Comprobado a propósito, que es lo que lo destapó:
+  dos peticiones HTTP no se solapan de forma fiable.
+  > Peor: al mirarlo se vio que **la implementación tampoco garantizaba nada**. El comentario del
+  > servicio decía que leer dentro de la transacción impedía la carrera, y es falso: PostgreSQL
+  > corre en `READ COMMITTED` —verificado con `SHOW transaction_isolation`—, así que dos
+  > transacciones leen las dos el mismo valor y las dos anotan el mismo «anterior».
+  > La garantía real es un **candado de fila**: `SELECT … FOR UPDATE` sobre la persona. Sobre la
+  > persona y no sobre el handicap porque la fila del handicap puede no existir todavía —el primer
+  > cambio— y no se puede bloquear lo que no está.
+  > El test nuevo fuerza el solape a mano: A toma el candado y se queda dentro; se comprueba que B
+  > **no ha leído nada** mientras tanto; A suelta, y B lee lo que A escribió. Verificado quitándole
+  > el `FOR UPDATE` a B: falla con «B leyó sin esperar: el candado no está haciendo nada».
+  > El test de `Promise.all` se quedó, renombrado a lo que de verdad comprueba —que la cadena queda
+  > intacta— y con la advertencia de que no prueba la garantía.
 
-- [ ] **T-333** `PUT /people/:id/handicaps/:type` y `GET /people/:id/handicaps`.
+- [x] **T-333** `PUT /people/:id/handicaps/:type` y `GET /people/:id/handicaps`.
   Verificación: contrato de entrada y salida; `club_admin` **denegado** en el `PUT`; una persona de
   otro club responde **404 y no 403**; los cuatro rechazos del dominio llegan con su código propio.
+  ✅ 2026-08-11 — el administrador del club recibe **403** al intentar fijar un handicap, que es la
+  regla del módulo probada de punta a punta.
+  > De paso: las mutaciones de los tests necesitan la cabecera CSRF. Armarlas a mano daba 403 y
+  > parecía un problema de permisos; se usa el helper `conSesion` del repo, que pone las dos cosas.
 
-- [ ] **T-334** `GET /people/:id/handicaps/history`, con R-030-09 aplicada **en el servicio**.
+- [x] **T-334** `GET /people/:id/handicaps/history`, con R-030-09 aplicada **en el servicio**.
   Verificación: los seis casos de visibilidad de punta a punta; **el test serializa la respuesta
   completa** y falla si aparece cualquier motivo o autor de un historial ajeno — el mismo criterio
   que `specs/040` T-451, por la misma razón: comprobar campos conocidos no ve el dato que alguien
   agregue mañana.
+  ✅ 2026-08-11 — los seis casos de punta a punta, incluido el acudiente viendo el historial de un
+  menor. La respuesta entera se serializa y se busca el motivo, la persona y el autor.
+  > `esAdministrador` se resuelve **por rol y no por permiso**: el permiso que venía a la mano
+  > —`handicap.edit`— no lo tiene el administrador del club, y usarlo aquí le habría cerrado la
+  > lectura del historial, que sí le corresponde.
 
-- [ ] **T-335** `GET /handicaps?type=club`, paginado (25 por defecto, 100 máximo, >100 es 400).
+- [x] **T-335** `GET /handicaps?type=club`, paginado (25 por defecto, 100 máximo, >100 es 400).
   Verificación: la paginación con sus tres casos; el listado **no incluye personas de otro club**;
   incluye a quien no ha sido calificado, con `calificado: false`.
+  ✅ 2026-08-11 — parte de `person` y no de `player_handicap`, justamente para que quien nunca fue
+  calificado aparezca. Listar sólo a los calificados dejaría a quien arma equipos creyendo que el
+  resto no existe.
 
-- [ ] **T-336** Las cuatro rutas declaradas en el arnés de aislamiento.
+- [x] **T-336** Las cuatro rutas declaradas en el arnés de aislamiento.
   Verificación: `pnpm check:isolation` en verde. El listado y el historial necesitan caso propio: su
   aislamiento es por **lo que devuelven**, no por el identificador que se les pide.
+  ✅ 2026-08-11 — **cierra la sección D.** Las cuatro con test propio, cada una por un motivo
+  distinto: el `PUT` necesita cuerpo válido *y* un actor con `handicap.edit` —que el recorrido
+  genérico no tiene, porque el comisario no es un rol administrativo—; el historial se acota además
+  **por persona**, así que dos jugadores del mismo club tampoco se ven el de otro.
+
+> **Sección D cerrada el 2026-08-11.** 472 tests de integración, `src/handicaps` al 95 %.
 
 ## E — Interfaz
 

@@ -11,3 +11,4 @@ export * from "./family.js";
 export * from "./audit.js";
 export * from "./field.js";
 export * from "./calendar.js";
+export * from "./handicap.js";
