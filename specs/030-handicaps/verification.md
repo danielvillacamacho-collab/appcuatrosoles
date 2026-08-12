@@ -4,7 +4,7 @@
 > cubre. Un criterio sin test **se resuelve**, no se anota.
 
 **Fecha de cierre:** 2026-08-11 · 317 tests de dominio · 472 de integración · 124 de interfaz ·
-1 E2E de navegador · `packages/domain/src/handicap` al 100 % · `apps/api/src/handicaps` al 95 %
+5 E2E de navegador (1 de handicaps) · `packages/domain/src/handicap` al 100 % · `apps/api/src/handicaps` al 95 %
 
 ## HU-030-01 — El comisario fija el handicap de un jugador
 
