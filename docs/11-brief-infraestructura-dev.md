@@ -34,12 +34,25 @@ datos leyendo ese subdominio. Eso tiene una consecuencia directa para ustedes: *
 comodín y certificado comodín**. Ver §4, que es la parte donde más fácil se pierde tiempo.
 
 ```
-Una EC2 (t3.small) con Docker Compose:
+Una EC2 (t3.small) con Docker Compose — tres servicios, no cuatro:
 ├── caddy      → TLS automático + reverse proxy + sirve la web como archivos estáticos
 ├── api        → NestJS, puerto interno 3000, NO expuesto a internet
-├── worker     → mismo build que api, procesa trabajos en segundo plano
 └── postgres   → PostgreSQL 16, volumen EBS dedicado, NO expuesto a internet
 ```
+
+**No hay un servicio `worker`, y es a propósito.** Los trabajos de fondo —mandar los correos
+encolados, y decidir a su hora si una práctica se hace o se cancela— corren **dentro del mismo
+contenedor del API**, con temporizadores. Un cuarto contenedor para dos temporizadores es una pieza
+más que desplegar, vigilar y reiniciar, sin nada a cambio a esta escala.
+
+Dos consecuencias prácticas para ustedes:
+
+- **Si el contenedor del API está caído, no salen correos ni se deciden prácticas.** Nada se pierde
+  —al volver, procesa lo que quedó pendiente—, pero el retraso es real. Vale la pena que la alarma
+  de «API caído» sea de las que despiertan.
+- **Se puede correr más de una réplica del API sin duplicar trabajo**: los dos procesos toman lo
+  que van a procesar con un candado en la base. No es que haga falta hoy; es que no es un
+  impedimento el día que haga falta.
 
 ---
 
@@ -216,7 +229,18 @@ rol tenga el permiso.
 
 ## 8. Tarea 6 — Despliegue automático desde GitHub
 
-El código vive en GitHub y ya tiene su pipeline escrito. Para que pueda desplegar solo:
+> **Estado, para que nadie espere de más:** el repositorio tiene su pipeline de **calidad**
+> (`.github/workflows/ci.yml`: compilación, tipos, linter, tests unitarios, de integración y de
+> navegador, y prueba de aislamiento entre clubes). **El pipeline de despliegue todavía no está
+> escrito** — lo escribimos nosotros, no ustedes, y para hacerlo necesitamos primero el rol y la
+> instancia de esta sección.
+>
+> Lo que sí está listo y en el repositorio: los `Dockerfile` del API y de Caddy —los dos
+> construidos y arrancados a mano para comprobarlo—, el `docker-compose.prod.yml` de producción y
+> el `rollback.sh`. El compose espera **imágenes ya publicadas** en un registro; publicarlas es
+> justamente el paso que falta escribir.
+
+Para que el despliegue pueda ser automático cuando lo escribamos:
 
 **Usar OIDC, no llaves de acceso.** Se crea un proveedor de identidad OIDC para
 `token.actions.githubusercontent.com` y un rol que GitHub Actions asume durante el despliegue. Es el
