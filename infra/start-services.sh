@@ -68,6 +68,23 @@ IMAGE_TAG=$IMAGE_TAG \
 ENTORNO=$ENTORNO \
 docker compose up -d
 
+# 6.5. Aplicar migraciones (después de que servicios estén listos)
+echo ""
+echo "⏳ Esperando a que API esté listo..."
+RETRY_COUNT=0
+MAX_RETRIES=30
+until docker exec cuatrosoles-api-1 pnpm db:migrate:deploy 2>/dev/null || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+  RETRY_COUNT=$((RETRY_COUNT + 1))
+  echo "  Intento $RETRY_COUNT/$MAX_RETRIES..."
+  sleep 2
+done
+
+if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+  echo "⚠️  No se pudieron aplicar las migraciones. Revisar logs con: docker compose logs api"
+else
+  echo "✅ Migraciones aplicadas"
+fi
+
 # 7. Mostrar estado
 echo ""
 echo "📊 Estado de servicios:"
