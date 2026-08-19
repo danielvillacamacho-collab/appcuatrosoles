@@ -73,16 +73,22 @@ echo ""
 echo "⏳ Esperando a que API esté listo..."
 RETRY_COUNT=0
 MAX_RETRIES=30
-until docker exec cuatrosoles-api-1 pnpm db:migrate:deploy 2>/dev/null || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+SUCCESS=false
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+  if docker exec cuatrosoles-api-1 npx -y prisma@6 migrate deploy --schema=prisma/schema.prisma 2>/dev/null; then
+    SUCCESS=true
+    echo "✅ Migraciones aplicadas"
+    break
+  fi
   RETRY_COUNT=$((RETRY_COUNT + 1))
   echo "  Intento $RETRY_COUNT/$MAX_RETRIES..."
   sleep 2
 done
 
-if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-  echo "⚠️  No se pudieron aplicar las migraciones. Revisar logs con: docker compose logs api"
-else
-  echo "✅ Migraciones aplicadas"
+if [ "$SUCCESS" = false ]; then
+  echo "⚠️  No se pudieron aplicar las migraciones después de $MAX_RETRIES intentos"
+  echo "Revisar logs: docker compose logs api"
 fi
 
 # 7. Mostrar estado
