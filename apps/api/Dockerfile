@@ -22,8 +22,8 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @polo/domain --filter @polo/contracts --filter @polo/api build
 
-# `--prod` deja fuera las dependencias de desarrollo.
-RUN pnpm --filter @polo/api --prod deploy /salida
+# Incluye devDependencies para que prisma esté disponible en runtime (para migraciones)
+RUN pnpm --filter @polo/api deploy /salida
 
 # El cliente de Prisma es código generado y vive dentro de `node_modules`: `pnpm deploy` copia
 # desde el almacén, donde no está lo que se generó después de instalar. Se vuelve a generar sobre
