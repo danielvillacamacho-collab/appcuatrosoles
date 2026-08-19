@@ -21,13 +21,13 @@ terraform {
    * Descomentar después de correr `bootstrap/` y reemplazar el nombre del bucket por el que
    * imprimió.
    */
-  # backend "s3" {
-  #   bucket         = "cuatrosoles-tfstate-<SUFIJO>"
-  #   key            = "dev/terraform.tfstate"
-  #   region         = "us-east-1"
-  #   dynamodb_table = "cuatrosoles-tfstate-lock"
-  #   encrypt        = true
-  # }
+  backend "s3" {
+    bucket         = "cuatrosoles-tfstate-eb3249c0"
+    key            = "dev/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "cuatrosoles-tfstate-lock"
+    encrypt        = true
+  }
 }
 
 provider "aws" {
@@ -50,6 +50,8 @@ provider "aws" {
 }
 
 /** La red por defecto de la cuenta. Para una instancia sola no se justifica una VPC propia. */
+data "aws_caller_identity" "actual" {}
+
 data "aws_vpc" "principal" {
   default = true
 }

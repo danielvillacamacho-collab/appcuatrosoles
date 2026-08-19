@@ -6,6 +6,8 @@
 #   · Los datos viven en el volumen EBS montado en `/var/lib/postgresql`, no en un volumen de Docker.
 #   · Las imágenes se traen etiquetadas, no se construyen en el servidor: desplegar es cambiar
 #     `IMAGE_TAG`, y volver atrás es cambiarla de vuelta (`infra/rollback.sh`).
+#   · Las imágenes viven en ECR, no en GHCR: la instancia hace `pull` con las credenciales de su
+#     propio rol (`infra/terraform/iam.tf`), sin login ni token de GitHub guardado en ningún lado.
 
 name: cuatrosoles
 
@@ -28,7 +30,7 @@ services:
       retries: 10
 
   api:
-    image: ghcr.io/${GITHUB_REPOSITORY}/api:${IMAGE_TAG:-latest}
+    image: ${ECR_REGISTRY}/cuatrosoles-${ENTORNO}-api:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
     depends_on:
@@ -46,7 +48,7 @@ services:
       start_period: 30s
 
   caddy:
-    image: ghcr.io/${GITHUB_REPOSITORY}/caddy:${IMAGE_TAG:-latest}
+    image: ${ECR_REGISTRY}/cuatrosoles-${ENTORNO}-caddy:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       # El mismo valor que recibe el API. Si no coinciden, Caddy sirve el sitio y el API responde

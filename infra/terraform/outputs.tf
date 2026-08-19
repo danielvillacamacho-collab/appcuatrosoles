@@ -37,6 +37,20 @@ output "base_domain_para_el_env" {
   value       = local.host
 }
 
+output "ecr_registro" {
+  description = "El valor de ECR_REGISTRY en el .env de la instancia — sólo el host, sin nombre de repo."
+  value       = "${data.aws_caller_identity.actual.account_id}.dkr.ecr.${var.region}.amazonaws.com"
+}
+
+output "ecr_repo_api" {
+  description = "URL completa del repo, para el build/push local (docker tag / docker push)"
+  value       = aws_ecr_repository.api.repository_url
+}
+
+output "ecr_repo_caddy" {
+  value = aws_ecr_repository.caddy.repository_url
+}
+
 output "estado_de_ses" {
   description = "Terraform verifica el dominio, pero salir del sandbox es un trámite manual (docs/11 §4)."
   value       = "Dominio ${var.dominio} verificado con DKIM. Falta solicitar la salida del sandbox a mano."

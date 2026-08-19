@@ -9,6 +9,14 @@
 resource "aws_s3_bucket" "respaldos" {
   bucket = "cuatrosoles-respaldos-${var.entorno}"
 
+  tags = {
+    name         = "cuatrosoles"
+    project      = "cuatrosoles"
+    environment  = "development"
+    cost_center  = "interno"
+    owner        = "infrateam"
+  }
+
   lifecycle {
     prevent_destroy = true
   }
@@ -97,6 +105,14 @@ resource "aws_dlm_lifecycle_policy" "snapshots" {
       copy_tags = true
     }
   }
+
+  tags = {
+    name         = "cuatrosoles"
+    project      = "cuatrosoles"
+    environment  = "development"
+    cost_center  = "interno"
+    owner        = "infrateam"
+  }
 }
 
 resource "aws_iam_role" "snapshots" {
@@ -110,6 +126,14 @@ resource "aws_iam_role" "snapshots" {
       Action    = "sts:AssumeRole"
     }]
   })
+
+  tags = {
+    name         = "cuatrosoles"
+    project      = "cuatrosoles"
+    environment  = "development"
+    cost_center  = "interno"
+    owner        = "infrateam"
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "snapshots" {

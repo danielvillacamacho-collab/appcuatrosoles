@@ -6,12 +6,15 @@
  * repositorio— es una credencial de larga vida que hay que rotar a mano, que sirve desde cualquier
  * parte del mundo si se filtra, y que nadie revoca a tiempo porque nadie se entera.
  */
-resource "aws_iam_openid_connect_provider" "github" {
-  url            = "https://token.actions.githubusercontent.com"
-  client_id_list = ["sts.amazonaws.com"]
-  # AWS dejó de validar esta huella en 2023 y la mantiene por compatibilidad; el argumento sigue
-  # siendo obligatorio.
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+/**
+ * Este proveedor ya existe en la cuenta — lo creó el proyecto "quoter" (dvpnyx-infra-team).
+ * AWS solo permite uno por cuenta para esta URL, y un mismo proveedor puede respaldar roles
+ * de distintos repos sin problema (cada rol condiciona su propio `sub`). Por eso es `data`,
+ * no `resource`: este proyecto lo usa pero no lo gestiona, para no arriesgarse a borrarlo
+ * (y con él, el despliegue de quoter) si algún día se corre `terraform destroy` acá.
+ */
+data "aws_iam_openid_connect_provider" "github" {
+  url = "https://token.actions.githubusercontent.com"
 }
 
 resource "aws_iam_role" "despliegue" {
@@ -21,7 +24,7 @@ resource "aws_iam_role" "despliegue" {
     Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
-      Principal = { Federated = aws_iam_openid_connect_provider.github.arn }
+      Principal = { Federated = data.aws_iam_openid_connect_provider.github.arn }
       Action    = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringEquals = {
@@ -40,6 +43,14 @@ resource "aws_iam_role" "despliegue" {
       }
     }]
   })
+
+  tags = {
+    name         = "cuatrosoles"
+    project      = "cuatrosoles"
+    environment  = "development"
+    cost_center  = "interno"
+    owner        = "infrateam"
+  }
 }
 
 /**
@@ -67,6 +78,26 @@ resource "aws_iam_role_policy" "despliegue" {
         Effect   = "Allow"
         Action   = ["ssm:GetCommandInvocation", "ssm:ListCommandInvocations"]
         Resource = "*"
+      },
+      {
+        # Igual que en el rol de la instancia: esta acción de ECR no admite scoping por recurso.
+        Effect   = "Allow"
+        Action   = ["ecr:GetAuthorizationToken"]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:PutImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload",
+        ]
+        Resource = [
+          aws_ecr_repository.api.arn,
+          aws_ecr_repository.caddy.arn,
+        ]
       },
     ]
   })

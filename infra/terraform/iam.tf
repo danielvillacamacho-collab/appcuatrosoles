@@ -18,6 +18,14 @@ resource "aws_iam_role" "instancia" {
       Action    = "sts:AssumeRole"
     }]
   })
+
+  tags = {
+    name         = "cuatrosoles"
+    project      = "cuatrosoles"
+    environment  = "development"
+    cost_center  = "interno"
+    owner        = "infrateam"
+  }
 }
 
 /** Session Manager: entrar a la instancia sin abrir el puerto 22 ni repartir llaves SSH. */
@@ -76,6 +84,36 @@ resource "aws_iam_role_policy" "correo" {
         StringEquals = { "ses:FromAddress" = "*@${var.dominio}" }
       }
     }]
+  })
+}
+
+/**
+ * Traer las imágenes de ECR. Sólo lectura, y sólo estos 2 repos — no todos los de la cuenta.
+ *
+ * `ecr:GetAuthorizationToken` no admite scoping por recurso (la API de ECR lo exige sobre `*`);
+ * el resto sí queda acotado a los repos de este ambiente.
+ */
+resource "aws_iam_role_policy" "ecr_pull" {
+  name = "${local.nombre}-ecr-pull"
+  role = aws_iam_role.instancia.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["ecr:GetAuthorizationToken"]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = ["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer", "ecr:BatchCheckLayerAvailability"]
+        Resource = [
+          aws_ecr_repository.api.arn,
+          aws_ecr_repository.caddy.arn,
+        ]
+      },
+    ]
   })
 }
 

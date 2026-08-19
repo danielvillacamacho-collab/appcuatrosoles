@@ -27,7 +27,7 @@ data "aws_ami" "al2023" {
  */
 resource "aws_security_group" "app" {
   name        = local.nombre
-  description = "Cuatro Soles ${var.entorno}: sólo HTTP y HTTPS entrantes"
+  description = "Cuatro Soles ${var.entorno}: solo HTTP y HTTPS entrantes"
   vpc_id      = data.aws_vpc.principal.id
 
   ingress {
@@ -53,6 +53,15 @@ resource "aws_security_group" "app" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name         = local.nombre
+    name         = "cuatrosoles"
+    project      = "cuatrosoles"
+    environment  = "development"
+    cost_center  = "interno"
+    owner        = "infrateam"
   }
 }
 
@@ -83,7 +92,14 @@ resource "aws_instance" "app" {
     http_put_response_hop_limit = 2
   }
 
-  tags = { Name = local.nombre }
+  tags = {
+    Name         = local.nombre
+    name         = "cuatrosoles"
+    project      = "cuatrosoles"
+    environment  = "development"
+    cost_center  = "interno"
+    owner        = "infrateam"
+  }
 
   lifecycle {
     # La AMI cambia sola cada vez que Amazon publica una: sin esto, un `apply` cualquiera
@@ -105,7 +121,14 @@ resource "aws_ebs_volume" "datos" {
   type              = "gp3"
   encrypted         = true
 
-  tags = { Name = "${local.nombre}-datos" }
+  tags = {
+    Name         = "${local.nombre}-datos"
+    name         = "cuatrosoles"
+    project      = "cuatrosoles"
+    environment  = "development"
+    cost_center  = "interno"
+    owner        = "infrateam"
+  }
 
   lifecycle {
     prevent_destroy = true
@@ -128,5 +151,12 @@ resource "aws_eip" "app" {
   domain   = "vpc"
   instance = aws_instance.app.id
 
-  tags = { Name = local.nombre }
+  tags = {
+    Name         = local.nombre
+    name         = "cuatrosoles"
+    project      = "cuatrosoles"
+    environment  = "development"
+    cost_center  = "interno"
+    owner        = "infrateam"
+  }
 }
