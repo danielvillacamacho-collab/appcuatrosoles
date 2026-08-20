@@ -2470,3 +2470,81 @@ cuando alguien más lo clona. Los otros tres son del pipeline, y su valor es que
 Ahora corren en cada `push`: lint, typecheck, arquitectura, migraciones `up`/`down`/`up` contra
 PostgreSQL real, cobertura con umbrales, integración, aislamiento de tenant, build, presupuesto de
 bundle y escaneo de secretos. Y en `main`, además, los E2E de API y los de navegador con Playwright.
+
+---
+
+## T-092 — `SesMailer`: el adaptador de correo real
+
+**Fecha:** 2026-08-19 · 16 tests
+
+### De dónde salió esta tarea
+
+No del plan, sino del **despliegue**. Al revisar el ambiente que dejó el equipo de infraestructura
+apareció que el único adaptador de correo era `MailerDeArchivo`, conectado **sin condición de
+entorno**. El resultado en producción:
+
+- SES estaba productivo (fuera del sandbox).
+- La instancia tenía rol IAM con `ses:SendEmail` restringido al dominio.
+- El SDK de AWS **no estaba ni instalado**.
+- Cada correo se escribía como un `.html` dentro del contenedor, en una carpeta sin volumen
+  montado: desaparecía en el siguiente redespliegue.
+
+Es decir: **nadie podía ser invitado ni recuperar su contraseña**, y el hito de la Fase 1 —«cargar
+las personas reales del club y que todas puedan ingresar desde su celular»— estaba bloqueado. Sin
+un solo error en ningún log, porque desde el punto de vista del código todo funcionaba: el correo
+«se enviaba».
+
+### Lo que se construyó
+
+| Pieza | Qué hace |
+|---|---|
+| `ses-mailer.ts` | Envía por Amazon SES. Sin llaves: usa la cadena de credenciales por defecto, que en la EC2 resuelve al rol de la instancia |
+| `mailer.selection.ts` | Decide qué adaptador usar. Función **pura**, para poder probar los casos que deben negarse a arrancar |
+| `mailer.factory.ts` | Instancia lo elegido y avisa por log qué quedó activo |
+| `outbox.module.ts` | Un solo cambio de línea: el adaptador ya no está fijo |
+
+### La regla que impide que vuelva a pasar
+
+| Entorno | Resultado |
+|---|---|
+| `MAILER=ses` + `MAIL_FROM` | SES |
+| `MAILER=ses` **sin** `MAIL_FROM` | **no arranca** |
+| `MAILER=file` | archivo, incluso en producción — alguien lo pidió explícitamente (con aviso en el log) |
+| `MAILER` sin definir + `NODE_ENV=production` | **no arranca** |
+| `MAILER` sin definir, fuera de producción | archivo (local, tests y CI siguen sin configurar nada) |
+| `MAILER=cualquier-otra-cosa` | **no arranca** |
+
+El caso decisivo es el cuarto: **en producción, omitir la decisión no puede significar «tirar los
+correos a un archivo»**. Un servidor que responde y se come los correos es peor que uno que no
+levanta, porque nadie se entera.
+
+El quinto es lo que hizo que la tarea no rompiera nada: 40 archivos de test arrancan la aplicación
+completa, y exigir la variable a secas los habría roto todos.
+
+### Decisiones que vale explicar
+
+1. **Sin llaves de acceso, a propósito.** El SDK toma las credenciales del rol de la instancia.
+   Llaves de larga vida en un `.env` hay que rotarlas, se filtran en un log y sobreviven a la
+   instancia que las necesitaba. Cuando el equipo de infra reportó «SES_ACCESS_KEY_ID = aún no
+   configurado», eso no era un pendiente: era lo correcto. Se corrigieron `.env.example` y
+   `docs/07` §4, que sí pedían llaves y empujaban a empeorar la seguridad.
+2. **El adaptador no reintenta.** La bandeja de salida ya reintenta con espera creciente y se rinde
+   al quinto intento. Dos mecanismos de reintento se multiplican, y un correo saldría muchas más
+   veces de las previstas. Hay un test que fija que una llamada fallida es **una** llamada.
+3. **Si SES falla, propaga.** Tragarse el error dejaría el mensaje marcado como enviado sin
+   haberse enviado — el outbox marca antes de enviar justamente para no duplicar.
+4. **UTF-8 declarado en asunto y cuerpo**, con test. Los correos van en español: sin el juego de
+   caracteres, «Confirmación de práctica» llega roto.
+5. **La forma de `MAIL_FROM` se valida al arrancar; el dominio no.** Que pertenezca al dominio
+   verificado lo hace cumplir la política de IAM. Duplicar esa regla en el código crearía dos
+   verdades capaces de discrepar.
+
+### Pendiente declarado
+
+- **No se ha enviado un correo real todavía.** Los 16 tests cubren la decisión y la forma del
+  comando que se le manda a SES, con un cliente falso. Que SES entregue de verdad sólo se sabe
+  desplegando con `MAILER=ses` y `MAIL_FROM`, e invitando a alguien. Eso es T-111 (demostración en
+  staging), y ahora sí se puede hacer.
+- El ambiente desplegado necesita las dos variables nuevas en su `.env`. Sin ellas, con
+  `NODE_ENV=production`, **el API no va a arrancar** — que es el comportamiento buscado, pero
+  conviene saberlo antes del próximo despliegue y no durante.

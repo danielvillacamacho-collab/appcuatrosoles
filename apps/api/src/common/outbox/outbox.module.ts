@@ -1,5 +1,6 @@
 import { Global, Module } from "@nestjs/common";
-import { MailerDeArchivo } from "../mailer/file-mailer.js";
+import { CLOCK } from "../clock/clock.module.js";
+import { construirMailer } from "../mailer/mailer.factory.js";
 import { MAILER } from "../mailer/mailer.port.js";
 import { OutboxProcessor } from "./outbox.processor.js";
 import { OutboxRepository } from "./outbox.repository.js";
@@ -8,9 +9,9 @@ import { OutboxScheduler } from "./outbox.scheduler.js";
 /**
  * La bandeja de salida y su envío.
  *
- * El adaptador de correo se elige aquí y en ningún otro lugar: hoy `MailerDeArchivo`, que escribe a
- * disco para poder probar en local; mañana `SesMailer` (ADR-008), cuando exista la cuenta de AWS.
- * Es el único archivo que cambia.
+ * El adaptador de correo se elige aquí y en ningún otro lugar. Cuál, lo decide el entorno:
+ * `construirMailer` devuelve `SesMailer` (ADR-008) o `MailerDeArchivo` según `MAILER`, y se niega a
+ * arrancar si en producción nadie tomó la decisión. Ver `mailer.selection.ts` para el por qué.
  */
 @Global()
 @Module({
@@ -18,7 +19,7 @@ import { OutboxScheduler } from "./outbox.scheduler.js";
     OutboxRepository,
     OutboxProcessor,
     OutboxScheduler,
-    { provide: MAILER, useClass: MailerDeArchivo },
+    { provide: MAILER, inject: [CLOCK], useFactory: construirMailer },
   ],
   exports: [OutboxRepository, OutboxProcessor],
 })

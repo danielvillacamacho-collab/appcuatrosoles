@@ -358,6 +358,16 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > copas editaran una constante de identidad antes de poder silenciar sus avisos, la sección
   > entera sería una pantalla sin nada que apagar.
 
+- [x] **T-092** Adaptador real de correo: `SesMailer` (ADR-008) y elección del adaptador por
+  entorno. Verificación: con `MAILER` sin definir y `NODE_ENV=production`, la aplicación **no
+  arranca**; con `MAILER=ses` sin `MAIL_FROM`, tampoco. ✅ 2026-08-19 — 16 tests, ver
+  `verification.md` §T-092.
+  > **Tarea que apareció del despliegue, no del plan.** El único adaptador era `MailerDeArchivo`,
+  > conectado sin condición de entorno, así que el primer despliegue real subió escribiendo los
+  > correos a un archivo dentro del contenedor: SES ya estaba productivo y la instancia tenía
+  > permiso para enviar, y ninguna invitación salía. Nadie podía ser invitado ni recuperar su
+  > contraseña — el hito de la Fase 1, bloqueado, sin una sola señal de error.
+
 ## K — End-to-end
 
 - [x] **T-100** E2E: administrador crea usuario → invitación llega (mailbox de prueba) →

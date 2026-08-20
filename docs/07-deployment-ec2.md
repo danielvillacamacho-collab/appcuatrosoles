@@ -76,17 +76,29 @@ que corre Docker. Mínimo necesario:
 ```
 DATABASE_URL=
 SESSION_SECRET=
+BASE_DOMAIN=            # el mismo valor que recibe Caddy, o el API responde 404 a todo
+MAILER=ses              # obligatorio en producción; ver abajo
+MAIL_FROM=              # dirección del dominio verificado en SES
+AWS_REGION=us-east-1
+S3_BUCKET=
+SENTRY_DSN=
 WOMPI_PUBLIC_KEY=       # pendiente Q-02b
 WOMPI_PRIVATE_KEY=      # pendiente Q-02b
 WOMPI_EVENTS_SECRET=    # pendiente Q-02b
-SES_ACCESS_KEY_ID=
-SES_SECRET_ACCESS_KEY=
-SES_REGION=
-SENTRY_DSN=
-S3_BUCKET=
-S3_ACCESS_KEY_ID=
-S3_SECRET_ACCESS_KEY=
 ```
+
+**No hay llaves de AWS en esta lista, y no es un olvido.** La instancia lleva un rol IAM
+(`infra/terraform/iam.tf`) con `ses:SendEmail` restringido a `*@<dominio>` y acceso al bucket de
+respaldos. El SDK las toma de ahí por la cadena de credenciales por defecto. Llaves de larga vida
+en un archivo hay que rotarlas, se filtran en un log y sobreviven a la instancia que las
+necesitaba. Si alguien las agrega «para probar», está empeorando la seguridad, no acelerando nada.
+
+**`MAILER` es obligatoria en producción y la aplicación no arranca sin ella.** Es deliberado:
+`ses` envía de verdad, `file` escribe los correos a disco. Omitirla es lo que hizo que el primer
+despliegue no enviara ninguna invitación —SES estaba productivo y la instancia tenía permiso, pero
+la aplicación nunca lo llamaba— sin que nada avisara. Un servidor que responde y se come los
+correos es peor que uno que no levanta, porque nadie se entera. Ver
+`apps/api/src/common/mailer/mailer.selection.ts`.
 
 ## 5. Backups
 
