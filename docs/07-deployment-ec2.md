@@ -100,6 +100,48 @@ la aplicación nunca lo llamaba— sin que nada avisara. Un servidor que respond
 correos es peor que uno que no levanta, porque nadie se entera. Ver
 `apps/api/src/common/mailer/mailer.selection.ts`.
 
+### El rol de aplicación de menor privilegio (T-007)
+
+El API **no se conecta como dueño de las tablas**. Se conecta con `polo_app`, que puede leer y
+escribir lo normal y **no puede**: crear o alterar tablas, borrar disparadores, ni modificar
+`audit_log` ni `handicap_history`.
+
+Son dos capas independientes sobre esas dos tablas, y conviene entender por qué hacen falta las
+dos: **un disparador para el dueño, y los permisos para la aplicación.** En PostgreSQL el dueño de
+una tabla se salta toda comprobación de permisos, así que un `REVOKE` contra él no hace nada; y un
+disparador se puede borrar, si quien está conectado tiene con qué. Cada capa cubre el agujero de la
+otra.
+
+**Cómo se activa en una instancia que ya está andando.** El orden importa: primero existe el rol,
+después se apunta el API a él.
+
+```bash
+# 1. Elegir una clave y ponerla en /srv/cuatrosoles/.env
+APP_DB_PASSWORD=<clave-nueva>
+DATABASE_URL_ADMIN=postgresql://polo:<clave-del-dueño>@postgres:5432/polo_dev
+
+# 2. Desplegar. El despliegue aplica la migración que crea el rol y le pone esa clave.
+./infra/start-services.sh <tag> dev
+# Tiene que decir: ✅ Rol polo_app listo
+
+# 3. Recién ahora, apuntar el API al rol nuevo — misma base, otro usuario:
+DATABASE_URL=postgresql://polo_app:<clave-nueva>@postgres:5432/polo_dev
+
+# 4. Reiniciar sólo el API y comprobar que quedó conectado como polo_app
+docker compose restart api
+docker compose exec -T postgres psql -U polo -d polo_dev \
+  -c "SELECT usename, count(*) FROM pg_stat_activity WHERE datname='polo_dev' GROUP BY usename"
+```
+
+El último comando es la verificación: tiene que aparecer `polo_app`. Si sólo aparece el dueño, el
+API no tomó la variable y **el cambio no surtió efecto** — que es exactamente el caso en que uno
+cree que está protegido y no lo está.
+
+**Si algo sale mal**, volver atrás es cambiar `DATABASE_URL` al dueño y reiniciar el API. El rol y
+sus permisos quedan; no estorban a nadie.
+
+---
+
 ## 5. Backups
 
 **Cómo está montado** (`infra/backup-db.sh` + `respaldo-db.timer`, instalado por `user-data.sh`):

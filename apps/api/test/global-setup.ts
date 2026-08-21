@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { PrismaClient } from "@prisma/client";
 import { GenericContainer, Wait, type StartedTestContainer } from "testcontainers";
 import type { GlobalSetupContext } from "vitest/node";
 
@@ -46,8 +47,31 @@ export async function setup({ provide }: GlobalSetupContext): Promise<void> {
     stdio: "pipe",
   });
 
-  provide("databaseUrl", url);
-  console.warn("[tests] base de datos lista.");
+  // ── El rol de aplicación (T-007) ────────────────────────────────────────────
+  //
+  // Las migraciones acaban de crearlo **sin contraseña y sin LOGIN**: una contraseña dentro de una
+  // migración sería una contraseña dentro del repositorio. Aquí se le pone una de juguete, igual
+  // que hace quien despliega con la de verdad.
+  //
+  // **Y la suite entera corre con ese rol, no con el dueño.** Es la diferencia entre creer que los
+  // permisos alcanzan y saberlo: si algún camino del código necesitara un privilegio que el rol no
+  // tiene, no falla un test dedicado — fallan los tests de esa funcionalidad, que es donde se
+  // entiende qué se rompió.
+  const cliente = new PrismaClient({ datasources: { db: { url } } });
+
+  try {
+    await cliente.$executeRawUnsafe("ALTER ROLE polo_app WITH LOGIN PASSWORD 'app_de_prueba'");
+  } finally {
+    await cliente.$disconnect();
+  }
+
+  const urlDeLaAplicacion = url.replace("postgresql://test:test@", "postgresql://polo_app:app_de_prueba@");
+
+  provide("databaseUrl", urlDeLaAplicacion);
+  // El del dueño queda disponible para lo que de verdad lo necesita: comprobar que el rol de
+  // aplicación **no** puede hacer algo que el dueño sí.
+  provide("databaseUrlAdmin", url);
+  console.warn("[tests] base de datos lista (la aplicación se conecta como polo_app).");
 }
 
 export async function teardown(): Promise<void> {

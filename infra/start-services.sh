@@ -128,8 +128,21 @@ RETRY_COUNT=0
 MAX_RETRIES=30
 SUCCESS=false
 
+# **Las migraciones corren con el DUEÑO de las tablas, no con el rol de la aplicación** (T-007).
+#
+# El rol con el que se conecta el API no puede crear ni alterar tablas — ése es justamente el
+# punto—, así que si se usara el mismo, `migrate deploy` fallaría con «permission denied».
+#
+# Con el valor por defecto puesto en `DATABASE_URL`, esto sigue funcionando igual en una instancia
+# que todavía no hizo el cambio: nada se rompe por desplegar antes de configurar el rol.
+set -a
+# shellcheck disable=SC1091
+source .env
+set +a
+URL_DE_MIGRACIONES="${DATABASE_URL_ADMIN:-$DATABASE_URL}"
+
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-  if docker exec cuatrosoles-api-1 npx -y prisma@6 migrate deploy --schema=prisma/schema.prisma 2>/dev/null; then
+  if docker exec -e DATABASE_URL="$URL_DE_MIGRACIONES" cuatrosoles-api-1 npx -y prisma@6 migrate deploy --schema=prisma/schema.prisma 2>/dev/null; then
     SUCCESS=true
     echo "✅ Migraciones aplicadas"
     break
@@ -142,6 +155,22 @@ done
 if [ "$SUCCESS" = false ]; then
   echo "⚠️  No se pudieron aplicar las migraciones después de $MAX_RETRIES intentos"
   echo "Revisar logs: docker compose logs api"
+fi
+
+# 6.6. La contraseña del rol de aplicación (T-007)
+#
+# La migración creó `polo_app` **sin contraseña y sin LOGIN**, porque una contraseña dentro de una
+# migración es una contraseña dentro del repositorio. Se le pone acá, en cada despliegue: es
+# idempotente y deja la instancia consistente con el `.env` aunque alguien haya rotado la clave.
+if [ -n "${APP_DB_PASSWORD:-}" ] && [ "$SUCCESS" = true ]; then
+  echo ""
+  echo "🔐 Configurando el rol de aplicación…"
+  if docker compose exec -T postgres psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
+      -c "ALTER ROLE polo_app WITH LOGIN PASSWORD '${APP_DB_PASSWORD}'" > /dev/null; then
+    echo "✅ Rol polo_app listo"
+  else
+    echo "⚠️  No se pudo configurar polo_app. El API seguirá conectándose con el rol que tenga en DATABASE_URL."
+  fi
 fi
 
 # 7. Mostrar estado

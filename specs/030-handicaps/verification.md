@@ -89,10 +89,10 @@ sin la garantía que dice probar es peor que no tenerlo.
 
 ## Pendientes declarados
 
-- **El `REVOKE` de `handicap_history`** —append-only a nivel de base de datos, constitución regla 7—
-  queda enganchado a **T-007**, el rol de mínimo privilegio, que va con AWS. Mientras la aplicación
-  corra como dueña de las tablas ningún `REVOKE` la limita. La intención está escrita en el esquema;
-  **la garantía todavía no existe**.
+- ~~**El `REVOKE` de `handicap_history`**~~ → **cerrado el 2026-08-21 con T-007.** `handicap_history`
+  tiene ahora sus tres disparadores —que paran también al dueño— y el `REVOKE` contra el rol de
+  aplicación, que se conecta sin ser dueño de nada. La garantía existe y hay tests que la prueban
+  por su código de error.
 - **`on_behalf_of_id` está declarada y sin usar** hasta que exista la delegación en un subcomisario
   (`docs/09` Q-11, decidido el 2026-08-11: spec propio).
 - **La misma persona en dos clubes tiene dos handicaps internacionales** que pueden divergir. Se

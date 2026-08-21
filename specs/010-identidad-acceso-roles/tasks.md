@@ -29,13 +29,30 @@ avisa — la tarea estaba mal partida (`docs/10` §2).
   > **triggers**, que sí aplican a todo el mundo. El `REVOKE` sigue siendo deseable como
   > segunda capa y va en **T-007**, porque crear el rol toca `docker-compose`, `.env`, el
   > despliegue y el CI.
-- [ ] **T-007** Rol de base de datos de menor privilegio para la aplicación (segunda capa de
+- [x] **T-007** Rol de base de datos de menor privilegio para la aplicación (segunda capa de
   P-07). Crear un rol **no superusuario** con el que se conecte `apps/api`, dejar la propiedad
   del esquema y las migraciones al rol administrador, y aplicar
   `REVOKE UPDATE, DELETE ON audit_log` + `GRANT SELECT, INSERT`. Toca `docker-compose.yml`,
   `.env.example`, `docs/07-deployment-ec2.md` y el workflow de CI. Verificación: conectado como
   el rol de aplicación, `UPDATE audit_log` falla **por permisos** (no sólo por el trigger), y
   las migraciones siguen corriendo con el rol administrador.
+  ✅ 2026-08-21 — 14 tests. `UPDATE audit_log` falla con **42501**, y hay un test que comprueba que
+  al **dueño** lo para el disparador con otro código: es la prueba de que las dos capas existen y
+  son independientes, no una sola sosteniendo todo.
+  > **Y la suite entera de integración corre ahora con `polo_app`**, no con el dueño. Es la
+  > diferencia entre creer que los permisos alcanzan y saberlo: si a algún camino del código le
+  > faltara un privilegio, no falla un test dedicado — fallan los tests de esa funcionalidad. Los
+  > 518 pasan.
+  > El rol se crea **sin contraseña y sin LOGIN**: una contraseña dentro de una migración es una
+  > contraseña dentro del repositorio. La pone el despliegue.
+  > Los **privilegios por defecto** son lo que hace mantenible el esquema: una tabla nueva nace
+  > accesible sin que nadie se acuerde de otorgar permisos. Y como eso significa que una tabla
+  > append-only futura nacería editable, hay un test que recorre las que tienen disparador y exige
+  > que ninguna le haya dejado permisos de escritura al rol.
+  > De paso se cerró el pendiente de `specs/030`: `handicap_history` no tenía disparador y ahora sí
+  > —el `REVOKE` solo no bastaba, porque el dueño se salta los permisos—.
+  > Verificado quitando el `REVOKE`: el código de error pasa de `42501` a `23001`, o sea que quien
+  > estaría parando el `UPDATE` sería el disparador y no los permisos. El test lo distingue.
 - [x] **T-005** ~~Constraint parcial `UNIQUE(club_id, email) WHERE email IS NOT NULL` en SQL
   crudo~~ → **corregido en T-001**: no hace falta SQL crudo. PostgreSQL trata los `NULL` como
   distintos en un índice único, así que el `@@unique([clubId, email])` normal de Prisma ya da
