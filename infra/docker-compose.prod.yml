@@ -9,12 +9,26 @@
 #   · Las imágenes viven en ECR, no en GHCR: la instancia hace `pull` con las credenciales de su
 #     propio rol (`infra/terraform/iam.tf`), sin login ni token de GitHub guardado en ningún lado.
 
+# Rotación de logs, común a los tres servicios.
+#
+# **Sin esto Docker escribe sin límite.** El controlador por defecto es `json-file` y no rota nada:
+# en una `t3.small` con el disco compartido con el sistema, unos meses de logs del API llenan la
+# partición y lo que se cae no es el logging, es todo. Con 20 MB por archivo y 5 archivos quedan
+# 100 MB por servicio y varios días de historia, que es lo que hace falta para investigar algo que
+# alguien reportó ayer.
+x-logs: &logs
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
 name: cuatrosoles
 
 services:
   postgres:
     image: postgres:16
     restart: unless-stopped
+    logging: *logs
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -32,6 +46,7 @@ services:
   api:
     image: ${ECR_REGISTRY}/cuatrosoles-${ENTORNO}-api:${IMAGE_TAG:-latest}
     restart: unless-stopped
+    logging: *logs
     env_file: .env
     depends_on:
       postgres:
@@ -50,6 +65,7 @@ services:
   caddy:
     image: ${ECR_REGISTRY}/cuatrosoles-${ENTORNO}-caddy:${IMAGE_TAG:-latest}
     restart: unless-stopped
+    logging: *logs
     environment:
       # El mismo valor que recibe el API. Si no coinciden, Caddy sirve el sitio y el API responde
       # 404 a todo.

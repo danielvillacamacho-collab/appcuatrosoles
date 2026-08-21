@@ -20,10 +20,23 @@ export function mensajeDeError(error: unknown): string {
   }
 
   if (error instanceof ApiError) {
-    return textoDeCodigo(error.data.code);
+    const texto = textoDeCodigo(error.data.code);
+
+    // **La referencia se muestra sólo cuando no tenemos una explicación.**
+    //
+    // Si el error es una regla del club —«esa cancha ya está ocupada»— la persona sabe qué hacer y
+    // un código de doce caracteres sólo estorba. Si en cambio salió el mensaje genérico, nadie
+    // sabe qué pasó: ahí la referencia es lo único que convierte «no me dejó guardar» en una línea
+    // de log encontrable, que es exactamente lo que hace falta mientras el club está probando.
+    return texto === copy.errores.generico ? conReferencia(texto, error.data.requestId) : texto;
   }
 
   return copy.errores.generico;
+}
+
+/** El identificador que el API ya devuelve en cada error y que quedó registrado con el stack. */
+function conReferencia(texto: string, requestId: string): string {
+  return requestId === "" ? texto : `${texto} ${copy.comun.referenciaDeError(requestId)}`;
 }
 
 /**

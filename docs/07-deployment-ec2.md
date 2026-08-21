@@ -102,6 +102,42 @@ correos es peor que uno que no levanta, porque nadie se entera. Ver
 
 ## 5. Backups
 
+**Cómo está montado** (`infra/backup-db.sh` + `respaldo-db.timer`, instalado por `user-data.sh`):
+
+| | |
+|---|---|
+| Cuándo | 08:20 UTC (3:20 a.m. en Bogotá), una hora después del snapshot de EBS para no competir por el disco |
+| Qué hace | `pg_dump --clean --if-exists` comprimido, subido a `s3://<bucket>/<entorno>/<fecha>.sql.gz` |
+| Cifrado | Del lado del servidor (AES256 en el bucket) y en tránsito por HTTPS. **No se cifra a mano**: una clave más que administrar es una clave más que perder el día de la restauración |
+| Si falla | El servicio termina con error y queda en `journalctl -u respaldo-db`. `Persistent=true` recupera el que se saltó si la instancia estuvo apagada |
+
+**El script se niega a subir un volcado sospechoso**, y ésa es la parte que lo convierte en un
+respaldo en vez de un archivo: comprueba que pese más de 20 KB, que el `gzip` esté íntegro, y que
+adentro haya de verdad un volcado de PostgreSQL. Un `pg_dump` que falla a mitad de camino deja un
+archivo corto y perfectamente subible; sin esos tres controles, el día de la restauración se
+descubre que hace meses se están guardando ceros.
+
+### Cómo se restaura
+
+```bash
+# 1. Ver qué hay
+aws s3 ls "s3://$BUCKET_DE_RESPALDOS/dev/" | tail -5
+
+# 2. Traerlo
+aws s3 cp "s3://$BUCKET_DE_RESPALDOS/dev/2026-08-21T08-20-00Z.sql.gz" /tmp/respaldo.sql.gz
+
+# 3. Restaurar. `--clean --if-exists` ya viene dentro del volcado: se puede aplicar sobre una base
+#    que ya tiene datos, y eso es justamente el caso real de una restauración.
+gzip -dc /tmp/respaldo.sql.gz | \
+  docker compose -f /srv/cuatrosoles/docker-compose.yml exec -T postgres \
+  psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB"
+```
+
+> **Restaurar sobre la base de producción reemplaza lo que hay.** Para la prueba mensual se levanta
+> un PostgreSQL aparte —`docker run --rm -p 5433:5432 postgres:16`— y se restaura ahí.
+
+---
+
 - `pg_dump` cifrado, diario, subido a S3, retención 30 días.
 - Snapshot diario de EBS como segunda capa (recupera el volumen completo si `pg_dump` mismo
   falló silenciosamente).

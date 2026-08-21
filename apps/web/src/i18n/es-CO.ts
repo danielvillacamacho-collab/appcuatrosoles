@@ -12,6 +12,14 @@ export const copy = {
   },
 
   comun: {
+    /**
+     * Acompaña al mensaje genérico de error, y sólo a ése.
+     *
+     * Va en `comun` y no en `errores` porque `errores` es un **mapa de código de error a texto** y
+     * nada más: meterle una función rompe ese contrato, y hay un test que lo comprueba.
+     */
+    referenciaDeError: (id: string) => `Si vuelve a pasar, repórtalo con este código: ${id}`,
+
     cargando: "Cargando…",
     salir: "Cerrar sesión",
     volverAlPanel: "← Volver al panel",

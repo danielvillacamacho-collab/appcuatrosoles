@@ -85,3 +85,36 @@ describe("camposConError", () => {
     expect(camposConError(new Error("otra cosa"))).toEqual([]);
   });
 });
+
+describe("la referencia para reportar, mientras el club está probando", () => {
+  it("un error SIN explicación trae el código que lo hace encontrable en los registros", () => {
+    // Convierte «no me dejó guardar» en una línea de log exacta. El API ya devuelve ese
+    // identificador en cada error y lo registra junto al stack.
+    const sinExplicacion = new ApiError(500, {
+      code: "codigo_que_no_existe",
+      message: "del servidor",
+      requestId: "req-abc123",
+    });
+
+    expect(mensajeDeError(sinExplicacion)).toContain("req-abc123");
+  });
+
+  it("y un error QUE SÍ se explica no lo trae: ahí el código sólo estorba", () => {
+    // «Esa cancha ya está ocupada» le dice a la persona qué hacer. Un identificador de doce
+    // caracteres al lado no agrega nada y ensucia la pantalla.
+    const conExplicacion = new ApiError(409, {
+      code: "cancha_ocupada",
+      message: "del servidor",
+      requestId: "req-abc123",
+    });
+
+    expect(mensajeDeError(conExplicacion)).toBe(copy.errores.cancha_ocupada);
+    expect(mensajeDeError(conExplicacion)).not.toContain("req-abc123");
+  });
+
+  it("sin identificador, el mensaje sale limpio", () => {
+    const sinId = new ApiError(500, { code: "raro", message: "x", requestId: "" });
+
+    expect(mensajeDeError(sinId)).toBe(copy.errores.generico);
+  });
+});

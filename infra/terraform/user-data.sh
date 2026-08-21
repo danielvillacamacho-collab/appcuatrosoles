@@ -55,3 +55,48 @@ fi
 mkdir -p /srv/cuatrosoles
 chown ec2-user:ec2-user /srv/cuatrosoles
 chmod 750 /srv/cuatrosoles
+
+# ── Respaldo diario de la base ────────────────────────────────────────────────
+#
+# El segundo mecanismo, independiente de los snapshots de EBS (`docs/07` §7). El script lo instala
+# el despliegue en `/srv/cuatrosoles/backup-db.sh`; aquí sólo queda **agendado**, para que exista
+# desde el primer arranque y no dependa de que alguien se acuerde.
+#
+# Un temporizador de systemd y no `cron`: `Persistent=true` ejecuta el respaldo que se saltó
+# mientras la instancia estaba apagada, y `journalctl -u respaldo-db` dice qué pasó la última vez
+# sin tener que ir a buscar un archivo de log.
+cat > /etc/systemd/system/respaldo-db.service <<'UNIDAD'
+[Unit]
+Description=Respaldo de la base de datos a S3
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=ec2-user
+WorkingDirectory=/srv/cuatrosoles
+# Del mismo `.env` que usa el compose, y no de variables inyectadas por Terraform: este archivo se
+# renderiza con `file()` y no con `templatefile()`, así que un `${...}` acá se escribiría literal.
+# Además, un segundo lugar donde poner el nombre del bucket es un segundo lugar donde se
+# desincroniza.
+EnvironmentFile=/srv/cuatrosoles/.env
+ExecStart=/srv/cuatrosoles/backup-db.sh
+UNIDAD
+
+cat > /etc/systemd/system/respaldo-db.timer <<'TEMPORIZADOR'
+[Unit]
+Description=Respaldo diario de la base de datos
+
+[Timer]
+# 08:20 UTC = 3:20 a.m. en Bogotá. Una hora después del snapshot de EBS a propósito: si los dos
+# corrieran juntos, competirían por el disco de una instancia chica.
+OnCalendar=*-*-* 08:20:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target
+TEMPORIZADOR
+
+systemctl daemon-reload
+systemctl enable --now respaldo-db.timer
