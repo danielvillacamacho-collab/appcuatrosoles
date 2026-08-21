@@ -50,6 +50,59 @@ else
   exit 1
 fi
 
+# 3b. Respaldo diario de la base: script y temporizador
+#
+# **Va acá y no sólo en `user-data.sh`.** Ese archivo corre una única vez, en el primer arranque de
+# la instancia: una máquina que ya estaba andando cuando se agregó el respaldo no lo tendría nunca,
+# y nadie se enteraría hasta el día que hiciera falta restaurar. Puesto acá, cada despliegue lo deja
+# instalado y al día — es idempotente, así que repetirlo no cuesta nada.
+if [ -f /data/appcuatrosoles/infra/backup-db.sh ]; then
+  echo ""
+  echo "💾 Instalando el respaldo diario..."
+  cp /data/appcuatrosoles/infra/backup-db.sh ./backup-db.sh
+  chmod +x ./backup-db.sh
+
+  sudo tee /etc/systemd/system/respaldo-db.service > /dev/null <<'UNIDAD'
+[Unit]
+Description=Respaldo de la base de datos a S3
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=ec2-user
+WorkingDirectory=/srv/cuatrosoles
+EnvironmentFile=/srv/cuatrosoles/.env
+ExecStart=/srv/cuatrosoles/backup-db.sh
+UNIDAD
+
+  sudo tee /etc/systemd/system/respaldo-db.timer > /dev/null <<'TEMPORIZADOR'
+[Unit]
+Description=Respaldo diario de la base de datos
+
+[Timer]
+OnCalendar=*-*-* 08:20:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target
+TEMPORIZADOR
+
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now respaldo-db.timer
+
+  # Un aviso y no un fallo: que falte el nombre del bucket no puede impedir un despliegue. Pero
+  # tiene que verse, porque sin esa variable el respaldo se ejecuta y termina en error todos los
+  # días sin que nadie lo mire.
+  if ! grep -q "^BUCKET_DE_RESPALDOS=." .env; then
+    echo ""
+    echo "⚠️  FALTA BUCKET_DE_RESPALDOS en /srv/cuatrosoles/.env"
+    echo "    El respaldo diario va a fallar hasta que se agregue."
+    echo "    El valor sale de: terraform output bucket_de_respaldos"
+  fi
+fi
+
 # 4. Detener servicios anteriores (si existen)
 echo ""
 echo "🛑 Deteniendo servicios anteriores..."

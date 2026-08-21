@@ -26,10 +26,19 @@ echo "📝 Autenticando en ECR..."
 aws ecr get-login-password --region $REGION | \
   docker login --username AWS --password-stdin $REGISTRY
 
+# La arquitectura del SERVIDOR, no la de quien construye.
+#
+# **La instancia es x86_64** (`compute.tf` pide una AMI `al2023-*-x86_64`). Sin esta bandera, un Mac
+# con Apple Silicon construye imágenes arm64, las sube a ECR, y el servidor no puede correrlas: se
+# descubre en el arranque, con el ambiente ya detenido. Fijarla cuesta unos minutos de emulación al
+# construir y quita esa clase entera de sorpresa.
+PLATAFORMA="${PLATAFORMA:-linux/amd64}"
+
 # 2. Construir imagen API
 echo ""
-echo "🔨 Construyendo imagen API..."
+echo "🔨 Construyendo imagen API para ${PLATAFORMA}..."
 docker build \
+  --platform "$PLATAFORMA" \
   --tag cuatrosoles-${ENTORNO}-api:${IMAGE_TAG} \
   --tag $REGISTRY/cuatrosoles-${ENTORNO}-api:${IMAGE_TAG} \
   --tag $REGISTRY/cuatrosoles-${ENTORNO}-api:latest \
@@ -38,8 +47,9 @@ docker build \
 
 # 3. Construir imagen Caddy (Web + Reverse Proxy)
 echo ""
-echo "🔨 Construyendo imagen Caddy..."
+echo "🔨 Construyendo imagen Caddy para ${PLATAFORMA}..."
 docker build \
+  --platform "$PLATAFORMA" \
   --tag cuatrosoles-${ENTORNO}-caddy:${IMAGE_TAG} \
   --tag $REGISTRY/cuatrosoles-${ENTORNO}-caddy:${IMAGE_TAG} \
   --tag $REGISTRY/cuatrosoles-${ENTORNO}-caddy:latest \

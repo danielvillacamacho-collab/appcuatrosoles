@@ -1,0 +1,35 @@
+# Lo que NO entra a la imagen.
+#
+# **Sin este archivo, `COPY . .` mete el `node_modules` de la máquina de quien construye.** En un
+# Mac con Apple Silicon eso son binarios de macOS arm64, y `pnpm install --frozen-lockfile` los
+# encuentra ya instalados y no baja los de Linux: la imagen web falla con «Cannot find module
+# @rollup/rollup-linux-x64-gnu», un error que culpa a npm de un problema de contexto de build.
+#
+# CI no lo veía porque clona limpio y no tiene `node_modules` que copiar. Es exactamente la clase
+# de defecto que sólo aparece cuando alguien despliega desde su propia máquina.
+node_modules
+**/node_modules
+
+# Resultados de compilación: la imagen los genera adentro. Copiarlos sólo agranda el contexto y
+# arriesga meter un `dist` viejo.
+dist
+**/dist
+.turbo
+**/.turbo
+coverage
+**/coverage
+
+# Estado local que no tiene nada que hacer en una imagen de producción — y el `.env` además
+# llevaría secretos adentro de una capa.
+.env
+.env.*
+!.env.example
+.git
+.github
+*.log
+.DS_Store
+
+# Pruebas y artefactos de pruebas.
+**/test-results
+**/playwright-report
+**/.vitest-reports
