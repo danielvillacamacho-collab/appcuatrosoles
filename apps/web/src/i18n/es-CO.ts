@@ -532,6 +532,10 @@ export const copy = {
       "Esta práctica no declara su nivel, así que no se puede verificar que te corresponda.",
     pareja_no_valida: "Esa persona no te propuso compartir puesto.",
 
+    // ── Equipos ──────────────────────────────────────────────────────────────
+    practica_no_confirmada: "Sólo se arman equipos de una práctica confirmada.",
+    equipos_incompletos: "Faltan puestos: los equipos tienen que incluir a todos los que juegan.",
+
     // ── Club, temporadas y configuración ─────────────────────────────────────
     nombre_en_uso: "Ya existe algo con ese nombre en el club.",
     codigo_en_uso: "Ese código ya está en uso.",

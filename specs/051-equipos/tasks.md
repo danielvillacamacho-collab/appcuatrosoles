@@ -59,26 +59,45 @@ avisos, el registro— es andamiaje alrededor de un número equivocado.
 
 ## C — API
 
-- [ ] **T-620** `TeamsService`: proponer desde cero.
+- [x] **T-620** `TeamsService`: proponer desde cero.
   Verificación: sólo sobre una práctica **confirmada** (R-051-01); rearmar dos veces no duplica
   equipos ni puestos; el handicap **queda congelado** en el puesto, y cambiarlo después en
   `specs/030` no mueve los equipos ya armados.
+  ✅ 2026-08-24 — 14 tests para la sección, **todos verdes a la primera**. Rearmar borra los dos
+  equipos y los vuelve a crear: los puestos se van con ellos por el `Cascade`, así que no quedan
+  huérfanos.
+  > Ajustar **no recalcula el handicap de nadie**: mover a alguien de equipo no cambia cuánto pesa.
+  > Recalcularlo ahí haría que un cambio de handicap ocurrido en el medio se colara sin que nadie lo
+  > pidiera.
 
-- [ ] **T-621** La propuesta **al confirmarse**, dentro de la transacción de la decisión
+- [x] **T-621** La propuesta **al confirmarse**, dentro de la transacción de la decisión
   (`plan.md` §5).
   Verificación: una práctica que se confirma queda con equipos propuestos sin que nadie haga nada;
   una que se cancela **no**; correr el proceso dos veces no arma equipos dos veces.
+  ✅ 2026-08-24 — la propuesta va **dentro de la transacción** en que se confirma. Con dos
+  transacciones separadas, un proceso que muere entre una y otra deja una práctica confirmada sin
+  equipos, y la promesa de HU-051-01 dependería de que nadie se caiga.
 
-- [ ] **T-622** Ajustar y aprobar.
+- [x] **T-622** Ajustar y aprobar.
   Verificación: ajustar manda la **composición entera**; aprobar publica y avisa; **reacomodar
   después de aprobado se puede** y vuelve a avisar; un jugador que intenta aprobar recibe 403.
+  ✅ 2026-08-24 — y un ajuste que deja gente afuera se rechaza: sin esa comprobación alguien podría
+  desaparecer de los dos equipos y nadie se enteraría hasta la cancha.
 
-- [ ] **T-623** Quién ve qué (R-051-05).
+- [x] **T-623** Quién ve qué (R-051-05).
   Verificación: un jugador **no ve** una propuesta sin aprobar — y **el test serializa la respuesta
   completa** buscando los nombres de los postulados, con el criterio de `specs/040` T-451: que el
   campo venga vacío no alcanza. Aprobados, sí los ve, con el suyo señalado.
+  ✅ 2026-08-24 — **404 y no 403** ante un borrador: decir «hay equipos pero no podés verlos» ya
+  cuenta que existen, y lo que se quiere es que un borrador no exista para nadie más.
 
-- [ ] **T-624** Las rutas en el arnés de aislamiento.
+- [x] **T-624** Las rutas en el arnés de aislamiento.
+  ✅ 2026-08-24 — **cierra la sección C.** Las cuatro con test propio: las tres que escriben dependen
+  del estado, y la de lectura se acota además por si quien mira puede aprobar.
+  > **Ningún permiso nuevo.** `practice.manage` alcanzó, y que este módulo no haya tenido que tocar
+  > la tabla de permisos es la señal de que ese permiso estaba bien pensado.
+
+> **Sección C cerrada el 2026-08-24.** 538 tests de integración.
 
 ## D — Interfaz
 

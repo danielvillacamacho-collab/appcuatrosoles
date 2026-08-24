@@ -16,6 +16,8 @@ export const NOTIFICATION_TYPES = [
    */
   "practice.confirmed",
   "practice.cancelled",
+  /** Los equipos quedaron publicados (`specs/051` R-051-07). También silenciable. */
+  "practice.teams-published",
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];

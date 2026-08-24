@@ -12,6 +12,7 @@ import { CLOCK } from "../common/clock/clock.module.js";
 import { logger } from "../common/logging/logger.js";
 import { OutboxRepository } from "../common/outbox/outbox.repository.js";
 import { PrismaService } from "../common/prisma/prisma.service.js";
+import { TeamsService } from "./teams.service.js";
 import { BookingsService } from "../fields/bookings.service.js";
 
 /**
@@ -32,6 +33,7 @@ export class DecisionProcessor {
     private readonly prisma: PrismaService,
     private readonly bookings: BookingsService,
     private readonly outbox: OutboxRepository,
+    private readonly equipos: TeamsService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -148,6 +150,14 @@ export class DecisionProcessor {
       // Los avisos van en **la misma transacción** (P-11). Si el cambio se revierte, los correos se
       // van con él; si el proceso muere después del `COMMIT`, ya están encolados y salen solos.
       await this.avisar(tx, practica, reparto, decision);
+
+      if (decision === "confirmar") {
+        // **Los equipos se proponen acá, no después** (`specs/051` T-621). Con dos transacciones
+        // separadas, un proceso que muere entre una y otra deja una práctica confirmada sin
+        // equipos, y la promesa de que «al confirmarse ya hay una propuesta» dependería de que
+        // nadie se caiga.
+        await this.equipos.proponerEn(tx, clubId, practiceId);
+      }
 
       return true;
     });

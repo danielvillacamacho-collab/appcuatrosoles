@@ -78,6 +78,15 @@ export function construirCorreo(tipo: string, payload: Prisma.JsonValue): Mensaj
         "",
       );
 
+    case "practice.teams-published":
+      return correo(
+        para,
+        "Ya están los equipos",
+        `${nombre}, quedaron armados los equipos de la práctica del ${fechaLegible(datos.startsAt)}. Juegas en el equipo ${texto(datos.equipo)}.`,
+        "",
+        "",
+      );
+
     default:
       // Un tipo desconocido es un error de programación, no un correo raro: se prefiere que falle
       // el envío —y que quede en `last_error`— a mandar un mensaje vacío que nadie entiende.

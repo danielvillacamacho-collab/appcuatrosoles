@@ -110,6 +110,16 @@ const CON_TEST_PROPIO = [
   "POST /api/practices/:id/applications",
   "DELETE /api/practices/:id/applications/mine",
   "POST /api/practices/:id/applications/mine/accept-partner",
+  // `teams.int-spec` → «una práctica de otro club responde 404» y «un jugador NO ve una propuesta
+  // sin aprobar, y la respuesta no filtra ningún nombre».
+  //
+  // Las cuatro con test propio. Las tres que escriben dependen del estado —sólo se arman equipos de
+  // una práctica confirmada—, y la de lectura se acota además **por si quien mira puede aprobar**:
+  // su aislamiento no es sólo por club, es por quién es cada quien.
+  "GET /api/practices/:id/teams",
+  "POST /api/practices/:id/teams/propose",
+  "PATCH /api/practices/:id/teams",
+  "POST /api/practices/:id/teams/approve",
   "POST /api/field-bookings/block",
   "DELETE /api/field-bookings/:id",
   // `minors.int-spec` → «un acudiente de otro club no existe desde aquí: 404, nunca 403». El

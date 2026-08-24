@@ -9,7 +9,8 @@ export type TipoDeMensaje =
   | "identity.notify-account-status-changed"
   /** Prácticas (`specs/050`). A diferencia de los de identidad, **éstos sí se pueden silenciar**. */
   | "practice.confirmed"
-  | "practice.cancelled";
+  | "practice.cancelled"
+  | "practice.teams-published";
 
 export interface MensajeAEncolar {
   tipo: TipoDeMensaje;

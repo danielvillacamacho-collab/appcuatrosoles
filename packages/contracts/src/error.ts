@@ -90,6 +90,10 @@ export const CODIGOS_DE_ERROR = [
   "practica_sin_nivel_declarado",
   "pareja_no_valida",
 
+  // Equipos (`specs/051`).
+  "practica_no_confirmada",
+  "equipos_incompletos",
+
   // Club, temporadas y configuración (`specs/020`, `specs/140`).
   "nombre_en_uso",
   "codigo_en_uso",
