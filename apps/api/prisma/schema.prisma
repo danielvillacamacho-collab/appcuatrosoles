@@ -68,8 +68,10 @@ model Person {
 
   /// Handicaps (`specs/030`). La **ausencia** de filas significa que nadie ha calificado a esta
   /// persona todavía, y se lee como −2 goles (R-030-05). No se crean al darla de alta.
-  practiceApplications PracticeApplication[]
-  practiceEligibility  PracticeEligibility[]
+  practiceApplications     PracticeApplication[]
+  practiceEligibility      PracticeEligibility[]
+  practiceSlotsAsPrimary   PracticeSlot[]        @relation("SlotTitular")
+  practiceSlotsAsSecondary PracticeSlot[]        @relation("SlotCompanero")
 
   handicaps       PlayerHandicap[]
   handicapChanges HandicapHistory[]
@@ -622,6 +624,8 @@ model Club {
   practices               Practice[]
   practiceApplications    PracticeApplication[]
   practiceEligibility     PracticeEligibility[]
+  practiceTeams           PracticeTeam[]
+  practiceSlots           PracticeSlot[]
   playerHandicaps         PlayerHandicap[]
   handicapHistory         HandicapHistory[]
 
@@ -1109,6 +1113,7 @@ model Practice {
   field        Field                 @relation(fields: [fieldId], references: [id], onDelete: Restrict)
   fieldBooking FieldBooking?         @relation(fields: [fieldBookingId], references: [id], onDelete: Restrict)
   applications PracticeApplication[]
+  teams        PracticeTeam[]
 
   @@index([clubId, startsAt])
   /// La consulta del proceso de decisión: lo vencido y todavía publicado (`plan.md` §0.2).
@@ -1170,4 +1175,76 @@ model PracticeEligibility {
 
   @@index([personId, revokedAt])
   @@map("practice_eligibility")
+}
+
+/// Los dos equipos de una práctica (`specs/051`).
+enum TeamLabel {
+  A
+  B
+
+  @@map("team_label")
+}
+
+/// Un equipo de una práctica. **Es un borrador mientras `approvedAt` sea nulo** (R-051-05): hasta
+/// que el comisario aprueba, nadie más lo ve.
+model PracticeTeam {
+  id         String @id @default(uuid(7))
+  clubId     String @map("club_id")
+  practiceId String @map("practice_id")
+
+  label TeamLabel
+
+  /// La suma de sus puestos, guardada. Se puede recalcular desde `practice_slot`, y se guarda igual:
+  /// es lo que se muestra en un listado sin traer todos los puestos de todas las prácticas.
+  handicapTotalHalves Int @map("handicap_total_halves")
+
+  approvedById String?   @map("approved_by_id")
+  approvedAt   DateTime? @map("approved_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  club     Club           @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  practice Practice       @relation(fields: [practiceId], references: [id], onDelete: Restrict)
+  slots    PracticeSlot[]
+
+  /// Un equipo A y un equipo B por práctica, no más.
+  @@unique([practiceId, label])
+  @@map("practice_team")
+}
+
+/// Un puesto dentro de un equipo: uno o dos jugadores (medio hombre).
+model PracticeSlot {
+  id             String @id @default(uuid(7))
+  clubId         String @map("club_id")
+  practiceTeamId String @map("practice_team_id")
+
+  position Int
+
+  primaryPersonId String @map("primary_person_id")
+
+  /// El medio hombre. La pareja viene de `practice_application` (`specs/050` R-050-08).
+  secondaryPersonId String? @map("secondary_person_id")
+
+  /// **El handicap con que se armó el equipo, congelado** (`plan.md` §0). Para un puesto compartido,
+  /// el más alto de los dos (R-051-06).
+  ///
+  /// No es una referencia al vigente a propósito: un equipo recalculado tres semanas después con
+  /// handicaps nuevos no es el mismo equipo bien calculado, es otro equipo.
+  effectiveHandicapHalves Int @map("effective_handicap_halves")
+
+  /// Declarado y sin usar hasta Fase 3, con el criterio de `practice.price_policy_id`.
+  costSharePrimaryPct Int @default(50) @map("cost_share_primary_pct")
+
+  club      Club    @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  primary   Person  @relation("SlotTitular", fields: [primaryPersonId], references: [id], onDelete: Restrict)
+  secondary Person? @relation("SlotCompanero", fields: [secondaryPersonId], references: [id], onDelete: Restrict)
+
+  /// **Cascade, y sólo acá.** Rearmar los equipos borra los dos y los vuelve a crear; que los
+  /// puestos se vayan con ellos es lo que impide que queden huérfanos. Hacia la práctica y hacia las
+  /// personas el borrado sigue siendo `Restrict`, como todo en el repo.
+  team PracticeTeam @relation(fields: [practiceTeamId], references: [id], onDelete: Cascade)
+
+  @@unique([practiceTeamId, position])
+  @@map("practice_slot")
 }

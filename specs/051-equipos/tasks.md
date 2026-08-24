@@ -40,12 +40,22 @@ avisos, el registro— es andamiaje alrededor de un número equivocado.
 
 ## B — Datos
 
-- [ ] **T-610** `PracticeTeam` y `PracticeSlot` (`plan.md` §1), con la migración.
+- [x] **T-610** `PracticeTeam` y `PracticeSlot` (`plan.md` §1), con la migración.
   Verificación: `up`/`down`/`up` contra Postgres real; dos equipos con la misma etiqueta en una
   práctica se rechazan; dos puestos en la misma posición de un equipo se rechazan; **borrar el
   equipo se lleva sus puestos** y no deja huérfanos.
   > Revisar la migración por el `DROP DEFAULT` sobre `time_range` que Prisma vuelve a meter — es la
   > cuarta vez. Ver la cabecera de `20260811234305_handicaps`.
+  ✅ 2026-08-24 — 6 tests. **La trajo, otra vez.** Cuarta migración seguida.
+  > Y hay un test que comprueba la promesa de T-007 con tablas de verdad: las dos nacieron
+  > accesibles para el rol de aplicación **sin que nadie otorgara nada**. Si los privilegios por
+  > defecto no funcionaran, este archivo entero fallaría con «permission denied», porque la suite
+  > corre como `polo_app` y no como el dueño.
+  > Los tests empezaron compartiendo una práctica y chocaban entre ellos por la restricción de «un
+  > equipo A por práctica»: el síntoma aparecía en un test que no tenía nada que ver. Cada uno crea
+  > la suya.
+
+> **Sección B cerrada el 2026-08-24.** 518 tests de integración.
 
 ## C — API
 
