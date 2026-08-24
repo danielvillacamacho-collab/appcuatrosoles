@@ -6,18 +6,75 @@ import { etiqueta } from "../db.js";
 describe("Esquema de equipos (T-610)", () => {
   let prisma: PrismaClient;
   let clubId: string;
-  let personas: string[];
   let fieldId: string;
   let cuentaId: string;
+  let personas: string[];
 
   /**
    * Una práctica **propia de cada test**.
    *
    * Compartir una sola entre todos parecía más simple y no lo era: la restricción de «un equipo A
    * por práctica» hace que el primer test que crea un equipo le rompa la corrida al siguiente, y el
-   * síntoma aparece en el test de más abajo, que no tiene nada que ver.
+   * síntoma aparece en un test de más abajo que no tiene nada que ver con la causa.
    */
   async function crearPractica(): Promise<string> {
+    const practica = await prisma.practice.create({
+      data: {
+        clubId,
+        fieldId,
+        startsAt: new Date("2027-12-01T16:00:00Z"),
+        endsAt: new Date("2027-12-01T18:00:00Z"),
+        chukkers: 6,
+        handicapType: "club",
+        targetPlayers: 4,
+        minPlayers: 4,
+        applicationsCloseAt: new Date("2027-12-01T12:00:00Z"),
+        decisionAt: new Date("2027-12-01T13:00:00Z"),
+        status: "confirmed",
+        createdById: cuentaId,
+      },
+      select: { id: true },
+    });
+
+    return practica.id;
+  }
+
+  async function crearEquipo(practiceId: string, label: "A" | "B", suma = 0): Promise<string> {
+    const equipo = await prisma.practiceTeam.create({
+      data: { clubId, practiceId, label, handicapTotalHalves: suma },
+      select: { id: true },
+    });
+
+    return equipo.id;
+  }
+
+  beforeAll(async () => {
+    prisma = new PrismaClient({ datasources: { db: { url: inject("databaseUrl") } } });
+
+    const club = await prisma.club.create({
+      data: { slug: `eq-${etiqueta("s")}`.toLowerCase().slice(0, 40), name: "Club de equipos" },
+    });
+    clubId = club.id;
+
+    fieldId = (await prisma.field.create({ data: { clubId, name: "Cancha 1" } })).id;
+
+    const persona = await prisma.person.create({ data: { clubId, fullName: "Creador" } });
+    const cuenta = await prisma.userAccount.create({
+      data: {
+        personId: persona.id,
+        email: `${etiqueta("eq")}@ejemplo.test`,
+        passwordHash: "argon2id$falso",
+        status: "active",
+      },
+    });
+
+    cuentaId = cuenta.id;
+    personas = [persona.id];
+
+    for (let i = 0; i < 3; i += 1) {
+      const otra = await prisma.person.create({ data: { clubId, fullName: `Jugador ${i}` } });
+      personas.push(otra.id);
+    }
   });
 
   afterAll(async () => {
@@ -33,12 +90,7 @@ describe("Esquema de equipos (T-610)", () => {
 
   it("dos puestos no comparten posición dentro de un equipo", async () => {
     const equipo = await crearEquipo(await crearPractica(), "B");
-    const puesto = {
-      clubId,
-      practiceTeamId: equipo,
-      position: 1,
-      effectiveHandicapHalves: 4,
-    };
+    const puesto = { clubId, practiceTeamId: equipo, position: 1, effectiveHandicapHalves: 4 };
 
     await prisma.practiceSlot.create({ data: { ...puesto, primaryPersonId: personas[0] ?? "" } });
 
@@ -101,7 +153,7 @@ describe("Esquema de equipos (T-610)", () => {
   it("las tablas nuevas nacieron accesibles para el rol de aplicación, sin que nadie lo hiciera", async () => {
     // **La promesa de T-007 comprobada con tablas de verdad.** Los privilegios por defecto son lo
     // que hace mantenible el esquema: si no funcionaran, este archivo entero fallaría con
-    // «permission denied» — porque la suite corre como `polo_app`, no como el dueño.
+    // «permission denied», porque la suite corre como `polo_app` y no como el dueño.
     const [quienSoy] = await prisma.$queryRawUnsafe<{ current_user: string }[]>(
       "SELECT current_user",
     );
