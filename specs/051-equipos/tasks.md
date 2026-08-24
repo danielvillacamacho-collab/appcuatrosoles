@@ -11,18 +11,32 @@ avisos, el registro— es andamiaje alrededor de un número equivocado.
 
 ## A — Dominio puro
 
-- [ ] **T-601** `handicapDelPuesto`: el más alto de los dos cuando el puesto es compartido
+- [x] **T-601** `handicapDelPuesto`: el más alto de los dos cuando el puesto es compartido
   (R-051-06).
   Verificación: un puesto de una persona pesa lo suyo; uno compartido entre 2 y 4 goles pesa **4**,
   ni 6 ni 3; el orden de los dos no cambia el resultado; dos iguales pesan ese valor.
+  ✅ 2026-08-24 — 5 tests, incluido el de handicaps negativos. Sumarlos inventaría un puesto que no
+  existe; promediarlos castigaría al bueno por acompañar a alguien.
 
-- [ ] **T-602** `balancearEquipos`: el reparto **exacto** más parejo (R-051-02, R-051-03, R-051-04).
+- [x] **T-602** `balancearEquipos`: el reparto **exacto** más parejo (R-051-02, R-051-03, R-051-04).
   Verificación: con `[8,7,6,5,4]` el codicioso da diferencia 2 y el exacto da 0 — el test exige el
   exacto; el mismo conjunto **desordenado** da el mismo resultado; con número impar los equipos
   quedan con un puesto de diferencia; con cero y con un solo puesto no rompe; el peor caso del
   contrato —40 puestos de 20 medios— resuelve rápido.
   > El codicioso «el más fuerte al equipo más liviano» es fácil de escribir y **no siempre acierta**.
   > El caso de prueba está elegido para que se note la diferencia: sin él, el error pasaría.
+  ✅ 2026-08-24 — 13 tests. **Cierra la sección A.** Reparto exacto con programación dinámica sobre
+  «cuántos van en A y cuánto suman»: 40 puestos —el máximo del contrato— se reparten en menos de un
+  segundo, así que no hay camino aproximado ni dos comportamientos que explicar.
+  > **Dos errores míos los encontraron los tests de borde, no yo.** El de handicaps negativos:
+  > la tabla se indexa por suma y no admite índices negativos, así que se trabaja con la suma
+  > desplazada — y yo había escrito el objetivo dividiendo también el desplazamiento, que da el
+  > valor equivocado en cuanto hay un principiante. Un club con principiantes es el caso normal,
+  > no el raro.
+  > Y el del puesto único: la búsqueda arrancaba en la suma cero dándola por buena, y cero no es
+  > alcanzable para un grupo de uno. El reparto salía vacío.
+
+> **Sección A cerrada el 2026-08-24.** 18 tests, `packages/domain/src/practice` al 100 % de líneas.
 
 ## B — Datos
 
