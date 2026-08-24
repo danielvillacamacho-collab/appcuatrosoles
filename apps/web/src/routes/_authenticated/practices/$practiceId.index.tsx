@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import type { PracticeResponse } from "@polo/contracts";
 import { Alert, Button, TextField } from "@polo/ui";
@@ -12,6 +12,8 @@ import {
   useRetirarme,
 } from "../../../features/practices/api/usePracticas.js";
 import { useSesion } from "../../../features/session/api/useSesion.js";
+import { useEquipos } from "../../../features/practices/api/useEquipos.js";
+import { handicapEnGoles } from "../../../lib/handicap.js";
 import { MiEstado } from "./index.js";
 import { useFecha } from "../../../lib/fechas.js";
 import { mensajeDeError } from "../../../lib/error-message.js";
@@ -24,7 +26,7 @@ import { copy } from "../../../i18n/es-CO.js";
  * separa esta pantalla de un tablero de WhatsApp: allá uno cuenta mensajes hacia atrás y se
  * equivoca.
  */
-export const Route = createFileRoute("/_authenticated/practices/$practiceId")({
+export const Route = createFileRoute("/_authenticated/practices/$practiceId/")({
   component: Detalle,
 });
 
@@ -116,8 +118,100 @@ function Contenido({ practica }: { practica: PracticeResponse }): React.JSX.Elem
         </ol>
       </section>
 
+      <Equipos practica={practica} puedeAdministrar={puedeAdministrar} />
+
       {puedeAdministrar && <Administracion practica={practica} />}
     </>
+  );
+}
+
+/**
+ * Los equipos, cuando ya están aprobados (T-631).
+ *
+ * **Un borrador no se muestra**: el API le responde 404 a quien no puede aprobarlo (R-051-05), así
+ * que acá no hay nada que esconder — si la consulta falla, simplemente no hay sección.
+ */
+function Equipos({
+  practica,
+  puedeAdministrar,
+}: {
+  practica: PracticeResponse;
+  puedeAdministrar: boolean;
+}): React.JSX.Element | null {
+  const sesion = useSesion();
+  const equipos = useEquipos(practica.id);
+
+  if (practica.status !== "confirmed") {
+    return null;
+  }
+
+  if (!equipos.isSuccess) {
+    // Ni «cargando» ni un error: para un jugador, unos equipos sin aprobar no existen.
+    return puedeAdministrar ? (
+      <div>
+        <Link to="/practices/$practiceId/teams" params={{ practiceId: practica.id }}>
+          <Button variante="secundaria">{copy.equipos.titulo}</Button>
+        </Link>
+      </div>
+    ) : null;
+  }
+
+  const miPersona = sesion.data?.personId;
+
+  return (
+    <section aria-labelledby="equipos" className="flex flex-col gap-3">
+      <h2 id="equipos" className="text-sm font-semibold uppercase tracking-[0.15em] text-muted">
+        {copy.equipos.titulo}
+      </h2>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {equipos.data.equipos.map((equipo) => {
+          const esElMio = equipo.slots.some(
+            (puesto) =>
+              puesto.titular.personId === miPersona || puesto.companero?.personId === miPersona,
+          );
+
+          return (
+            <div
+              key={equipo.label}
+              className={`flex flex-col gap-2 rounded-lg border p-4 ${
+                esElMio ? "border-brunswick bg-brunswick/10" : "border-sage bg-white/60"
+              }`}
+            >
+              <p className="flex items-center justify-between">
+                <span className="text-sm font-bold uppercase tracking-[0.15em] text-brunswick">
+                  {copy.equipos.equipo(equipo.label)}
+                </span>
+                <span className="font-bold">{handicapEnGoles(equipo.handicapTotalHalves)}</span>
+              </p>
+
+              {esElMio && <p className="text-sm font-medium">{copy.equipos.miEquipo}</p>}
+
+              <ul className="flex flex-col gap-1">
+                {equipo.slots.map((puesto) => (
+                  <li key={puesto.id}>
+                    {puesto.companero === null
+                      ? puesto.titular.fullName
+                      : copy.equipos.compartido(
+                          puesto.titular.fullName,
+                          puesto.companero.fullName,
+                        )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+
+      {puedeAdministrar && (
+        <div>
+          <Link to="/practices/$practiceId/teams" params={{ practiceId: practica.id }}>
+            <Button variante="secundaria">{copy.equipos.titulo}</Button>
+          </Link>
+        </div>
+      )}
+    </section>
   );
 }
 

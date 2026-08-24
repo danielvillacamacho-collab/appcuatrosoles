@@ -156,6 +156,34 @@ export class TeamsService {
     }
 
     await this.prisma.$transaction(async (tx) => {
+      // **En dos pasadas, y no en una.**
+      //
+      // El índice único es `(equipo, posición)`, y reasignar de a una fila pasa por estados
+      // intermedios que lo violan: si el primer puesto de A se va al otro equipo, el segundo tiene
+      // que pasar a la posición 1 **mientras el primero todavía está ahí**. La transacción entera
+      // fallaba con un 500 y el ajuste no se guardaba.
+      //
+      // La primera pasada manda todo a posiciones negativas —distintas entre sí, y que ningún
+      // puesto real usa— junto con su equipo definitivo. Ahí ya no hay colisión posible, y la
+      // segunda pasada escribe las posiciones de verdad sobre un equipo donde todas son negativas.
+      let temporal = 0;
+
+      for (const equipo of cambios.equipos) {
+        const destino = equipos.find((candidato) => candidato.label === equipo.label);
+
+        if (destino === undefined) {
+          continue;
+        }
+
+        for (const slotId of equipo.slotIds) {
+          temporal -= 1;
+          await tx.practiceSlot.update({
+            where: { id: slotId },
+            data: { practiceTeamId: destino.id, position: temporal },
+          });
+        }
+      }
+
       for (const equipo of cambios.equipos) {
         const destino = equipos.find((candidato) => candidato.label === equipo.label);
 
@@ -167,7 +195,7 @@ export class TeamsService {
           await tx.practiceSlot.update({
             where: { id: slotId },
             // La posición se recalcula porque el orden dentro del equipo cambia al mover gente.
-            data: { practiceTeamId: destino.id, position: indice + 1 },
+            data: { position: indice + 1 },
           });
         }
 

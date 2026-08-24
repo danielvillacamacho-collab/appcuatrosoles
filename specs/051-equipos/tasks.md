@@ -101,14 +101,32 @@ avisos, el registro— es andamiaje alrededor de un número equivocado.
 
 ## D — Interfaz
 
-- [ ] **T-630** La pantalla del comisario: los dos equipos, **la diferencia en vivo**, y aprobar.
+- [x] **T-630** La pantalla del comisario: los dos equipos, **la diferencia en vivo**, y aprobar.
   > El asistente de balance no es una pantalla aparte: es el número al lado de cada equipo. Que
   > cambie al mover a alguien es la función entera.
   Verificación: mover un jugador actualiza las dos sumas y la diferencia **sin ir al servidor**; un
   puesto compartido muestra **los dos nombres**; un jugador no ve el botón de aprobar.
+  ✅ 2026-08-24 — 15 tests. Verificado además en el navegador contra el API real: mover a un jugador
+  cambió la diferencia de «Parejos» a 6 goles **con cero llamadas al API**.
+  > **Y ahí aparecieron dos cosas que ningún test veía.**
+  > La primera: una práctica confirmada **sin equipos** dejaba al comisario en un callejón — el API
+  > podía armarlos y la pantalla no ofrecía cómo. Es el mismo agujero de `specs/030` con la pantalla
+  > de handicaps y de `specs/050` con aceptar un medio hombre: faltaba el camino, no la
+  > funcionalidad. Tres veces el mismo hallazgo, y las tres lo destapó abrir la pantalla.
+  > La segunda: **guardar un ajuste no persistía**. Reasignar posiciones de a una fila pasa por
+  > estados que violan el índice único `(equipo, posición)`: si el primer puesto de A se va, el
+  > segundo pasa a la posición 1 **mientras el primero todavía está ahí**. La transacción fallaba
+  > con un 500. Se reprodujo primero en un test —falló con 500— y recién después se arregló, en dos
+  > pasadas: primero todo a posiciones negativas con su equipo definitivo, después las de verdad.
 
-- [ ] **T-631** Los equipos en el detalle de la práctica, para el jugador.
+- [x] **T-631** Los equipos en el detalle de la práctica, para el jugador.
   Verificación: sin aprobar no se muestra nada de equipos; aprobados, el equipo propio va señalado.
+  ✅ 2026-08-24 — **cierra la sección D.** Un borrador no se esconde en la pantalla: el API le
+  responde 404 a quien no puede aprobarlo, así que acá no hay nada que ocultar.
+  > La ruta de detalle pasó a ser `$practiceId.index.tsx`: como `$practiceId.tsx` actuaba de
+  > plantilla y no rendía el hijo, la pantalla de equipos no aparecía nunca.
+
+> **Sección D cerrada el 2026-08-24.** 167 tests de interfaz, bundle 125.2 de 200 KB.
 
 ## E — Cierre
 

@@ -34,6 +34,8 @@ export const queryKeys = {
   practicas: {
     todas: ["practices"] as const,
     detalle: (id: string) => ["practices", id] as const,
+    /** Cuelga del detalle: invalidarlo alcanza a los equipos. */
+    equipos: (id: string) => ["practices", id, "teams"] as const,
   },
 
   handicaps: {

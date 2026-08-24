@@ -329,6 +329,41 @@ describe("Equipos · API (T-620 a T-624)", () => {
       expect(respuesta.body.diferenciaHalves).toBeGreaterThan(0);
     });
 
+    it("mover a alguien HACIA ABAJO en el orden no choca con la posición de otro", async () => {
+      // **El caso que rompía y que ningún test veía.** Al reasignar posiciones una por una, un
+      // estado intermedio puede violar el índice único `(equipo, posición)`: si el primer puesto de
+      // A se va, el segundo pasa a la posición 1 mientras el primero **todavía está ahí**.
+      //
+      // Lo destapó mover un jugador en el navegador y ver que el guardado no persistía.
+      const practiceId = await practicaConfirmada(jugadores);
+      const actuales = (await como(comisario, api().get(`/api/practices/${practiceId}/teams`))).body;
+      const [a, b] = actuales.equipos;
+
+      const respuesta = await como(
+        comisario,
+        api()
+          .patch(`/api/practices/${practiceId}/teams`)
+          .send({
+            equipos: [
+              // El PRIMERO de A se va: el que queda tiene que pasar a la posición 1.
+              { label: "A", slotIds: a.slots.slice(1).map((s: { id: string }) => s.id) },
+              { label: "B", slotIds: [...b.slots.map((s: { id: string }) => s.id), a.slots[0].id] },
+            ],
+          }),
+      );
+
+      expect(respuesta.status, JSON.stringify(respuesta.body)).toBe(200);
+      expect(respuesta.body.equipos[0].slots).toHaveLength(1);
+      expect(respuesta.body.equipos[1].slots).toHaveLength(3);
+
+      // Y quedó guardado de verdad, no sólo en la respuesta.
+      const desdeLaBase = await prisma.practiceSlot.count({
+        where: { team: { practiceId, label: "B" } },
+      });
+
+      expect(desdeLaBase).toBe(3);
+    });
+
     it("un ajuste que deja gente afuera se rechaza", async () => {
       // Sin esto, alguien podría desaparecer de los dos equipos y nadie se enteraría hasta la cancha.
       const practiceId = await practicaConfirmada(jugadores);

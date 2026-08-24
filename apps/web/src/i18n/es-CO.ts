@@ -50,6 +50,32 @@ export const copy = {
     treasurer: "Tesorero",
   } as Record<string, string>,
 
+  equipos: {
+    titulo: "Equipos",
+    descripcion: "El sistema propuso los más parejos posibles. Ajusta y aprueba.",
+    equipo: (label: string) => `Equipo ${label}`,
+    /** Lo que mira el comisario. Es la función entera del asistente de balance. */
+    diferencia: "Diferencia",
+    parejos: "Parejos",
+    sinAprobar: "Sin aprobar. Los jugadores todavía no los ven.",
+    aprobados: "Aprobados y avisados",
+    mover: (nombre: string) => `Mover a ${nombre} al otro equipo`,
+    guardar: "Guardar cambios",
+    guardando: "Guardando…",
+    rearmar: "Volver a la propuesta del sistema",
+    aprobar: "Aprobar y avisar",
+    aprobando: "Aprobando…",
+    reaprobar: "Guardar y volver a avisar",
+    sinEquipos: "Todavía no hay equipos. Se arman solos cuando la práctica se confirma.",
+    armar: "Armar los equipos ahora",
+    armando: "Armando…",
+    miEquipo: "Tu equipo",
+    /** Los dos nombres de un puesto compartido: sin eso el número no se explica. */
+    compartido: (uno: string, otro: string) => `${uno} + ${otro}`,
+    pesaComo: (goles: string) => `pesa ${goles}`,
+    cambiosSinGuardar: "Tienes cambios sin guardar.",
+  },
+
   practicas: {
     titulo: "Prácticas",
     descripcion: "Qué hay programado esta semana, y si estás dentro.",
