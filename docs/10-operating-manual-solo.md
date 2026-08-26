@@ -175,3 +175,17 @@ entre 30 y 90 minutos, incluyendo revisión y commit. El módulo 010 son 65 tare
 
 La trampa habitual es la Fase 0: montar el andamiaje se siente lento y sin resultado visible.
 Es la inversión que hace que las 400 tareas siguientes salgan bien. No la recortes.
+
+---
+
+## Cuando alguien reporta un error
+
+El circuito está probado y es corto: la pantalla muestra un código, y ese código está en el log del
+servidor con la causa y el stack.
+
+```bash
+docker compose -f /srv/cuatrosoles/docker-compose.yml logs api | grep req_XXXXXXXX
+```
+
+El detalle de cuándo aparece el código y cuánto duran los logs está en
+`docs/12-hallazgos-de-pruebas.md`, que es donde vive el proceso de reportes.

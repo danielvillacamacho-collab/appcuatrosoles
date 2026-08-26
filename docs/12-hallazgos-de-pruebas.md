@@ -37,6 +37,30 @@ La cuarta es la más valiosa y la que sólo aparece con uso real. Las tres prime
 cualquiera; que un supuesto del producto esté equivocado sólo lo descubre alguien usándolo para
 trabajar.
 
+## Qué hacer con un código de error
+
+Cuando la pantalla dice **«repórtalo con el código de la solicitud»**, ese código no es decorativo:
+es lo que convierte «no me dejó guardar» en la línea exacta del log, con la causa y el punto del
+código donde ocurrió.
+
+En el servidor:
+
+```bash
+docker compose -f /srv/cuatrosoles/docker-compose.yml logs api | grep req_XXXXXXXX
+```
+
+Sale una línea con el error completo. El campo `err.message` dice **qué** pasó y `err.stack`
+**dónde**. Comprobado de punta a punta: se provocó un error de verdad, la pantalla devolvió un
+código, y ese código apareció una sola vez en el log con la causa exacta.
+
+Dos cosas que conviene saber antes de necesitarlas:
+
+- **El código sólo aparece cuando el error es inesperado.** Si la pantalla explicó el problema —«esa
+  cancha ya está ocupada»— no hay nada que buscar: eso es una regla del club funcionando, y el
+  reporte útil es lo que la persona esperaba que pasara.
+- **Los logs se rotan**: cinco archivos de 20 MB por servicio. Son varios días, no meses. Un código
+  de hace dos semanas puede haberse ido, así que conviene mirar los reportes mientras están frescos.
+
 ## Pendientes
 
 <!-- Los nuevos van arriba. Al cerrar uno, se marca y se anota en una línea qué se hizo. -->
