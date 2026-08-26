@@ -217,11 +217,19 @@ Se prueba con un test que serializa la respuesta y verifica que no aparece ning�
 `person_id`, `horse_id` (nullable, fuera de alcance v1).
 > Fuente de verdad de quién jugó cuánto. La estadística por jugador se cuenta desde aquí,
 > no desde la postulación. Un medio hombre suma sólo sus celdas.
-
-**practice_attendance** — `practice_id`, `person_id`, `attended`, `chukkers_played`,
-`recorded_by_id`.
+> Nace llena al aprobarse los equipos, en la misma transacción (`specs/052` R-052-01).
+> Invariante: `UNIQUE(practice_id, chukker_no, person_id)` — nadie juega dos veces el mismo
+> chukker, porque eso haría imposible contar (R-052-04).
 
 **practice_result** — opcional. `practice_id`, `team_a_goals`, `team_b_goals`, `notes`.
+> Opcional de verdad: una práctica se cierra sin marcador. Si el resultado le cambiara algo a
+> alguien —una tabla, un fixture— sería una copa y viviría en §F.
+
+> **`practice_attendance` se eliminó el 2026-08-26** (`specs/052` D-052-02). Guardaba `attended` y
+> `chukkers_played`, que son las dos cosas que la grilla ya dice: asistió quien tiene celdas, y jugó
+> tantos chukkers como celdas tenga. Dos fuentes para el mismo dato sólo pueden aportar una cosa
+> —contradecirse—, y era el número del que va a colgar el cobro de Fase 3. Lo único que guardaba y
+> la grilla no era el ausente, y ése ya vive en `practice_application.outcome = no_show`.
 
 ---
 
