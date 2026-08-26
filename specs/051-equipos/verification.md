@@ -70,7 +70,13 @@
    quitó. Lo que fallaba era el **test**: movía a alguien antes de que aterrizara el refresco de
    rearmar, que sí trae datos distintos —puestos con identificadores nuevos— y se lleva el
    movimiento, como debe. Cuatro corridas completas en verde después de esperarlo.
-5. **La ruta de detalle tenía que ser `index`**: como `$practiceId.tsx` actuaba de plantilla sin
+5. **Y el E2E fallaba en CI aunque pasara cuatro veces en local.** `isVisible()` **no espera**:
+   devuelve lo que hay en ese instante. Con la pantalla todavía cargando, los dos botones daban
+   `false`, el test tomaba la rama equivocada y se quedaba un minuto esperando uno que no existía.
+   En local no se veía **porque la base ya traía equipos de una corrida anterior**; en CI, que
+   siembra desde cero, fallaba siempre. Se reprodujo levantando una base limpia igual que CI, y se
+   comprobó después en las dos condiciones: recién sembrada y ya usada.
+6. **La ruta de detalle tenía que ser `index`**: como `$practiceId.tsx` actuaba de plantilla sin
    rendir el hijo, la pantalla de equipos no aparecía nunca.
 
 ## Pendientes declarados

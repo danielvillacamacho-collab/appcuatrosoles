@@ -144,6 +144,10 @@ avisos, el registro— es andamiaje alrededor de un número equivocado.
   > Lo que fallaba era el test: movía a alguien **antes de que aterrizara el refresco de rearmar**,
   > que sí trae datos distintos —puestos con identificadores nuevos— y se lleva el movimiento, como
   > debe. Cuatro corridas completas en verde después de esperarlo.
+  > **Y aun así falló en CI.** `isVisible()` no espera, así que con la pantalla cargando los dos
+  > botones daban `false` y el test tomaba la rama equivocada. En local no se veía porque la base ya
+  > traía equipos de antes; en CI, que siembra desde cero, fallaba siempre. Comprobado en las dos
+  > condiciones contra una base levantada igual que CI.
 - [x] **T-641** `verification.md` con cada criterio mapeado a su test.
   ✅ 2026-08-25 — **cierra el módulo 051.** Cinco hallazgos que no estaban en el plan y cuatro
   pendientes declarados.

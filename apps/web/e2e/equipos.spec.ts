@@ -52,7 +52,14 @@ test("armar equipos, mover viendo la diferencia, y aprobar", async ({ page }) =>
     const armar = page.getByRole("button", { name: copy.equipos.armar });
     const rearmar = page.getByRole("button", { name: copy.equipos.rearmar });
 
-    if (await armar.isVisible().catch(() => false)) {
+    // **Primero se espera a que aparezca alguno de los dos, y recién después se decide.**
+    // `isVisible()` no espera: devuelve lo que hay en ese instante. Con la pantalla todavía
+    // cargando, los dos daban `false`, el test tomaba la rama equivocada y se quedaba un minuto
+    // esperando un botón que no existía. En local no se veía porque la base ya traía equipos de una
+    // corrida anterior; en CI, que siembra desde cero, fallaba siempre.
+    await expect(armar.or(rearmar)).toBeVisible();
+
+    if (await armar.isVisible()) {
       await armar.click();
     } else {
       await rearmar.click();
