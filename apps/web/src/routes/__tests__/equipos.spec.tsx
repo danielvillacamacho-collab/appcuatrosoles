@@ -174,6 +174,33 @@ describe("La pantalla del comisario (T-630)", () => {
     expect(screen.getByText(copy.equipos.cambiosSinGuardar)).toBeDefined();
   });
 
+  it("un refresco con los mismos datos no borra los cambios sin guardar", async () => {
+    // **Esto lo garantiza TanStack Query, no código nuestro**, y el test está para que se note si
+    // deja de ser cierto: con *structural sharing*, un refresco cuyos datos son iguales devuelve la
+    // misma referencia, así que el efecto que sincroniza con el servidor ni se dispara.
+    //
+    // Llegué a escribir una comparación por valor creyendo que hacía falta. Tres intentos de
+    // reproducir el problema fallaron —el test pasaba igual con y sin ella— y eso fue lo que mostró
+    // que la guarda no protegía de nada. El refresco se provoca a mano porque, si no, el test no
+    // mide lo que dice medir.
+    conApi("commissioner");
+    const persona = userEvent.setup();
+    const pantalla = montar("/practices/pr-1/teams");
+
+    await persona.click(
+      await screen.findByRole("button", { name: copy.equipos.mover("Ana Polo") }),
+    );
+    expect(screen.getByText(copy.equipos.cambiosSinGuardar)).toBeDefined();
+
+    await pantalla.queryClient.invalidateQueries({ queryKey: ["practices", "pr-1"] });
+    await new Promise((resolver) => setTimeout(resolver, 200));
+
+    expect(
+      screen.queryByText(copy.equipos.cambiosSinGuardar),
+      "el refresco se llevó los cambios del comisario",
+    ).not.toBeNull();
+  });
+
   it("dice que los jugadores todavía no los ven", async () => {
     conApi("commissioner");
     montar("/practices/pr-1/teams");

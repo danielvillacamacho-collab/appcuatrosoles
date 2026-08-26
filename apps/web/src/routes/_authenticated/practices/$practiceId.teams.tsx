@@ -86,8 +86,14 @@ function Tablero({
 
   const [enPantalla, setEnPantalla] = useState<EnPantalla>(() => aEnPantalla(desdeElServidor));
 
-  // Cuando el servidor manda algo nuevo —se rearmó, se aprobó— la pantalla se pone al día. Sin
-  // esto, «volver a la propuesta del sistema» no mostraría nada distinto.
+  // Cuando el servidor manda algo **distinto** —se rearmó, se aprobó— la pantalla se pone al día.
+  //
+  // No hace falta comparar por valor: TanStack Query aplica *structural sharing*, así que un
+  // refresco cuyos datos son iguales devuelve **la misma referencia** y este efecto ni se entera.
+  // Llegué a escribir esa comparación creyendo que un refresco de fondo le borraba los cambios al
+  // comisario, y **tres intentos de reproducirlo fallaron**: pasaban igual con y sin ella. Lo que
+  // fallaba era otra cosa (ver el E2E), y una guarda que no protege de nada es una guarda que
+  // alguien va a tener que entender en vano.
   useEffect(() => {
     setEnPantalla(aEnPantalla(desdeElServidor));
   }, [desdeElServidor]);

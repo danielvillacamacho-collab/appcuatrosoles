@@ -130,8 +130,20 @@ avisos, el registro— es andamiaje alrededor de un número equivocado.
 
 ## E — Cierre
 
-- [ ] **T-640** E2E: se confirma una práctica, el comisario mueve a alguien viendo cambiar la
+- [x] **T-640** E2E: se confirma una práctica, el comisario mueve a alguien viendo cambiar la
   diferencia, aprueba, y un jugador ve su equipo.
   > Con día propio por corrida y un paso que lleva el estado a un punto conocido: la lección de los
   > E2E de `030` y `050`.
-- [ ] **T-641** `verification.md` con cada criterio mapeado a su test.
+  ✅ 2026-08-25 — parte de una práctica confirmada **que siembra `db:seed`**: llegar a una por el
+  camino normal exige esperar al proceso de decisión, y un test que espera a que un reloj dispare es
+  un test que a veces falla por el reloj. De paso, el club de ejemplo ahora muestra el módulo.
+  > **Falló una de cada tres corridas y lo diagnostiqué mal.** Creí que un refresco de fondo pisaba
+  > los cambios sin guardar y escribí una comparación por valor; tres intentos de reproducirlo
+  > fallaron, y eso mostró que TanStack Query ya devuelve la misma referencia cuando los datos son
+  > iguales. La guarda no protegía de nada y se quitó.
+  > Lo que fallaba era el test: movía a alguien **antes de que aterrizara el refresco de rearmar**,
+  > que sí trae datos distintos —puestos con identificadores nuevos— y se lleva el movimiento, como
+  > debe. Cuatro corridas completas en verde después de esperarlo.
+- [x] **T-641** `verification.md` con cada criterio mapeado a su test.
+  ✅ 2026-08-25 — **cierra el módulo 051.** Cinco hallazgos que no estaban en el plan y cuatro
+  pendientes declarados.

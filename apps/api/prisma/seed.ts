@@ -255,7 +255,109 @@ export async function sembrarClubDemo(
     log(`  ${persona.fullName} (${persona.role}) — ${persona.email}`);
   }
 
+  await sembrarPracticaConEquipos(prisma, log);
+
   log(`\nListo. Contraseña de todas las cuentas de ejemplo: ${CONTRASENA_DEMO}`);
+}
+
+/**
+ * Una práctica **ya confirmada, con equipos armados** (`specs/051`).
+ *
+ * Existe por dos razones. La primera es que sin ella el club de ejemplo no muestra el módulo:
+ * llegar a una práctica confirmada por el camino normal exige esperar a que corra el proceso de
+ * decisión, y nadie va a esperar un minuto mirando una pantalla para ver si funciona.
+ *
+ * La segunda es que el E2E de equipos necesita un punto de partida que no dependa de un
+ * temporizador. Un test que espera a que un reloj dispare es un test que a veces falla por el
+ * reloj.
+ */
+async function sembrarPracticaConEquipos(
+  prisma: PrismaClient,
+  log: (mensaje: string) => void,
+): Promise<void> {
+  const cancha = await prisma.field.findFirst({ where: { clubId: CLUB_ID }, orderBy: { name: "asc" } });
+  const creador = await prisma.userAccount.findFirst({
+    where: { person: { clubId: CLUB_ID } },
+  });
+
+  if (cancha === null || creador === null) {
+    return;
+  }
+
+  // Idempotente por la franja: correr el seed de nuevo no crea una segunda.
+  const CUANDO = {
+    startsAt: new Date("2026-12-03T21:00:00.000Z"),
+    endsAt: new Date("2026-12-03T23:00:00.000Z"),
+  };
+
+  // La marca es **la gente de ejemplo**, no la franja: buscar por franja casaba con cualquier
+  // práctica que alguien hubiera dejado ahí —un E2E, una prueba a mano— y el seed se daba por hecho
+  // sin haber sembrado nada.
+  const yaEsta = await prisma.person.findFirst({
+    where: { clubId: CLUB_ID, fullName: "Ana Ejemplo" },
+    select: { id: true },
+  });
+
+  if (yaEsta !== null) {
+    log("  práctica de ejemplo con equipos (ya estaba)");
+
+    return;
+  }
+
+  // Handicaps elegidos para que exista un reparto perfecto y el balanceo se luzca: 3+2 = 4+1 goles.
+  const JUGADORES = [
+    { nombre: "Ana Ejemplo", halves: 6 },
+    { nombre: "Beto Ejemplo", halves: 4 },
+    { nombre: "Caro Ejemplo", halves: 8 },
+    { nombre: "Dani Ejemplo", halves: 2 },
+  ];
+
+  const practica = await prisma.practice.create({
+    data: {
+      clubId: CLUB_ID,
+      fieldId: cancha.id,
+      startsAt: CUANDO.startsAt,
+      endsAt: CUANDO.endsAt,
+      chukkers: 6,
+      handicapType: "club",
+      targetPlayers: 4,
+      minPlayers: 4,
+      applicationsCloseAt: new Date("2026-12-03T17:00:00.000Z"),
+      decisionAt: new Date("2026-12-03T18:00:00.000Z"),
+      status: "confirmed",
+      createdById: creador.id,
+    },
+    select: { id: true },
+  });
+
+  for (const jugador of JUGADORES) {
+    const persona = await prisma.person.create({
+      data: { clubId: CLUB_ID, fullName: jugador.nombre },
+    });
+
+    await prisma.playerHandicap.create({
+      data: {
+        clubId: CLUB_ID,
+        personId: persona.id,
+        type: "club",
+        valueHalves: jugador.halves,
+      },
+    });
+
+    await prisma.practiceApplication.create({
+      data: {
+        clubId: CLUB_ID,
+        practiceId: practica.id,
+        personId: persona.id,
+        chukkersOffered: 4,
+        outcome: "accepted",
+      },
+    });
+  }
+
+  // **Sin equipos armados, a propósito.** Que el club de ejemplo llegue hasta acá y no más lejos es
+  // lo que deja ver la pantalla haciendo su trabajo: se entra, se arman, se ajustan y se aprueban.
+  log(`  práctica de ejemplo confirmada, con ${JUGADORES.length} jugadores y sin equipos todavía`);
 }
 
 /**

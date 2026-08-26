@@ -25,6 +25,9 @@ describe("Seed del club de ejemplo", () => {
     organizaciones: await prisma.organization.count({ where: { clubId: CLUB_ID } }),
     temporadas: await prisma.season.count({ where: { clubId: CLUB_ID } }),
     vinculos: await prisma.personOrganization.count({ where: { clubId: CLUB_ID } }),
+    practicas: await prisma.practice.count({ where: { clubId: CLUB_ID } }),
+    postulaciones: await prisma.practiceApplication.count({ where: { clubId: CLUB_ID } }),
+    handicaps: await prisma.playerHandicap.count({ where: { clubId: CLUB_ID } }),
   });
 
   beforeAll(async () => {
@@ -38,7 +41,11 @@ describe("Seed del club de ejemplo", () => {
   it("deja el club de ejemplo listo para usar", async () => {
     const conteos = await contar();
 
-    expect(conteos.personas).toBe(3);
+    // **Siete personas y tres cuentas**, y la diferencia es el punto: las tres con cuenta son las
+    // que entran a probar —administradora, comisario y jugador—, y las otras cuatro son los
+    // jugadores de la práctica de ejemplo, que existen para que haya equipos que armar y **no
+    // necesitan iniciar sesión**. Un menor sin cuenta propia es exactamente la misma forma.
+    expect(conteos.personas).toBe(7);
     expect(conteos.cuentas).toBe(3);
     expect(conteos.roles).toBe(3);
     expect(conteos.categorias).toBe(5);
@@ -49,6 +56,25 @@ describe("Seed del club de ejemplo", () => {
     // Las tres personas quedan vinculadas a la organización: sin vínculos, un administrador de
     // organización no tendría sobre qué actuar y R-010-04 no se podría probar con datos reales.
     expect(conteos.vinculos).toBe(3);
+  });
+
+  it("deja una práctica confirmada con jugadores, para poder ver los equipos", async () => {
+    // Sin ella el club de ejemplo no muestra `specs/051`: llegar a una práctica confirmada por el
+    // camino normal exige esperar a que corra el proceso de decisión.
+    const conteos = await contar();
+    const practica = await prisma.practice.findFirstOrThrow({ where: { clubId: CLUB_ID } });
+
+    expect(conteos.practicas).toBe(1);
+    expect(practica.status).toBe("confirmed");
+    expect(conteos.postulaciones).toBe(4);
+    // Con handicap, o el balanceo no tendría nada que balancear.
+    expect(conteos.handicaps).toBe(4);
+  });
+
+  it("y la deja SIN equipos armados, a propósito", async () => {
+    // Que el club de ejemplo llegue hasta acá y no más lejos es lo que deja ver la pantalla
+    // haciendo su trabajo: se entra, se arman, se ajustan y se aprueban.
+    expect(await prisma.practiceTeam.count({ where: { clubId: CLUB_ID } })).toBe(0);
   });
 
   it("el club queda activo y con su subdominio propio, no como los que migró T-202", async () => {
