@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { HandicapTypeSchema } from "./handicap.js";
 
-export const PracticeStatusSchema = z.enum(["draft", "published", "confirmed", "cancelled"]);
+export const PracticeStatusSchema = z.enum([
+  "draft",
+  "published",
+  "confirmed",
+  "cancelled",
+  "played",
+]);
 export type PracticeStatusName = z.infer<typeof PracticeStatusSchema>;
 
 const handicapHalves = z.number().int().min(-4).max(20);

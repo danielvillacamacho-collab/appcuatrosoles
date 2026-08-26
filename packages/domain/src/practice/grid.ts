@@ -1,4 +1,5 @@
 import { err, ok, type Result } from "../shared/result.js";
+import type { EstadoDePractica } from "./decision.js";
 
 /** Uno de los dos equipos de una práctica. Es una **coordenada**, no una referencia a una fila. */
 export type Equipo = "A" | "B";
@@ -126,7 +127,7 @@ export function validarGrilla(celdas: readonly Celda[]): Result<void, ErrorDeGri
 
 /** El estado de la práctica que le importa al cierre. */
 export interface PracticaParaCerrar {
-  estado: string;
+  estado: EstadoDePractica;
   startsAt: Date;
 }
 

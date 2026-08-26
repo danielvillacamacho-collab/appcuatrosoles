@@ -72,6 +72,7 @@ model Person {
   practiceEligibility      PracticeEligibility[]
   practiceSlotsAsPrimary   PracticeSlot[]        @relation("SlotTitular")
   practiceSlotsAsSecondary PracticeSlot[]        @relation("SlotCompanero")
+  chukkerGridCells         ChukkerGridCell[]
 
   handicaps       PlayerHandicap[]
   handicapChanges HandicapHistory[]
@@ -1043,8 +1044,9 @@ model HandicapHistory {
 
 /// En qué punto de su vida está una práctica (`specs/050`).
 ///
-/// `played` y `settled` llegan con `051` y con Fase 3. **No se declaran todavía**: un estado que
-/// nada produce ni consume es una invitación a que alguien lo use para otra cosa.
+/// `settled` llega con Fase 3. **No se declara todavía**: un estado que nada produce ni consume es
+/// una invitación a que alguien lo use para otra cosa. `played` se declaró con `052`, que es el
+/// módulo que lo produce — el comentario anterior lo prometía para `051` y no llegó ahí.
 enum PracticeStatus {
   /// Sólo la ve quien la creó. No ocupa cancha (R-050-03).
   draft
@@ -1052,6 +1054,8 @@ enum PracticeStatus {
   published
   confirmed
   cancelled
+  /// Se jugó y el comisario la cerró (`specs/052` R-052-06). La grilla queda congelada.
+  played
 
   @@map("practice_status")
 }
@@ -1103,10 +1107,17 @@ model Practice {
   /// **Declarado y sin usar** hasta Fase 3, con el criterio de `handicap_history.on_behalf_of_id`.
   pricePolicyId String? @map("price_policy_id")
 
-  decidedAt   DateTime? @map("decided_at") @db.Timestamptz(3)
-  createdById String    @map("created_by_id")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  decidedAt DateTime? @map("decided_at") @db.Timestamptz(3)
+
+  /// Cuándo y quién la cerró (`specs/052` HU-052-03). Nulos mientras no esté cerrada; reabrirla los
+  /// vuelve a poner en nulo, y **el rastro de la reapertura queda en `audit_log`**, que es
+  /// append-only y por lo tanto el único sitio donde no se puede perder.
+  closedAt   DateTime? @map("closed_at") @db.Timestamptz(3)
+  closedById String?   @map("closed_by_id")
+
+  createdById String   @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   club         Club                  @relation(fields: [clubId], references: [id], onDelete: Restrict)
   season       Season?               @relation(fields: [seasonId], references: [id], onDelete: Restrict)
@@ -1114,6 +1125,8 @@ model Practice {
   fieldBooking FieldBooking?         @relation(fields: [fieldBookingId], references: [id], onDelete: Restrict)
   applications PracticeApplication[]
   teams        PracticeTeam[]
+  gridCells    ChukkerGridCell[]
+  result       PracticeResult?
 
   @@index([clubId, startsAt])
   /// La consulta del proceso de decisión: lo vencido y todavía publicado (`plan.md` §0.2).
@@ -1247,4 +1260,66 @@ model PracticeSlot {
 
   @@unique([practiceTeamId, position])
   @@map("practice_slot")
+}
+
+/// Una celda de la grilla: un puesto en un chukker (`specs/052`).
+///
+/// Nace al aprobarse los equipos, **en la misma transacción** (R-052-01). `personId` nulo es un
+/// hueco —nadie jugó ese puesto ese chukker—, no una celda que falte: el lugar sigue existiendo, y
+/// por eso volver a llenarlo cuesta un toque.
+model ChukkerGridCell {
+  id         String @id @default(uuid(7))
+  clubId     String @map("club_id")
+  practiceId String @map("practice_id")
+
+  chukkerNo Int @map("chukker_no")
+
+  /// **El equipo es una coordenada, no una llave foránea a `practice_team`** (`specs/052` §5).
+  /// Volver a proponer equipos los borra y los recrea, así que una celda que colgara de ellos se
+  /// iría por cascada, en silencio y sin un error que lo delatara. «Equipo A, puesto 2, chukker 4»
+  /// es un lugar en la cancha, y el lugar no deja de existir porque cambie quién lo ocupa.
+  team     TeamLabel
+  position Int
+
+  /// Nulo = hueco. Puede ser **cualquier persona activa del club**, no sólo un aceptado (R-052-05):
+  /// que entre alguien que no se postuló es lo normal cuando falta uno.
+  personId String? @map("person_id")
+
+  /// **Declarada y sin usar** hasta `080`, con el criterio de `practice_slot.cost_share_primary_pct`.
+  /// La grilla es donde va a vivir el caballo de cada chukker.
+  horseId String? @map("horse_id")
+
+  practice Practice @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  person   Person?  @relation(fields: [personId], references: [id], onDelete: Restrict)
+
+  /// Un solo hueco por lugar: la grilla no puede tener dos celdas para el mismo sitio.
+  @@unique([practiceId, chukkerNo, team, position])
+  /// **R-052-04, en la base y no en el código.** PostgreSQL trata los nulos como distintos entre sí
+  /// en un índice único, así que esto **permite varios huecos en el mismo chukker** y prohíbe que
+  /// alguien juegue dos veces el mismo. Comprobado contra Postgres antes de escribirlo.
+  @@unique([practiceId, chukkerNo, personId])
+  /// Contar los chukkers de una persona sin recorrer prácticas.
+  @@index([clubId, personId])
+  @@map("chukker_grid_cell")
+}
+
+/// Cómo terminó una práctica. **Opcional** (R-052-09): una práctica se cierra sin marcador.
+///
+/// Si el resultado le cambiara algo a alguien —una tabla, un fixture, un desempate— sería una copa
+/// y viviría en `060`. Acá es un dato que el club anota si quiere.
+model PracticeResult {
+  /// Uno por práctica: la clave primaria **es** la práctica.
+  practiceId String @id @map("practice_id")
+  clubId     String @map("club_id")
+
+  teamAGoals Int     @map("team_a_goals")
+  teamBGoals Int     @map("team_b_goals")
+  notes      String?
+
+  recordedById String   @map("recorded_by_id")
+  recordedAt   DateTime @map("recorded_at") @db.Timestamptz(3)
+
+  practice Practice @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+
+  @@map("practice_result")
 }

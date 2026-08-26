@@ -56,7 +56,7 @@ número lo va a leer el cobro de Fase 3, y si sale mal se cobra mal.
 
 ## B — Datos
 
-- [ ] **T-711** Esquema: `ChukkerGridCell` y `PracticeResult`, el estado `played`, y `closedAt` /
+- [x] **T-711** Esquema: `ChukkerGridCell` y `PracticeResult`, el estado `played`, y `closedAt` /
   `closedById` en `Practice`. Migración revisada **a mano** antes de aplicarla.
   Verificación: la migración aplica y revierte contra Postgres real; el `UNIQUE` de
   `(practice_id, chukker_no, person_id)` **rechaza** a la misma persona dos veces y **acepta** dos
@@ -64,11 +64,28 @@ número lo va a leer el cobro de Fase 3, y si sale mal se cobra mal.
   migración.
   > Prisma tiene antecedentes en este repo (`030`: `DROP DEFAULT` sobre una columna GENERATED, que
   > PostgreSQL rechaza con 42601). El SQL se lee antes de aplicarlo, siempre.
+  ✅ 2026-08-26 — 9 tests de esquema. **Prisma volvió a generar el `DROP DEFAULT` sobre la columna
+  GENERATED de `field_booking`**, por quinta vez en este repo; se quitó a mano y quedó advertido en
+  la cabecera de la migración. El `down.sql` fue la parte que no era trivial: PostgreSQL no tiene
+  `DROP VALUE` para un enum, así que quitar `played` obliga a recrear el tipo y a reescribir la
+  columna. El ciclo **up → down → up** se probó contra Postgres real, que es lo que corre CI.
+  > Comprobado además que el `ALTER DEFAULT PRIVILEGES` de `020` T-007 alcanza a las tablas nuevas:
+  > `polo_app` quedó con permisos sin que esta migración se los diera. Si no fuera así, la suite de
+  > integración —que corre con el rol restringido— habría fallado entera tres tareas más adelante.
 
-- [ ] **T-712** La celda **no** cuelga del equipo: comprobar que un rearme no se lleva la grilla.
+- [x] **T-712** La celda **no** cuelga del equipo: comprobar que un rearme no se lleva la grilla.
   Verificación: se aprueba, se corrige la grilla a mano, se vuelve a proponer equipos y se aprueba
   otra vez; **las correcciones siguen ahí**. Es el test que justifica que `team` sea una coordenada
   y no una llave foránea (plan §5).
+  ✅ 2026-08-26 — el test borra el equipo y cuenta las celdas: siguen las 6. Es la garantía de que
+  `team` sea una coordenada y no una llave foránea. Con la llave, el primer comisario que rearmara
+  equipos se habría llevado la grilla por cascada, en silencio y sin un error que lo delatara.
+
+> **Sección B cerrada el 2026-08-26.** 550 tests de integración (541 + 9). El `UNIQUE` de
+> `(practice_id, chukker_no, person_id)` se comprobó contra Postgres **antes** de escribirlo y otra
+> vez contra la tabla real: acepta varios huecos en el mismo chukker —los nulos no chocan entre sí—
+> y rechaza a la misma persona dos veces, **también entre equipos distintos**, que es el caso que un
+> índice por equipo dejaría pasar.
 
 ## C — API
 

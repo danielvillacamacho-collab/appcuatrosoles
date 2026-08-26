@@ -109,6 +109,7 @@ export const copy = {
       published: "Publicada",
       confirmed: "Confirmada",
       cancelled: "Cancelada",
+      played: "Jugada",
     } as Record<string, string>,
     handicapUsado: {
       international: "Handicap internacional",

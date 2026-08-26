@@ -1,5 +1,11 @@
 /** En qué estado está la práctica, de lo que le importa a la decisión. */
-export type EstadoDePractica = "draft" | "published" | "confirmed" | "cancelled";
+export type EstadoDePractica =
+  | "draft"
+  | "published"
+  | "confirmed"
+  | "cancelled"
+  /** Se jugó y se cerró (`specs/052`). `decidirPractica` la trata como ya decidida, que es lo que es. */
+  | "played";
 
 export interface PracticaADecidir {
   estado: EstadoDePractica;

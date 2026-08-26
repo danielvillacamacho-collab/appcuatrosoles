@@ -5,6 +5,7 @@ import {
   puedeCerrar,
   validarGrilla,
   type Celda,
+  type PracticaParaCerrar,
   type PuestoDeGrilla,
 } from "../grid.js";
 
@@ -215,7 +216,7 @@ describe("puedeCerrar (T-704)", () => {
 
   it("NO mira el reloj del sistema: la misma práctica da distinto según la hora que se le pase", () => {
     // Es la comprobación de P-08. Si el dominio mirara `new Date()`, este test no se podría escribir.
-    const practica = { estado: "confirmed", startsAt: EMPIEZA };
+    const practica: PracticaParaCerrar = { estado: "confirmed", startsAt: EMPIEZA };
 
     expect(puedeCerrar(practica, new Date("2026-12-03T20:59:59.999Z")).ok).toBe(false);
     expect(puedeCerrar(practica, new Date("2026-12-03T21:00:00.001Z")).ok).toBe(true);
