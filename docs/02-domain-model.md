@@ -213,8 +213,12 @@ Se prueba con un test que serializa la respuesta y verifica que no aparece ning�
 `primary_person_id`, `secondary_person_id` (medio hombre),
 `effective_handicap_halves` (= máximo de los dos), `cost_share_primary_pct` (default 50).
 
-**chukker_grid_cell** — `practice_id`, `chukker_no`, `practice_team_id`, `position`,
-`person_id`, `horse_id` (nullable, fuera de alcance v1).
+**chukker_grid_cell** — `practice_id`, `chukker_no`, `team` (A|B), `position`,
+`person_id` (nullable = hueco), `horse_id` (nullable, fuera de alcance v1).
+> `team` es una **coordenada, no una llave foránea a `practice_team`** (`specs/052` §5): volver a
+> proponer equipos los borra y los recrea, y una celda que colgara de ellos se iría por cascada.
+> «Equipo A, puesto 2, chukker 4» es un lugar en la cancha, y el lugar no deja de existir porque
+> cambie quién lo ocupa.
 > Fuente de verdad de quién jugó cuánto. La estadística por jugador se cuenta desde aquí,
 > no desde la postulación. Un medio hombre suma sólo sus celdas.
 > Nace llena al aprobarse los equipos, en la misma transacción (`specs/052` R-052-01).
