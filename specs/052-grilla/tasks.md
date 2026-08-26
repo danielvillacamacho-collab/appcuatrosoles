@@ -11,31 +11,48 @@ número lo va a leer el cobro de Fase 3, y si sale mal se cobra mal.
 
 ## A — Dominio puro
 
-- [ ] **T-701** `grillaInicial`: cada puesto en todos los chukkers (R-052-01).
+- [x] **T-701** `grillaInicial`: cada puesto en todos los chukkers (R-052-01).
   Verificación: 8 puestos × 6 chukkers da 48 celdas y ninguna repetida; un puesto de medio hombre
   queda a nombre del **titular** (R-052-08); con 7 y con 8 chukkers sale lo que debe; con cero
   puestos devuelve vacío en vez de romper.
+  ✅ 2026-08-26 — 5 tests. Las celdas de un puesto compartido nacen **todas a nombre del titular**:
+  repartirlas por la mitad sería inventar un dato con apariencia de hecho, y quién de los dos entró
+  en cada chukker es justamente lo que el comisario va a corregir.
 
-- [ ] **T-702** `chukkersPorPersona`: la cuenta, contada de las celdas y de ningún otro lado
+- [x] **T-702** `chukkersPorPersona`: la cuenta, contada de las celdas y de ningún otro lado
   (R-052-02).
   Verificación: quien está en 6 celdas cuenta 6; las celdas vacías **no cuentan para nadie**; un
   puesto compartido reparte según quién esté en cada celda, no mitad y mitad; alguien que no está en
   ninguna celda **no aparece en el resultado**, que es distinto de aparecer en cero.
   > La distinción del último criterio es la que separa «no jugó» de «no estaba», y es justo la que
   > el cobro va a necesitar.
+  ✅ 2026-08-26 — 6 tests. La distinción entre «no jugó» y «no estaba» quedó como test propio: quien
+  no tiene celdas **no aparece en el mapa**, en vez de aparecer en cero. Un cero inventado las
+  confunde, y el cobro de Fase 3 va a necesitar separarlas.
 
-- [ ] **T-703** `validarGrilla`: nadie dos veces en el mismo chukker (R-052-04).
+- [x] **T-703** `validarGrilla`: nadie dos veces en el mismo chukker (R-052-04).
   Verificación: la misma persona en dos celdas del mismo chukker se rechaza, **aunque sea en equipos
   distintos**; la misma persona en chukkers distintos se acepta; dos celdas vacías en el mismo
   chukker se aceptan; el error dice **quién** y **en qué chukker**, porque un rechazo que no lo diga
   obliga a buscar a mano en una matriz de 64 celdas.
+  ✅ 2026-08-26 — 7 tests. La comprobación es **entre los dos equipos, no dentro de cada uno**: la
+  misma persona en A y en B en el mismo chukker es el caso que de verdad ocurre —sustituir a alguien
+  y olvidar sacarlo de donde estaba— y es el que se escapa mirando equipo por equipo.
 
-- [ ] **T-704** `puedeCerrar`: contra el reloj inyectado (R-052-07).
+- [x] **T-704** `puedeCerrar`: contra el reloj inyectado (R-052-07).
   Verificación: una práctica confirmada que ya empezó se puede cerrar; una que empieza en una hora
   **no**; una cancelada no; una ya cerrada no; y **ningún `new Date()`** — el test fija el reloj y
   mueve la hora, no el sistema (P-08).
+  ✅ 2026-08-26 — 8 tests, incluido el borde exacto del instante de comienzo. **Cierra la sección A.**
+  El último test es la comprobación de P-08: la misma práctica da distinto según la hora que se le
+  pase. Si el dominio mirara `new Date()`, ese test no se podría escribir.
 
-> Cierre de A: `packages/domain/src/practice/grid.ts` con cobertura ≥ 85 % (la del paquete).
+> **Sección A cerrada el 2026-08-26.** 23 tests, `grid.ts` al 100 % de líneas, ramas y funciones.
+> Las cuatro funciones se verificaron **rompiéndolas a propósito**: mirar el chukker equipo por
+> equipo, contar los huecos como si fueran gente, leer el reloj del sistema en vez del inyectado, y
+> repartir el puesto compartido. Las cuatro mutaciones hacen fallar tests (2, 1, 3 y 4
+> respectivamente). Un test que pasa igual con y sin la garantía que dice probar es peor que no
+> tenerlo.
 
 ## B — Datos
 
