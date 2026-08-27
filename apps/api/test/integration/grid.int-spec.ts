@@ -310,4 +310,228 @@ describe("Grilla · API (T-722 a T-727)", () => {
       expect(respuesta.status).toBe(404);
     });
   });
+
+  describe("corregir la grilla (T-723)", () => {
+    /** Dónde está una persona en un chukker dado. */
+    async function lugarDe(
+      practiceId: string,
+      personId: string,
+      chukker: number,
+    ): Promise<{ equipo: "A" | "B"; position: number }> {
+      const celda = await prisma.chukkerGridCell.findFirstOrThrow({
+        where: { practiceId, personId, chukkerNo: chukker },
+        select: { team: true, position: true },
+      });
+
+      return { equipo: celda.team, position: celda.position };
+    }
+
+    it("vaciar una celda baja la cuenta de esa persona", async () => {
+      const practiceId = await practicaConGrilla();
+      const ana = (jugadores[0] as Cuenta).personId;
+      const donde = await lugarDe(practiceId, ana, 4);
+
+      const respuesta = await como(
+        comisario,
+        api()
+          .patch(`/api/practices/${practiceId}/grid`)
+          .send({ cambios: [{ chukker: 4, ...donde, personId: null }] }),
+      );
+
+      expect(respuesta.status).toBe(200);
+      const grilla = PracticeGridResponse.parse(respuesta.body);
+      const fila = grilla.chukkersPorPersona.find((una) => una.personId === ana);
+      expect(fila?.chukkers).toBe(5);
+    });
+
+    it("INTERCAMBIAR dos jugadores del mismo chukker funciona", async () => {
+      // El caso que falla con una sola pasada: poner a Ana donde está Luis choca contra el `UNIQUE`
+      // antes de que Luis se mueva. Es el mismo escalón de `051` T-632.
+      const practiceId = await practicaConGrilla();
+      const ana = (jugadores[0] as Cuenta).personId;
+      const luis = (jugadores[3] as Cuenta).personId;
+      const deAna = await lugarDe(practiceId, ana, 3);
+      const deLuis = await lugarDe(practiceId, luis, 3);
+
+      const respuesta = await como(
+        comisario,
+        api()
+          .patch(`/api/practices/${practiceId}/grid`)
+          .send({
+            cambios: [
+              { chukker: 3, ...deAna, personId: luis },
+              { chukker: 3, ...deLuis, personId: ana },
+            ],
+          }),
+      );
+
+      expect(respuesta.status).toBe(200);
+      expect(await lugarDe(practiceId, ana, 3)).toEqual(deLuis);
+      expect(await lugarDe(practiceId, luis, 3)).toEqual(deAna);
+    });
+
+    it("un lote con un cambio inválido NO aplica ninguno", async () => {
+      const practiceId = await practicaConGrilla();
+      const ana = (jugadores[0] as Cuenta).personId;
+      const deAna = await lugarDe(practiceId, ana, 2);
+
+      // El primero es válido —vaciar la celda de Ana en el chukker 2—; el segundo la dejaría dos
+      // veces en el chukker 1, donde sigue estando.
+      const enElUno = await lugarDe(practiceId, (jugadores[3] as Cuenta).personId, 1);
+
+      const respuesta = await como(
+        comisario,
+        api()
+          .patch(`/api/practices/${practiceId}/grid`)
+          .send({
+            cambios: [
+              { chukker: 2, ...deAna, personId: null },
+              { chukker: 1, ...enElUno, personId: ana },
+            ],
+          }),
+      );
+
+      expect(respuesta.status).toBe(422);
+      expect(respuesta.body.error.code).toBe("repetido_en_el_chukker");
+
+      // El primer cambio, que era válido, tampoco entró.
+      expect(await lugarDe(practiceId, ana, 2)).toEqual(deAna);
+    });
+
+    it("la misma persona dos veces en un chukker se rechaza, y el error dice cuál", async () => {
+      const practiceId = await practicaConGrilla();
+      const ana = (jugadores[0] as Cuenta).personId;
+      const deLuis = await lugarDe(practiceId, (jugadores[3] as Cuenta).personId, 5);
+
+      const respuesta = await como(
+        comisario,
+        api()
+          .patch(`/api/practices/${practiceId}/grid`)
+          .send({ cambios: [{ chukker: 5, ...deLuis, personId: ana }] }),
+      );
+
+      expect(respuesta.status).toBe(422);
+      expect(respuesta.body.error.message).toContain("5");
+    });
+
+    it("se puede meter a alguien que NO se postuló (R-052-05)", async () => {
+      // Es lo normal cuando falta uno. Una grilla que no lo permita se llena mal o no se llena.
+      const practiceId = await practicaConGrilla();
+      const suplente = await prisma.person.create({
+        data: { clubId: club.id, fullName: `Suplente ${etiqueta("s")}` },
+      });
+      const deAna = await lugarDe(practiceId, (jugadores[0] as Cuenta).personId, 6);
+
+      const respuesta = await como(
+        comisario,
+        api()
+          .patch(`/api/practices/${practiceId}/grid`)
+          .send({ cambios: [{ chukker: 6, ...deAna, personId: suplente.id }] }),
+      );
+
+      expect(respuesta.status).toBe(200);
+      const grilla = PracticeGridResponse.parse(respuesta.body);
+      expect(grilla.chukkersPorPersona.some((fila) => fila.personId === suplente.id)).toBe(true);
+    });
+
+    it("una persona de OTRO club se rechaza", async () => {
+      const otroClub = await prisma.club.create({
+        data: { slug: `aj2-${etiqueta("s")}`.toLowerCase().slice(0, 40), name: "Otro" },
+      });
+      const ajena = await prisma.person.create({
+        data: { clubId: otroClub.id, fullName: "Persona ajena" },
+      });
+      const practiceId = await practicaConGrilla();
+      const deAna = await lugarDe(practiceId, (jugadores[0] as Cuenta).personId, 1);
+
+      const respuesta = await como(
+        comisario,
+        api()
+          .patch(`/api/practices/${practiceId}/grid`)
+          .send({ cambios: [{ chukker: 1, ...deAna, personId: ajena.id }] }),
+      );
+
+      expect(respuesta.status).toBe(422);
+      expect(respuesta.body.error.code).toBe("persona_invalida");
+    });
+
+    it("un lugar que no existe en la grilla se rechaza", async () => {
+      const practiceId = await practicaConGrilla();
+
+      const respuesta = await como(
+        comisario,
+        api()
+          .patch(`/api/practices/${practiceId}/grid`)
+          .send({
+            cambios: [{ chukker: 99, equipo: "A", position: 1, personId: null }],
+          }),
+      );
+
+      expect(respuesta.status).toBe(422);
+      expect(respuesta.body.error.code).toBe("celda_inexistente");
+    });
+
+    it("un jugador NO puede corregir la grilla", async () => {
+      const practiceId = await practicaConGrilla();
+      const deAna = await lugarDe(practiceId, (jugadores[0] as Cuenta).personId, 1);
+
+      const respuesta = await como(
+        jugadores[1] as Cuenta,
+        api()
+          .patch(`/api/practices/${practiceId}/grid`)
+          .send({ cambios: [{ chukker: 1, ...deAna, personId: null }] }),
+      );
+
+      expect(respuesta.status).toBe(403);
+    });
+
+    it("el comisario de OTRO club tampoco corrige la grilla ajena: 404", async () => {
+      const otroClub = await prisma.club.create({
+        data: { slug: `aj3-${etiqueta("s")}`.toLowerCase().slice(0, 40), name: "Otro más" },
+      });
+      app.get(ClubDirectory).invalidate();
+
+      const persona = await prisma.person.create({
+        data: { clubId: otroClub.id, fullName: "Comisario ajeno 2" },
+      });
+      const cuenta = await prisma.userAccount.create({
+        data: {
+          personId: persona.id,
+          email: `${etiqueta("aj3")}@ejemplo.test`,
+          passwordHash: "argon2id$falso",
+          status: "active",
+        },
+      });
+      await prisma.roleAssignment.create({
+        data: {
+          userAccountId: cuenta.id,
+          role: "commissioner",
+          scope: "club",
+          scopeId: otroClub.id,
+          grantedById: cuenta.id,
+        },
+      });
+      const token = crearTokenDeSesion();
+      await prisma.session.create({
+        data: {
+          userAccountId: cuenta.id,
+          tokenHash: hashDeTokenDeSesion(token),
+          expiresAt: new Date("2027-01-01T00:00:00Z"),
+        },
+      });
+
+      const practiceId = await practicaConGrilla();
+      const deAna = await lugarDe(practiceId, (jugadores[0] as Cuenta).personId, 1);
+
+      const respuesta = await conSesion(
+        api()
+          .patch(`/api/practices/${practiceId}/grid`)
+          .set("Host", `${otroClub.slug}.${BASE}`)
+          .send({ cambios: [{ chukker: 1, ...deAna, personId: null }] }),
+        token,
+      );
+
+      expect(respuesta.status).toBe(404);
+    });
+  });
 });

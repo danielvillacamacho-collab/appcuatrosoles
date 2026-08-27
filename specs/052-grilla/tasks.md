@@ -112,11 +112,21 @@ número lo va a leer el cobro de Fase 3, y si sale mal se cobra mal.
   > El test propio se rehízo con un comisario de verdad del otro club: con la sesión de este club,
   > el guard de tenant respondía antes y el 404 no probaba nada de la grilla.
 
-- [ ] **T-723** `PATCH /practices/:id/grid`: el lote de cambios, atómico.
+- [x] **T-723** `PATCH /practices/:id/grid`: el lote de cambios, atómico.
   Verificación: **intercambiar dos jugadores del mismo chukker funciona** —es el caso que falla con
   una sola pasada, el escalón de `051` T-632—; un lote con un cambio inválido **no aplica ninguno**;
   vaciar una celda baja la cuenta; poner a alguien de otro club se rechaza; un jugador sin
   `practice.manage` recibe 403.
+  ✅ 2026-08-27 — 9 tests. Las dos pasadas resuelven el intercambio; **verificado quitándolas**:
+  sin la primera, el intercambio y el vaciado fallan contra el `UNIQUE` en el estado intermedio.
+  > **El arnés de aislamiento me hizo declarar la ruta, y el primer intento pasaba en vacío.** Metí
+  > la de lectura en el recorrido genérico y daba verde: el recorrido no crea una práctica del club
+  > víctima ni sustituye `:id` para prácticas, así que la URL llegaba con `:id` literal y el 404
+  > salía por inexistente. Las dos rutas pasaron a tener test propio, con un comisario de verdad del
+  > otro club.
+  > Y un test mío estaba mal: creía que un lote era inválido cuando no lo era, porque el primer
+  > cambio vaciaba la celda que el segundo iba a ocupar. El servicio valida **la grilla resultante**,
+  > no cada cambio por separado, que es la semántica correcta.
 
 - [ ] **T-724** `POST /practices/:id/no-show`: marcar y vaciar sus celdas, en una transacción
   (R-052-03).

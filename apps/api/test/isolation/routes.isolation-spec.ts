@@ -120,6 +120,15 @@ const CON_TEST_PROPIO = [
   "POST /api/practices/:id/teams/propose",
   "PATCH /api/practices/:id/teams",
   "POST /api/practices/:id/teams/approve",
+  // `grid.int-spec` → «el comisario de OTRO club recibe 404, nunca 403» y «tampoco puede corregir
+  // la grilla ajena».
+  //
+  // **Se intentó meterlas en el recorrido genérico y pasaban en vacío**: el recorrido no crea una
+  // práctica del club víctima ni sustituye `:id` para prácticas, así que la URL llegaba con `:id`
+  // literal y el 404 salía por inexistente, no por aislamiento. Un test que da verde sin probar
+  // nada es peor que no tenerlo.
+  "GET /api/practices/:id/grid",
+  "PATCH /api/practices/:id/grid",
   "POST /api/field-bookings/block",
   "DELETE /api/field-bookings/:id",
   // `minors.int-spec` → «un acudiente de otro club no existe desde aquí: 404, nunca 403». El
@@ -201,10 +210,6 @@ const COBERTURA: { ruta: string; espera: "ajeno" | "vacio" | "propio" }[] = [
   { ruta: "PUT /api/settings/:key", espera: "propio" },
   { ruta: "GET /api/organizations/:id/settings", espera: "ajeno" },
   { ruta: "PUT /api/organizations/:id/settings/:key", espera: "ajeno" },
-  // La grilla (`specs/052`) SÍ encaja en el recorrido genérico, a diferencia de las demás rutas de
-  // práctica: recibe el identificador de una práctica y no necesita cuerpo ni un estado concreto
-  // para significar algo. Una práctica de otro club tiene que responder 404.
-  { ruta: "GET /api/practices/:id/grid", espera: "ajeno" },
 ];
 
 const VERBOS: Record<number, string> = {

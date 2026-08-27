@@ -1,12 +1,13 @@
-import { Controller, Get, Param, Req, UseGuards, UseInterceptors } from "@nestjs/common";
-import type { PracticeGridResponse } from "@polo/contracts";
+import { Body, Controller, Get, Param, Patch, Req, UseGuards, UseInterceptors } from "@nestjs/common";
+import { AdjustGridRequest, type PracticeGridResponse } from "@polo/contracts";
 import { AuditInterceptor } from "../common/audit/audit.interceptor.js";
-import type { ConAuditoria } from "../common/audit/auditable.js";
+import { Auditable, type ConAuditoria } from "../common/audit/auditable.js";
 import type { ConSessionUser } from "../common/auth/current-user.js";
 import { PermissionGuard } from "../common/auth/permission.guard.js";
-import { SinPermiso } from "../common/auth/require-permission.js";
+import { RequirePermission, SinPermiso } from "../common/auth/require-permission.js";
 import { SessionGuard } from "../common/auth/session.guard.js";
 import { clubDeLaSolicitud } from "../club/tenant-de-la-solicitud.js";
+import { ZodValidationPipe } from "../common/http/zod-validation.pipe.js";
 import { TenantGuard } from "../tenant/tenant.guard.js";
 import type { ConTenant } from "../tenant/tenant-context.js";
 import { GridService } from "./grid.service.js";
@@ -36,5 +37,23 @@ export class GridController {
   @SinPermiso("La grilla de una práctica la ve cualquiera del club (plan §4 de `specs/052`).")
   async ver(@Req() req: Solicitud, @Param("id") id: string): Promise<PracticeGridResponse> {
     return this.grilla.ver(clubDeLaSolicitud(req), id);
+  }
+
+  /**
+   * Corregir la grilla (T-723).
+   *
+   * Manda **los cambios**, no la grilla entera — al revés que los equipos de `051`, y a propósito:
+   * una grilla es una matriz de celdas independientes, así que dos correcciones simultáneas en
+   * chukkers distintos no son un conflicto, son dos correcciones ciertas.
+   */
+  @Patch()
+  @RequirePermission("practice.manage")
+  @Auditable({ action: "practice.grid-adjusted", entityType: "chukker_grid_cell" })
+  async ajustar(
+    @Req() req: Solicitud,
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(AdjustGridRequest)) cambios: AdjustGridRequest,
+  ): Promise<PracticeGridResponse> {
+    return this.grilla.ajustar(clubDeLaSolicitud(req), id, cambios);
   }
 }
