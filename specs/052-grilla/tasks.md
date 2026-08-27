@@ -239,8 +239,10 @@ número lo va a leer el cobro de Fase 3, y si sale mal se cobra mal.
   ruta nueva y falló hasta hacerlo; y el primer intento —meterlas en el recorrido genérico— pasaba
   sin probar nada, porque el recorrido no crea una práctica del club víctima.
 
-- [ ] **T-743** `verification.md`: cada criterio de aceptación con el archivo y el título literal del
+- [x] **T-743** `verification.md`: cada criterio de aceptación con el archivo y el título literal del
   test que lo cubre. Un criterio sin test **se resuelve, no se anota**.
+  ✅ 2026-08-27 — `verification.md` con cada criterio y el título literal de su test. **Cierra el
+  módulo**: 20 tareas hechas, 1 aplazada con motivo.
 
 - [x] **T-744** Semilla: una práctica **cerrada con grilla** en `pnpm db:seed`, para que la pantalla
   del jugador tenga algo que mostrar sin tener que jugar una práctica a mano.

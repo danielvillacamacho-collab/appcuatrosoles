@@ -1,6 +1,6 @@
 # SPEC-052 — Grilla de chukkers, asistencia y resultado
 
-> Estado: ready · Depende de: 050, 051 · Fuente: `docs/source` §7, `docs/02` §E,
+> Estado: done · Depende de: 050, 051 · Fuente: `docs/source` §7, `docs/02` §E,
 > decisiones de Daniel del 2026-08-26 (§13)
 
 Cierra el arco que abrió `050`. Una práctica hoy se publica, se decide y se le arman equipos —y
