@@ -13,6 +13,7 @@ import {
 import type { Prisma } from "@prisma/client";
 import { CLOCK } from "../common/clock/clock.module.js";
 import { ApiException } from "../common/errors/api-error.js";
+import { GridService } from "./grid.service.js";
 import { OutboxRepository } from "../common/outbox/outbox.repository.js";
 import { PrismaService } from "../common/prisma/prisma.service.js";
 
@@ -50,6 +51,7 @@ export class TeamsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxRepository,
+    private readonly grilla: GridService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -273,6 +275,11 @@ export class TeamsService {
           }
         }
       }
+
+      // **La grilla nace acá, no después** (`specs/052` T-721, R-052-01). Con dos transacciones
+      // separadas, un proceso que muera entre una y otra deja una práctica aprobada sin grilla, y
+      // esa práctica no se puede cerrar nunca.
+      await this.grilla.crearEn(tx, clubId, practiceId);
     });
 
     return this.ver(clubId, practiceId, { puedeAprobar: true });

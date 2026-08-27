@@ -89,10 +89,16 @@ número lo va a leer el cobro de Fase 3, y si sale mal se cobra mal.
 
 ## C — API
 
-- [ ] **T-721** La grilla nace al aprobar, **en la misma transacción** que la aprobación
+- [x] **T-721** La grilla nace al aprobar, **en la misma transacción** que la aprobación
   (R-052-01).
   Verificación: aprobar deja 48 celdas; **si crear la grilla falla, no quedan equipos aprobados**;
   aprobar por segunda vez **no** recrea la grilla ni pisa lo corregido.
+  ✅ 2026-08-27 — 3 tests. La grilla se crea dentro de la transacción de `aprobar`, y **sólo la
+  primera vez**: aprobar de nuevo deja intactas las correcciones hechas a mano, que es lo único que
+  un comisario no perdonaría.
+  > El test de la transacción única se verificó **rompiéndolo**: con la grilla en su propia
+  > transacción, los equipos quedan aprobados y la grilla vacía, y el test falla. Es exactamente el
+  > estado que dejaría una práctica imposible de cerrar.
 
 - [ ] **T-722** `GET /practices/:id/grid`: la grilla con la cuenta por persona.
   Verificación: cualquiera con sesión en el club la ve (plan §4); otra práctica de **otro club**

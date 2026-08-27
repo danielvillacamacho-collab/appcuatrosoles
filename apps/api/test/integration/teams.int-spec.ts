@@ -2,13 +2,14 @@ import "reflect-metadata";
 import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
 import request from "supertest";
-import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { PracticeTeamsResponse } from "@polo/contracts";
 import type { Clock } from "@polo/domain";
 import { AppModule } from "../../src/app.module.js";
 import { CLOCK } from "../../src/common/clock/clock.module.js";
 import { crearTokenDeSesion, hashDeTokenDeSesion } from "../../src/common/auth/session-token.js";
 import { DecisionProcessor } from "../../src/practices/decision.processor.js";
+import { GridService } from "../../src/practices/grid.service.js";
 import { PrismaService } from "../../src/common/prisma/prisma.service.js";
 import { BASE_DOMAIN } from "../../src/tenant/base-domain.js";
 import { ClubDirectory } from "../../src/tenant/club-directory.js";
@@ -424,6 +425,85 @@ describe("Equipos · API (T-620 a T-624)", () => {
       });
 
       expect(avisos).toBeGreaterThan(4);
+    });
+
+    it("aprobar hace nacer la grilla, llena (T-721, R-052-01)", async () => {
+      const practiceId = await practicaConfirmada(jugadores);
+
+      await como(comisario, api().post(`/api/practices/${practiceId}/teams/approve`).send({}));
+
+      const celdas = await prisma.chukkerGridCell.findMany({
+        where: { practiceId },
+        select: { chukkerNo: true, team: true, position: true, personId: true },
+      });
+
+      // 4 puestos × 6 chukkers. La práctica de prueba tiene 4 jugadores, no 8.
+      expect(celdas).toHaveLength(24);
+      expect(
+        celdas.every((celda) => celda.personId !== null),
+        "nace llena: todos juegan todos los chukkers",
+      ).toBe(true);
+
+      const chukkers = new Set(celdas.map((celda) => celda.chukkerNo));
+      expect([...chukkers].sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6]);
+    });
+
+    it("aprobar POR SEGUNDA VEZ no pisa la grilla corregida a mano", async () => {
+      // Aprobar se puede repetir (R-051-07). Rehacer la grilla borraría las correcciones del
+      // comisario, que es lo único que no perdonaría.
+      const practiceId = await practicaConfirmada(jugadores);
+      await como(comisario, api().post(`/api/practices/${practiceId}/teams/approve`).send({}));
+
+      // «Ana no jugó el cuarto.»
+      const corregida = await prisma.chukkerGridCell.findFirstOrThrow({
+        where: { practiceId, chukkerNo: 4 },
+        select: { id: true },
+      });
+      await prisma.chukkerGridCell.update({
+        where: { id: corregida.id },
+        data: { personId: null },
+      });
+
+      await como(comisario, api().post(`/api/practices/${practiceId}/teams/approve`).send({}));
+
+      const despues = await prisma.chukkerGridCell.findUniqueOrThrow({
+        where: { id: corregida.id },
+        select: { personId: true },
+      });
+
+      expect(despues.personId, "la corrección sobrevive a la segunda aprobación").toBeNull();
+      expect(await prisma.chukkerGridCell.count({ where: { practiceId } })).toBe(24);
+    });
+
+    it("si la grilla falla, NO quedan equipos aprobados: es una sola transacción", async () => {
+      // El comportamiento correcto (plan §5). Aprobar sin grilla deja una práctica que no se puede
+      // cerrar nunca, así que es preferible que la aprobación se caiga con ella.
+      const practiceId = await practicaConfirmada(jugadores);
+      const grilla = app.get(GridService);
+      const original = grilla.crearEn.bind(grilla);
+
+      vi.spyOn(grilla, "crearEn").mockRejectedValueOnce(new Error("fallo al crear la grilla"));
+
+      const respuesta = await como(
+        comisario,
+        api().post(`/api/practices/${practiceId}/teams/approve`).send({}),
+      );
+
+      expect(respuesta.status).toBe(500);
+
+      const equipos = await prisma.practiceTeam.findMany({
+        where: { practiceId },
+        select: { approvedAt: true },
+      });
+
+      expect(equipos.length, "los equipos propuestos siguen ahí").toBeGreaterThan(0);
+      expect(
+        equipos.every((equipo) => equipo.approvedAt === null),
+        "pero NINGUNO quedó aprobado: la transacción se revirtió entera",
+      ).toBe(true);
+      expect(await prisma.chukkerGridCell.count({ where: { practiceId } })).toBe(0);
+
+      grilla.crearEn = original;
     });
 
     it("un jugador NO puede aprobar", async () => {

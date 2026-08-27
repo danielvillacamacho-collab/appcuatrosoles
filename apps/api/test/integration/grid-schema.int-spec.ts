@@ -2,6 +2,9 @@ import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { etiqueta } from "../db.js";
 
+/** Una hora fija: un `new Date()` suelto lo prohíbe la regla de P-08, y con razón. */
+const REGISTRADO_EN = new Date("2027-12-01T18:30:00.000Z");
+
 /**
  * T-711 y T-712 — lo que garantiza la **base**, probado contra la base.
  *
@@ -178,7 +181,7 @@ describe("Esquema de la grilla (T-711, T-712)", () => {
         teamAGoals: 5,
         teamBGoals: 4,
         recordedById: cuentaId,
-        recordedAt: new Date(),
+        recordedAt: REGISTRADO_EN,
       },
     });
 
@@ -196,7 +199,7 @@ describe("Esquema de la grilla (T-711, T-712)", () => {
       teamAGoals: 5,
       teamBGoals: 4,
       recordedById: cuentaId,
-      recordedAt: new Date(),
+      recordedAt: REGISTRADO_EN,
     };
 
     await prisma.practiceResult.create({ data: resultado });
@@ -213,7 +216,7 @@ describe("Esquema de la grilla (T-711, T-712)", () => {
 
     await prisma.practice.update({
       where: { id: practiceId },
-      data: { status: "played", closedAt: new Date(), closedById: cuentaId },
+      data: { status: "played", closedAt: REGISTRADO_EN, closedById: cuentaId },
     });
 
     const practica = await prisma.practice.findUniqueOrThrow({
