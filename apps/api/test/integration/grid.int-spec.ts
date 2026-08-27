@@ -714,4 +714,230 @@ describe("Grilla · API (T-722 a T-727)", () => {
       expect(respuesta.status).toBe(403);
     });
   });
+
+  describe("cerrar y reabrir (T-725)", () => {
+    /** Después de que la práctica empezó, que es cuando se puede cerrar. */
+    function despuesDeEmpezar(): void {
+      reloj.mover("2026-05-10T18:00:00.000Z");
+    }
+
+    it("cerrar deja la práctica en played, con quién y cuándo", async () => {
+      const practiceId = await practicaConGrilla();
+      despuesDeEmpezar();
+
+      const respuesta = await como(
+        comisario,
+        api().post(`/api/practices/${practiceId}/close`).send({}),
+      );
+
+      expect(respuesta.status).toBe(201);
+      expect(PracticeGridResponse.parse(respuesta.body).cerrada).toBe(true);
+
+      const practica = await prisma.practice.findUniqueOrThrow({
+        where: { id: practiceId },
+        select: { status: true, closedAt: true, closedById: true },
+      });
+
+      expect(practica.status).toBe("played");
+      expect(practica.closedAt).not.toBeNull();
+      expect(practica.closedById).toBe(comisario.cuentaId);
+    });
+
+    it("cerrada, la grilla NO admite cambios", async () => {
+      const practiceId = await practicaConGrilla();
+      const celda = await prisma.chukkerGridCell.findFirstOrThrow({
+        where: { practiceId },
+        select: { chukkerNo: true, team: true, position: true },
+      });
+      despuesDeEmpezar();
+      await como(comisario, api().post(`/api/practices/${practiceId}/close`).send({}));
+
+      const respuesta = await como(
+        comisario,
+        api()
+          .patch(`/api/practices/${practiceId}/grid`)
+          .send({
+            cambios: [
+              {
+                chukker: celda.chukkerNo,
+                equipo: celda.team,
+                position: celda.position,
+                personId: null,
+              },
+            ],
+          }),
+      );
+
+      expect(respuesta.status).toBe(409);
+      expect(respuesta.body.error.code).toBe("practica_cerrada");
+    });
+
+    it("una práctica que TODAVÍA NO EMPEZÓ no se cierra (R-052-07)", async () => {
+      const practiceId = await practicaConGrilla();
+      reloj.mover("2026-05-10T12:00:00.000Z");
+
+      const respuesta = await como(
+        comisario,
+        api().post(`/api/practices/${practiceId}/close`).send({}),
+      );
+
+      expect(respuesta.status).toBe(409);
+      expect(respuesta.body.error.code).toBe("todavia_no_empezo");
+    });
+
+    it("cerrar dos veces se rechaza con su propio motivo", async () => {
+      const practiceId = await practicaConGrilla();
+      despuesDeEmpezar();
+      await como(comisario, api().post(`/api/practices/${practiceId}/close`).send({}));
+
+      const respuesta = await como(
+        comisario,
+        api().post(`/api/practices/${practiceId}/close`).send({}),
+      );
+
+      expect(respuesta.status).toBe(409);
+      expect(respuesta.body.error.code).toBe("ya_cerrada");
+    });
+
+    it("reabrir la devuelve a editable, y DEJA RASTRO EN LA AUDITORÍA", async () => {
+      const practiceId = await practicaConGrilla();
+      despuesDeEmpezar();
+      await como(comisario, api().post(`/api/practices/${practiceId}/close`).send({}));
+
+      const respuesta = await como(
+        comisario,
+        api().post(`/api/practices/${practiceId}/reopen`).send({}),
+      );
+
+      expect(respuesta.status).toBe(201);
+      expect(PracticeGridResponse.parse(respuesta.body).cerrada).toBe(false);
+
+      const practica = await prisma.practice.findUniqueOrThrow({
+        where: { id: practiceId },
+        select: { status: true, closedAt: true, closedById: true },
+      });
+      expect(practica.status).toBe("confirmed");
+      expect(practica.closedAt).toBeNull();
+      expect(practica.closedById).toBeNull();
+
+      // La mitad de la razón por la que reabrir puede existir: si el rastro se perdiera, cerrar
+      // dejaría de significar algo. `audit_log` es append-only, así que es el único sitio seguro.
+      const rastro = await prisma.auditLog.findMany({
+        where: { entityId: practiceId, action: "practice.reopened" },
+        select: { actorUserId: true },
+      });
+
+      expect(rastro).toHaveLength(1);
+      expect(rastro[0]?.actorUserId).toBe(comisario.cuentaId);
+    });
+
+    it("reabierta, la grilla vuelve a admitir cambios", async () => {
+      const practiceId = await practicaConGrilla();
+      const celda = await prisma.chukkerGridCell.findFirstOrThrow({
+        where: { practiceId },
+        select: { chukkerNo: true, team: true, position: true },
+      });
+      despuesDeEmpezar();
+      await como(comisario, api().post(`/api/practices/${practiceId}/close`).send({}));
+      await como(comisario, api().post(`/api/practices/${practiceId}/reopen`).send({}));
+
+      const respuesta = await como(
+        comisario,
+        api()
+          .patch(`/api/practices/${practiceId}/grid`)
+          .send({
+            cambios: [
+              {
+                chukker: celda.chukkerNo,
+                equipo: celda.team,
+                position: celda.position,
+                personId: null,
+              },
+            ],
+          }),
+      );
+
+      expect(respuesta.status).toBe(200);
+    });
+
+    it("reabrir algo que no está cerrado se rechaza", async () => {
+      const practiceId = await practicaConGrilla();
+
+      const respuesta = await como(
+        comisario,
+        api().post(`/api/practices/${practiceId}/reopen`).send({}),
+      );
+
+      expect(respuesta.status).toBe(409);
+      expect(respuesta.body.error.code).toBe("practica_no_cerrada");
+    });
+
+    it("un jugador NO puede cerrar ni reabrir", async () => {
+      const practiceId = await practicaConGrilla();
+      despuesDeEmpezar();
+
+      const cerrar = await como(
+        jugadores[1] as Cuenta,
+        api().post(`/api/practices/${practiceId}/close`).send({}),
+      );
+      expect(cerrar.status).toBe(403);
+
+      await como(comisario, api().post(`/api/practices/${practiceId}/close`).send({}));
+
+      const reabrir = await como(
+        jugadores[1] as Cuenta,
+        api().post(`/api/practices/${practiceId}/reopen`).send({}),
+      );
+      expect(reabrir.status).toBe(403);
+    });
+
+    it("el comisario de OTRO club no cierra la práctica ajena: 404", async () => {
+      const otroClub = await prisma.club.create({
+        data: { slug: `aj4-${etiqueta("s")}`.toLowerCase().slice(0, 40), name: "Otro cuarto" },
+      });
+      app.get(ClubDirectory).invalidate();
+
+      const persona = await prisma.person.create({
+        data: { clubId: otroClub.id, fullName: "Comisario ajeno 3" },
+      });
+      const cuenta = await prisma.userAccount.create({
+        data: {
+          personId: persona.id,
+          email: `${etiqueta("aj4")}@ejemplo.test`,
+          passwordHash: "argon2id$falso",
+          status: "active",
+        },
+      });
+      await prisma.roleAssignment.create({
+        data: {
+          userAccountId: cuenta.id,
+          role: "commissioner",
+          scope: "club",
+          scopeId: otroClub.id,
+          grantedById: cuenta.id,
+        },
+      });
+      const token = crearTokenDeSesion();
+      await prisma.session.create({
+        data: {
+          userAccountId: cuenta.id,
+          tokenHash: hashDeTokenDeSesion(token),
+          expiresAt: new Date("2027-01-01T00:00:00Z"),
+        },
+      });
+
+      const practiceId = await practicaConGrilla();
+      despuesDeEmpezar();
+
+      const respuesta = await conSesion(
+        api()
+          .post(`/api/practices/${practiceId}/close`)
+          .set("Host", `${otroClub.slug}.${BASE}`)
+          .send({}),
+        token,
+      );
+
+      expect(respuesta.status).toBe(404);
+    });
+  });
 });

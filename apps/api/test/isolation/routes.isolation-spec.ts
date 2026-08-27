@@ -107,6 +107,10 @@ const CON_TEST_PROPIO = [
   "PATCH /api/practices/:id",
   "POST /api/practices/:id/publish",
   "POST /api/practices/:id/cancel",
+  // `grid.int-spec` → cerrar y reabrir dependen del estado de la práctica, así que el recorrido
+  // genérico —que no crea una práctica del club víctima— no diría nada.
+  "POST /api/practices/:id/close",
+  "POST /api/practices/:id/reopen",
   "POST /api/practices/:id/applications",
   "DELETE /api/practices/:id/applications/mine",
   "POST /api/practices/:id/applications/mine/accept-partner",

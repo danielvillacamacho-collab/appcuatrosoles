@@ -17,6 +17,7 @@ import {
   CancelPracticeRequest,
   CreatePracticeRequest,
   UpdatePracticeRequest,
+  type PracticeGridResponse,
   type PracticeResponse,
 } from "@polo/contracts";
 import { z } from "zod";
@@ -31,6 +32,7 @@ import { clubDeLaSolicitud } from "../club/tenant-de-la-solicitud.js";
 import { TenantGuard } from "../tenant/tenant.guard.js";
 import type { ConTenant } from "../tenant/tenant-context.js";
 import { ApplicationsService } from "./applications.service.js";
+import { GridService } from "./grid.service.js";
 import { PracticesService } from "./practices.service.js";
 
 type Solicitud = ConTenant & ConSessionUser & ConAuditoria;
@@ -58,6 +60,7 @@ export class PracticesController {
   constructor(
     private readonly practicas: PracticesService,
     private readonly postulaciones: ApplicationsService,
+    private readonly grilla: GridService,
   ) {}
 
   @Get()
@@ -116,6 +119,32 @@ export class PracticesController {
     @Body(new ZodValidationPipe(CancelPracticeRequest)) datos: CancelPracticeRequest,
   ): Promise<PracticeResponse> {
     return this.practicas.cancelar(clubDeLaSolicitud(req), id, datos.reason);
+  }
+
+  /**
+   * Cerrar la práctica: lo registrado queda firme (T-725, HU-052-03).
+   *
+   * Va acá y no bajo `/grid` porque lo que cambia es **el estado de la práctica**, igual que
+   * publicar y cancelar. Lo que se congela es la grilla, pero lo que se decide es la práctica.
+   */
+  @Post(":id/close")
+  @RequirePermission("practice.manage")
+  @Auditable({ action: "practice.closed", entityType: "practice" })
+  async cerrar(@Req() req: Solicitud, @Param("id") id: string): Promise<PracticeGridResponse> {
+    return this.grilla.cerrar(clubDeLaSolicitud(req), id, cuentaDe(req));
+  }
+
+  /**
+   * Reabrir (R-052-06).
+   *
+   * **Queda auditado**, que es la mitad de la razón por la que reabrir puede existir: si el rastro
+   * se perdiera, cerrar dejaría de significar algo.
+   */
+  @Post(":id/reopen")
+  @RequirePermission("practice.manage")
+  @Auditable({ action: "practice.reopened", entityType: "practice" })
+  async reabrir(@Req() req: Solicitud, @Param("id") id: string): Promise<PracticeGridResponse> {
+    return this.grilla.reabrir(clubDeLaSolicitud(req), id, cuentaDe(req));
   }
 
   @Post(":id/applications")

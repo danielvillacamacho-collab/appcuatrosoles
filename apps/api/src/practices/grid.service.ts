@@ -1,14 +1,18 @@
-import { HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
+import { HttpStatus, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { AdjustGridRequest, NoShowRequest, PracticeGridResponse } from "@polo/contracts";
 import {
   chukkersPorPersona,
   grillaInicial,
+  puedeCerrar,
   validarGrilla,
   type Celda,
+  type Clock,
+  type EstadoDePractica,
   type PuestoDeGrilla,
 } from "@polo/domain";
 import type { Prisma } from "@prisma/client";
 import { ApiException } from "../common/errors/api-error.js";
+import { CLOCK } from "../common/clock/clock.module.js";
 import { PrismaService } from "../common/prisma/prisma.service.js";
 
 /**
@@ -19,7 +23,10 @@ import { PrismaService } from "../common/prisma/prisma.service.js";
  */
 @Injectable()
 export class GridService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(CLOCK) private readonly clock: Clock,
+  ) {}
 
   /**
    * La grilla nace al aprobarse los equipos (T-721, R-052-01).
@@ -422,4 +429,101 @@ export class GridService {
 
     return this.ver(clubId, practiceId);
   }
+
+  /**
+   * Cerrar la práctica (T-725, HU-052-03).
+   *
+   * **Nadie cierra por reloj**: alguien dice «esto fue lo que pasó». Un cierre automático a la hora
+   * de fin dejaría fuera al comisario que llena la grilla al otro día, que es el caso normal.
+   *
+   * El candado va primero, con la lección de `030` T-332: sin `FOR UPDATE`, un `PATCH` en vuelo y
+   * este cierre leen los dos el mismo estado y el cambio entra en una grilla que ya está congelada.
+   */
+  async cerrar(
+    clubId: string,
+    practiceId: string,
+    cerradaPor: string,
+  ): Promise<PracticeGridResponse> {
+    await this.cambiarCierre(clubId, practiceId, cerradaPor, "cerrar");
+
+    return this.ver(clubId, practiceId);
+  }
+
+  /**
+   * Reabrir (T-725, R-052-06).
+   *
+   * Existe porque cerrar de más es fácil y corregir por base de datos no puede ser la salida. Queda
+   * en `audit_log`, que es append-only y por lo tanto el único sitio donde el rastro no se pierde.
+   */
+  async reabrir(
+    clubId: string,
+    practiceId: string,
+    reabiertaPor: string,
+  ): Promise<PracticeGridResponse> {
+    await this.cambiarCierre(clubId, practiceId, reabiertaPor, "reabrir");
+
+    return this.ver(clubId, practiceId);
+  }
+
+  private async cambiarCierre(
+    clubId: string,
+    practiceId: string,
+    quien: string,
+    que: "cerrar" | "reabrir",
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "practice" WHERE id = ${practiceId} AND club_id = ${clubId} FOR UPDATE`;
+
+      const practica = await tx.practice.findFirst({
+        where: { id: practiceId, clubId },
+        select: { status: true, startsAt: true },
+      });
+
+      if (practica === null) {
+        throw new NotFoundException();
+      }
+
+      if (que === "reabrir") {
+        if (practica.status !== "played") {
+          throw new ApiException(
+            "practica_no_cerrada",
+            HttpStatus.CONFLICT,
+            "Esa práctica no está cerrada.",
+          );
+        }
+
+        await tx.practice.update({
+          where: { id: practiceId },
+          data: { status: "confirmed", closedAt: null, closedById: null },
+        });
+
+        return;
+      }
+
+      const puede = puedeCerrar(
+        { estado: practica.status as EstadoDePractica, startsAt: practica.startsAt },
+        this.clock.now(),
+      );
+
+      if (!puede.ok) {
+        throw new ApiException(
+          puede.error,
+          HttpStatus.CONFLICT,
+          MOTIVO_DE_RECHAZO[puede.error],
+        );
+      }
+
+      await tx.practice.update({
+        where: { id: practiceId },
+        data: { status: "played", closedAt: this.clock.now(), closedById: quien },
+      });
+    });
+  }
 }
+
+/** El copy de cada rechazo, junto al código que viaja (`docs/03` §2). */
+const MOTIVO_DE_RECHAZO = {
+  todavia_no_empezo: "No se puede cerrar una práctica que todavía no empezó.",
+  no_esta_confirmada: "Sólo se cierra una práctica confirmada.",
+  ya_cerrada: "Esa práctica ya está cerrada.",
+} as const;

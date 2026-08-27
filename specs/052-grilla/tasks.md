@@ -144,11 +144,17 @@ número lo va a leer el cobro de Fase 3, y si sale mal se cobra mal.
   > marca», y no había con qué. Desmarcar existe ahora, y **no restaura las celdas** — el sistema no
   > sabe qué chukkers jugó, y devolverle los seis sería inventar el dato que el módulo registra.
 
-- [ ] **T-725** `POST /practices/:id/close` y `/reopen`, con candado.
+- [x] **T-725** `POST /practices/:id/close` y `/reopen`, con candado.
   Verificación: cerrar deja `played`, con quién y cuándo, y la grilla deja de admitir cambios;
   cerrar algo que no empezó se rechaza (R-052-07); reabrir vuelve a `confirmed` y **deja rastro en
   `audit_log`**; un `PATCH` en vuelo contra una práctica que se está cerrando **espera el candado**
   y no entra en una grilla congelada (lección de `030` T-332).
+  ✅ 2026-08-27 — 9 tests. Cerrar y reabrir van en el controlador de prácticas, junto a publicar y
+  cancelar: lo que se congela es la grilla, pero lo que cambia de estado es la práctica.
+  > Verificado rompiendo las dos garantías: sin `puedeCerrar` se cierra una práctica que no empezó
+  > (2 tests caen), y sin el congelado una práctica cerrada sigue admitiendo cambios (1 test cae).
+  > El rastro de la reapertura se comprueba **en `audit_log`**, no en la respuesta: si el rastro se
+  > perdiera, cerrar dejaría de significar algo, y `audit_log` es append-only por P-07.
 
 - [ ] **T-726** `PUT /practices/:id/result`: el marcador, opcional.
   Verificación: se guarda con notas y sin notas; se puede corregir; cerrar **sin** marcador funciona
