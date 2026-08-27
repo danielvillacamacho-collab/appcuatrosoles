@@ -134,7 +134,7 @@ function Tablero({
       cambios: [{ chukker, ...lugar, personId: jugado ? null : fila.personId }],
     };
 
-    void ajustar.mutateAsync(cambios);
+    ajustar.mutate(cambios);
   }
 
   const error = ajustar.error ?? ausente.error;
@@ -197,7 +197,7 @@ function Tablero({
                 <Button
                   variante="texto"
                   onClick={() =>
-                    void ausente.mutateAsync({
+                    ausente.mutate({
                       personId: fila.personId,
                       ausente: !fila.noSePresento,
                     })
@@ -325,14 +325,14 @@ function Cierre({ practiceId, cerrada }: { practiceId: string; cerrada: boolean 
       {cerrada ? (
         <Button
           variante="secundaria"
-          onClick={() => void cierre.mutateAsync({ cerrar: false })}
+          onClick={() => cierre.mutate({ cerrar: false })}
           cargando={cierre.isPending}
         >
           {cierre.isPending ? copy.grilla.reabriendo : copy.grilla.reabrir}
         </Button>
       ) : (
         <>
-          <Button onClick={() => void cierre.mutateAsync({ cerrar: true })} cargando={cierre.isPending}>
+          <Button onClick={() => cierre.mutate({ cerrar: true })} cargando={cierre.isPending}>
             {cierre.isPending ? copy.grilla.cerrando : copy.grilla.cerrar}
           </Button>
           <span className="text-sm text-muted">{copy.grilla.cerrarConfirmar}</span>

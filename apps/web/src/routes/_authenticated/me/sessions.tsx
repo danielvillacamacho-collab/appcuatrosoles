@@ -10,6 +10,7 @@ import {
 import { useFecha } from "../../../lib/fechas.js";
 import { mensajeDeError } from "../../../lib/error-message.js";
 import { copy } from "../../../i18n/es-CO.js";
+import { salioBien } from "../../../lib/mutacion.js";
 
 /**
  * Mis dispositivos (T-131, HU-010-05).
@@ -28,7 +29,9 @@ function MisDispositivos(): React.JSX.Element {
   const navegar = useNavigate();
 
   const cerrarTodo = async (): Promise<void> => {
-    await cerrarTodas.mutateAsync(undefined);
+    if (!(await salioBien(cerrarTodas.mutateAsync(undefined)))) {
+      return;
+    }
     await navegar({ to: "/login" });
   };
 
@@ -52,7 +55,7 @@ function MisDispositivos(): React.JSX.Element {
             {!sesion.current && (
               <Button
                 variante="secundaria"
-                onClick={() => void cerrar.mutateAsync(sesion.id)}
+                onClick={() => cerrar.mutate(sesion.id)}
                 cargando={cerrar.isPending && cerrar.variables === sesion.id}
               >
                 {copy.dispositivos.cerrar}

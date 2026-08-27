@@ -9,6 +9,7 @@ import { useRestablecerContrasena } from "../features/auth/api/useRestablecerCon
 import { mensajeDeError } from "../lib/error-message.js";
 import { PantallaDeEntrada } from "../components/Pantalla.js";
 import { copy } from "../i18n/es-CO.js";
+import { salioBien } from "../lib/mutacion.js";
 
 /**
  * Definir una contraseña nueva con el enlace del correo (T-129, HU-010-06).
@@ -45,7 +46,9 @@ function Restablecer(): React.JSX.Element {
   });
 
   const enviar = handleSubmit(async (datos) => {
-    await restablecer.mutateAsync(datos);
+    if (!(await salioBien(restablecer.mutateAsync(datos)))) {
+      return;
+    }
   });
 
   return (

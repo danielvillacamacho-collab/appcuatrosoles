@@ -11,6 +11,7 @@ import {
 } from "../../features/fields/api/useCanchas.js";
 import { mensajeDeError } from "../../lib/error-message.js";
 import { copy } from "../../i18n/es-CO.js";
+import { salioBien } from "../../lib/mutacion.js";
 
 /**
  * Las canchas del club (T-461, HU-040-01).
@@ -67,10 +68,17 @@ function FormularioDeCancha({ onListo }: { onListo: () => void }): React.JSX.Ele
     }
 
     setErrorLocal(null);
-    await crear.mutateAsync({
-      name: nombre.trim(),
-      ...(superficie.trim() === "" ? {} : { surface: superficie.trim() }),
-    });
+    const creada = await salioBien(
+      crear.mutateAsync({
+        name: nombre.trim(),
+        ...(superficie.trim() === "" ? {} : { surface: superficie.trim() }),
+      }),
+    );
+
+    if (!creada) {
+      return;
+    }
+
     onListo();
   };
 
@@ -134,7 +142,7 @@ function FichaDeCancha({ cancha }: { cancha: FieldResponse }): React.JSX.Element
           {cancha.status === "active" ? (
             <Button
               variante="secundaria"
-              onClick={() => void editar.mutateAsync({ status: "maintenance" })}
+              onClick={() => editar.mutate({ status: "maintenance" })}
               cargando={editar.isPending}
             >
               {copy.canchas.ponerEnMantenimiento}
@@ -142,7 +150,7 @@ function FichaDeCancha({ cancha }: { cancha: FieldResponse }): React.JSX.Element
           ) : (
             <Button
               variante="secundaria"
-              onClick={() => void editar.mutateAsync({ status: "active" })}
+              onClick={() => editar.mutate({ status: "active" })}
               cargando={editar.isPending}
             >
               {copy.canchas.reactivar}
@@ -150,7 +158,7 @@ function FichaDeCancha({ cancha }: { cancha: FieldResponse }): React.JSX.Element
           )}
           <Button
             variante="texto"
-            onClick={() => void archivar.mutateAsync(cancha.id)}
+            onClick={() => archivar.mutate(cancha.id)}
             cargando={archivar.isPending && archivar.variables === cancha.id}
           >
             {copy.canchas.archivar}

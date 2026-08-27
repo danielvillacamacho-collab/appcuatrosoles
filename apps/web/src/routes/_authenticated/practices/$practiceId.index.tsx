@@ -252,7 +252,7 @@ function MiPostulacion({ practica }: { practica: PracticeResponse }): React.JSX.
             <Button
               variante="secundaria"
               onClick={() =>
-                void aceptar.mutateAsync(practica.miPostulacion?.propuestaRecibida?.personId ?? "")
+                aceptar.mutate(practica.miPostulacion?.propuestaRecibida?.personId ?? "")
               }
               cargando={aceptar.isPending}
             >
@@ -264,7 +264,7 @@ function MiPostulacion({ practica }: { practica: PracticeResponse }): React.JSX.
         <div>
           <Button
             variante="texto"
-            onClick={() => void retirarme.mutateAsync()}
+            onClick={() => retirarme.mutate()}
             cargando={retirarme.isPending}
           >
             {copy.practicas.retirarme}
@@ -278,7 +278,7 @@ function MiPostulacion({ practica }: { practica: PracticeResponse }): React.JSX.
     <form
       onSubmit={(evento) => {
         evento.preventDefault();
-        void postularme.mutateAsync({
+        postularme.mutate({
           chukkersOffered: Number(chukkers),
           ...(companero.trim() === "" ? {} : { halfManPartnerPersonId: companero.trim() }),
         });
@@ -336,7 +336,7 @@ function Administracion({ practica }: { practica: PracticeResponse }): React.JSX
 
       {practica.status === "draft" && (
         <div>
-          <Button onClick={() => void publicar.mutateAsync(practica.id)} cargando={publicar.isPending}>
+          <Button onClick={() => publicar.mutate(practica.id)} cargando={publicar.isPending}>
             {publicar.isPending ? copy.nuevaPractica.publicando : copy.nuevaPractica.publicar}
           </Button>
         </div>
@@ -351,7 +351,7 @@ function Administracion({ practica }: { practica: PracticeResponse }): React.JSX
           />
           <Button
             variante="secundaria"
-            onClick={() => void cancelar.mutateAsync(motivo.trim())}
+            onClick={() => cancelar.mutate(motivo.trim())}
             cargando={cancelar.isPending}
             disabled={motivo.trim() === ""}
           >

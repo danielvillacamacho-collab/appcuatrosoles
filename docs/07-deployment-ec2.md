@@ -283,6 +283,27 @@ Vuelve a la imagen anterior en menos de dos minutos (`docs/10` §6). Es el prime
 cualquier incidente, **antes** del diagnóstico — diagnosticar con el sistema roto en
 producción no ayuda a nadie que esté usándolo en ese momento.
 
+## 7b. Comprobar un despliegue desde fuera
+
+Sin entrar a la instancia y sin pedirle nada a nadie:
+
+```bash
+curl -s https://lospinos.dev.cuatrosoles.co/api/health
+# {"status":"ok","version":"<sha del commit desplegado>"}
+```
+
+`version` es el commit del que salió la imagen: lo sella `deploy.yml` al construir. Compararlo con
+el sha de `main` responde «¿está desplegado lo último?» sin deducir nada.
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' https://lospinos.dev.cuatrosoles.co/api/ready
+# 200 = el API puede consultar la base · 503 = vive pero la base no responde
+```
+
+> **`/health` no toca la base y `/ready` sí, a propósito.** Si la base se cae, `/health` tiene que
+> seguir respondiendo: «el servidor está muerto» y «el servidor vive y la base no» son dos
+> incidentes con dos respuestas distintas, y una sola señal no deja distinguirlos.
+
 ## 8. Observabilidad
 
 - **Logs**: Pino en formato JSON, con `requestId` en cada línea — el mismo que ve el usuario

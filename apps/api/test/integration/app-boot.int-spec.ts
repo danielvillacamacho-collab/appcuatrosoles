@@ -38,7 +38,20 @@ describe("Arranque de la aplicación", () => {
     const respuesta = await request(app.getHttpServer()).get("/api/health");
 
     expect(respuesta.status).toBe(200);
-    expect(respuesta.body).toEqual({ status: "ok" });
+    expect(respuesta.body).toMatchObject({ status: "ok" });
+    // La versión sale del sello que pone el `Dockerfile` al construir; corriendo desde el código
+    // fuente no hay ninguno, y decir «desconocida» es más honesto que inventar un número.
+    expect(respuesta.body.version).toBe("desconocida");
+  });
+
+  it("/ready comprueba la base de verdad, no sólo que el proceso vive", async () => {
+    // Durante mucho tiempo devolvía `ok` sin preguntarle nada a PostgreSQL, mientras el
+    // healthcheck del compose la usaba creyendo que sí. Un contenedor incapaz de leer una fila se
+    // reportaba sano.
+    const respuesta = await request(app.getHttpServer()).get("/api/ready");
+
+    expect(respuesta.status).toBe(200);
+    expect(respuesta.body).toMatchObject({ status: "ok" });
   });
 
   it("la conexión a Postgres queda abierta desde el arranque, no en la primera consulta", async () => {

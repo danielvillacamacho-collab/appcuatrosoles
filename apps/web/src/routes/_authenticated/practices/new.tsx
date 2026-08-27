@@ -9,6 +9,7 @@ import { instanteDelDia } from "@polo/domain";
 import { hoy } from "../../../lib/hoy.js";
 import { mensajeDeError } from "../../../lib/error-message.js";
 import { copy } from "../../../i18n/es-CO.js";
+import { oNulo } from "../../../lib/mutacion.js";
 
 /**
  * Crear una práctica (T-552).
@@ -55,17 +56,23 @@ function NuevaPractica(): React.JSX.Element {
 
     setErrorLocal(null);
 
-    const creada = await crear.mutateAsync({
-      fieldId: cancha,
-      startsAt: instanteDelDia(dia, desde, zona).toISOString(),
-      endsAt: instanteDelDia(dia, hasta, zona).toISOString(),
-      chukkers: Number(chukkers),
-      handicapType,
-      targetPlayers: Number(objetivo),
-      minPlayers: Number(minimo),
-      applicationsCloseAt: instanteDelDia(dia, cierre, zona).toISOString(),
-      decisionAt: instanteDelDia(dia, decision, zona).toISOString(),
-    });
+    const creada = await oNulo(
+      crear.mutateAsync({
+        fieldId: cancha,
+        startsAt: instanteDelDia(dia, desde, zona).toISOString(),
+        endsAt: instanteDelDia(dia, hasta, zona).toISOString(),
+        chukkers: Number(chukkers),
+        handicapType,
+        targetPlayers: Number(objetivo),
+        minPlayers: Number(minimo),
+        applicationsCloseAt: instanteDelDia(dia, cierre, zona).toISOString(),
+          decisionAt: instanteDelDia(dia, decision, zona).toISOString(),
+      }),
+    );
+
+    if (creada === null) {
+      return;
+    }
 
     await navegar({ to: "/practices/$practiceId", params: { practiceId: creada.id } });
   };

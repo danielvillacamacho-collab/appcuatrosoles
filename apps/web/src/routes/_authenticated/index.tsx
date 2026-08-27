@@ -5,6 +5,7 @@ import { useSesion } from "../../features/session/api/useSesion.js";
 import { useSalir } from "../../features/auth/api/useSalir.js";
 import { useClub } from "../../features/club/api/useClub.js";
 import { copy } from "../../i18n/es-CO.js";
+import { salioBien } from "../../lib/mutacion.js";
 
 /**
  * El panel propio (T-127, HU-010-04 «accede a su panel según sus roles»).
@@ -38,7 +39,9 @@ function Panel(): React.JSX.Element {
   }
 
   const cerrar = async (): Promise<void> => {
-    await salir.mutateAsync(undefined);
+    if (!(await salioBien(salir.mutateAsync(undefined)))) {
+      return;
+    }
     await navegar({ to: "/login" });
   };
 

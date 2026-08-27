@@ -56,6 +56,10 @@ services:
     healthcheck:
       # `/api/ready` y no `/api/health`: el primero comprueba además que la base responde. Un
       # proceso vivo que no puede consultar nada no está listo para recibir tráfico.
+      #
+      # **Esto fue falso hasta el 2026-08-27.** `/ready` devolvía `ok` sin preguntarle nada a
+      # PostgreSQL, así que este healthcheck daba por sano un contenedor que no podía leer una fila.
+      # Se descubrió comprobando un despliegue desde fuera. Ahora consulta de verdad.
       test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000/api/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
       interval: 15s
       timeout: 5s

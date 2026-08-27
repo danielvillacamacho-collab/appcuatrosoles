@@ -11,6 +11,7 @@ import { golesAMediosGoles, handicapEnGoles } from "../../lib/handicap.js";
 import { useFecha } from "../../lib/fechas.js";
 import { mensajeDeError } from "../../lib/error-message.js";
 import { copy } from "../../i18n/es-CO.js";
+import { salioBien } from "../../lib/mutacion.js";
 
 /**
  * Los handicaps de una persona (T-340, T-341, T-342).
@@ -143,7 +144,10 @@ function Formulario({
     }
 
     setErrorLocal(null);
-    await fijar.mutateAsync({ valueHalves, reason: motivo.trim() });
+    if (!(await salioBien(fijar.mutateAsync({ valueHalves, reason: motivo.trim() })))) {
+      return;
+    }
+
     onListo();
   };
 

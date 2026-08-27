@@ -12,6 +12,7 @@ import { useCrearUsuario } from "../../../features/users/api/useUsuarios.js";
 import { clubDelActor, rolesQuePuedeOtorgar } from "../../../features/users/roles-que-puede-otorgar.js";
 import { mensajeDeError } from "../../../lib/error-message.js";
 import { copy } from "../../../i18n/es-CO.js";
+import { oNulo } from "../../../lib/mutacion.js";
 
 /**
  * Crear o invitar (T-135, HU-010-01 y HU-010-02).
@@ -63,7 +64,12 @@ function NuevoUsuario(): React.JSX.Element {
         ];
 
   const enviar = handleSubmit(async (datos) => {
-    const creado = await crear.mutateAsync(datos);
+    const creado = await oNulo(crear.mutateAsync(datos));
+
+    if (creado === null) {
+      return;
+    }
+
     await navegar({ to: "/users/$userId", params: { userId: creado.id } });
   });
 

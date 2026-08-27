@@ -9,6 +9,7 @@ import { useLogin } from "../features/auth/api/useLogin.js";
 import { mensajeDeError } from "../lib/error-message.js";
 import { PantallaDeEntrada } from "../components/Pantalla.js";
 import { copy } from "../i18n/es-CO.js";
+import { salioBien } from "../lib/mutacion.js";
 
 /**
  * La pantalla de ingreso (T-124, HU-010-04).
@@ -48,7 +49,9 @@ function Ingreso(): React.JSX.Element {
   });
 
   const enviar = handleSubmit(async (datos) => {
-    await login.mutateAsync(datos);
+    if (!(await salioBien(login.mutateAsync(datos)))) {
+      return;
+    }
     await navegar({ to: "/" });
   });
 

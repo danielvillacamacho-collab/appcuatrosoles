@@ -35,7 +35,7 @@ function MisAvisos(): React.JSX.Element {
             <Interruptor
               aviso={aviso}
               onCambiar={(enabled) =>
-                void cambiar.mutateAsync({ preferences: [{ type: aviso.type, enabled }] })
+                cambiar.mutate({ preferences: [{ type: aviso.type, enabled }] })
               }
             />
           </li>

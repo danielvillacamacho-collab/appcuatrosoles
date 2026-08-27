@@ -124,7 +124,7 @@ function Contenido({
               {!esMiCuenta && (
                 <Button
                   variante="texto"
-                  onClick={() => void retirar.mutateAsync(rol.id)}
+                  onClick={() => retirar.mutate(rol.id)}
                   cargando={retirar.isPending && retirar.variables === rol.id}
                 >
                   {copy.fichaUsuario.retirar}
@@ -157,7 +157,7 @@ function Contenido({
               <Button
                 key={boton.accion}
                 variante={boton.variante ?? "primaria"}
-                onClick={() => void accion.mutateAsync(boton.accion)}
+                onClick={() => accion.mutate(boton.accion)}
                 cargando={accion.isPending && accion.variables === boton.accion}
               >
                 {boton.texto}

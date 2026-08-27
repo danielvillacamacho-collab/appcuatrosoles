@@ -44,7 +44,7 @@ function SinEquipos({ practiceId }: { practiceId: string }): React.JSX.Element {
       <Alert>{copy.equipos.sinEquipos}</Alert>
       {proponer.isError && <Alert>{mensajeDeError(proponer.error)}</Alert>}
       <div>
-        <Button onClick={() => void proponer.mutateAsync()} cargando={proponer.isPending}>
+        <Button onClick={() => proponer.mutate()} cargando={proponer.isPending}>
           {proponer.isPending ? copy.equipos.armando : copy.equipos.armar}
         </Button>
       </div>
@@ -212,14 +212,14 @@ function Tablero({
         </Button>
         <Button
           variante="secundaria"
-          onClick={() => void aprobar.mutateAsync()}
+          onClick={() => aprobar.mutate()}
           cargando={aprobar.isPending}
         >
           {desdeElServidor.aprobados ? copy.equipos.reaprobar : copy.equipos.aprobar}
         </Button>
         <Button
           variante="texto"
-          onClick={() => void proponer.mutateAsync()}
+          onClick={() => proponer.mutate()}
           cargando={proponer.isPending}
         >
           {copy.equipos.rearmar}

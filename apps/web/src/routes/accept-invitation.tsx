@@ -10,6 +10,7 @@ import { useClub } from "../features/club/api/useClub.js";
 import { mensajeDeError } from "../lib/error-message.js";
 import { PantallaDeEntrada } from "../components/Pantalla.js";
 import { copy } from "../i18n/es-CO.js";
+import { salioBien } from "../lib/mutacion.js";
 
 /**
  * Definir la primera contraseña con el enlace de invitación (T-126, HU-010-02).
@@ -75,7 +76,9 @@ function AceptarInvitacion(): React.JSX.Element {
   });
 
   const enviar = handleSubmit(async (datos) => {
-    await aceptar.mutateAsync(datos);
+    if (!(await salioBien(aceptar.mutateAsync(datos)))) {
+      return;
+    }
     // El API activa la cuenta pero no abre sesión: quien acaba de definir una contraseña debería
     // probarla de una vez, no descubrir mañana que escribió otra cosa.
     await navegar({ to: "/login" });

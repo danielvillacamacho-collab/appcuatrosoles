@@ -15,6 +15,7 @@ import { hoy } from "../../lib/hoy.js";
 import { fechaDeCalendario } from "../../lib/fechas.js";
 import { mensajeDeError } from "../../lib/error-message.js";
 import { copy } from "../../i18n/es-CO.js";
+import { salioBien } from "../../lib/mutacion.js";
 
 /**
  * El calendario del día (T-460, HU-040-04).
@@ -191,7 +192,7 @@ function Franja({
       {esBloqueo && puedeBloquear && (
         <Button
           variante="texto"
-          onClick={() => void levantar.mutateAsync(entrada.id)}
+          onClick={() => levantar.mutate(entrada.id)}
           cargando={levantar.isPending}
         >
           {copy.calendario.levantarBloqueo}
@@ -244,12 +245,19 @@ function FormularioDeBloqueo({
     }
 
     setErrorLocal(null);
-    await bloquear.mutateAsync({
-      fieldId,
-      startsAt: startsAt.toISOString(),
-      endsAt: endsAt.toISOString(),
-      reason: motivo.trim(),
-    });
+    const guardado = await salioBien(
+      bloquear.mutateAsync({
+        fieldId,
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
+        reason: motivo.trim(),
+      }),
+    );
+
+    if (!guardado) {
+      return;
+    }
+
     onListo();
   };
 

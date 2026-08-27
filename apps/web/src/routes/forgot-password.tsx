@@ -7,6 +7,7 @@ import { useOlvideMiContrasena } from "../features/auth/api/useOlvideMiContrasen
 import { mensajeDeError } from "../lib/error-message.js";
 import { PantallaDeEntrada } from "../components/Pantalla.js";
 import { copy } from "../i18n/es-CO.js";
+import { salioBien } from "../lib/mutacion.js";
 
 /**
  * Pedir el enlace para restablecer la contraseña (HU-010-06).
@@ -33,7 +34,9 @@ function Olvide(): React.JSX.Element {
   });
 
   const enviar = handleSubmit(async (datos) => {
-    await pedir.mutateAsync(datos);
+    if (!(await salioBien(pedir.mutateAsync(datos)))) {
+      return;
+    }
   });
 
   return (

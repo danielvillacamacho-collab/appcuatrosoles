@@ -9,6 +9,7 @@ import { useSesion } from "../../../features/session/api/useSesion.js";
 import { useEditarPerfil, usePedirCambioDeCorreo } from "../../../features/me/api/usePerfil.js";
 import { mensajeDeError } from "../../../lib/error-message.js";
 import { copy } from "../../../i18n/es-CO.js";
+import { salioBien } from "../../../lib/mutacion.js";
 
 /**
  * Mi perfil (T-130, HU-010-07).
@@ -92,7 +93,9 @@ function MisDatos({ telefono }: { telefono: string | null }): React.JSX.Element 
   const enviar = handleSubmit(async (datos) => {
     // Un teléfono borrado se manda como `null` y no como `""`: son cosas distintas para el API —
     // «no tengo teléfono» frente a «tengo uno que es la cadena vacía».
-    await editar.mutateAsync({ phone: datos.phone === "" ? null : datos.phone });
+    if (!(await salioBien(editar.mutateAsync({ phone: datos.phone === "" ? null : datos.phone })))) {
+      return;
+    }
   });
 
   return (

@@ -43,6 +43,12 @@ RUN apt-get update \
 
 COPY --from=build /salida ./
 
+# El commit del que salió esta imagen, para poder preguntarle su versión a `/api/health` en vez de
+# deducirla del hash de un archivo compilado. Lo pasa `deploy.yml`; construyendo a mano queda en
+# «desconocida», que es honesto.
+ARG APP_VERSION=desconocida
+ENV APP_VERSION=${APP_VERSION}
+
 # No corre como root: si algo se escapa del proceso, se escapa sin privilegios. `node` es un
 # usuario que la imagen oficial ya trae.
 USER node
