@@ -29,6 +29,7 @@ import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedUsersUserIdRouteImport } from './routes/_authenticated/users/$userId'
 import { Route as AuthenticatedUsersNewRouteImport } from './routes/_authenticated/users/new'
 import { Route as AuthenticatedPracticesPracticeIdIndexRouteImport } from './routes/_authenticated/practices/$practiceId.index'
+import { Route as AuthenticatedPracticesPracticeIdGridRouteImport } from './routes/_authenticated/practices/$practiceId.grid'
 import { Route as AuthenticatedPracticesPracticeIdTeamsRouteImport } from './routes/_authenticated/practices/$practiceId.teams'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -137,6 +138,12 @@ const AuthenticatedPracticesPracticeIdIndexRoute =
     path: '/practices/$practiceId/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPracticesPracticeIdGridRoute =
+  AuthenticatedPracticesPracticeIdGridRouteImport.update({
+    id: '/practices/$practiceId/grid',
+    path: '/practices/$practiceId/grid',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedPracticesPracticeIdTeamsRoute =
   AuthenticatedPracticesPracticeIdTeamsRouteImport.update({
     id: '/practices/$practiceId/teams',
@@ -163,6 +170,7 @@ export interface FileRoutesByFullPath {
   '/users/new': typeof AuthenticatedUsersNewRoute
   '/practices/': typeof AuthenticatedPracticesIndexRoute
   '/users/': typeof AuthenticatedUsersIndexRoute
+  '/practices/$practiceId/grid': typeof AuthenticatedPracticesPracticeIdGridRoute
   '/practices/$practiceId/teams': typeof AuthenticatedPracticesPracticeIdTeamsRoute
   '/practices/$practiceId/': typeof AuthenticatedPracticesPracticeIdIndexRoute
 }
@@ -185,6 +193,7 @@ export interface FileRoutesByTo {
   '/users/new': typeof AuthenticatedUsersNewRoute
   '/practices': typeof AuthenticatedPracticesIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
+  '/practices/$practiceId/grid': typeof AuthenticatedPracticesPracticeIdGridRoute
   '/practices/$practiceId/teams': typeof AuthenticatedPracticesPracticeIdTeamsRoute
   '/practices/$practiceId': typeof AuthenticatedPracticesPracticeIdIndexRoute
 }
@@ -209,6 +218,7 @@ export interface FileRoutesById {
   '/_authenticated/users/new': typeof AuthenticatedUsersNewRoute
   '/_authenticated/practices/': typeof AuthenticatedPracticesIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
+  '/_authenticated/practices/$practiceId/grid': typeof AuthenticatedPracticesPracticeIdGridRoute
   '/_authenticated/practices/$practiceId/teams': typeof AuthenticatedPracticesPracticeIdTeamsRoute
   '/_authenticated/practices/$practiceId/': typeof AuthenticatedPracticesPracticeIdIndexRoute
 }
@@ -233,6 +243,7 @@ export interface FileRouteTypes {
     | '/users/new'
     | '/practices/'
     | '/users/'
+    | '/practices/$practiceId/grid'
     | '/practices/$practiceId/teams'
     | '/practices/$practiceId/'
   fileRoutesByTo: FileRoutesByTo
@@ -255,6 +266,7 @@ export interface FileRouteTypes {
     | '/users/new'
     | '/practices'
     | '/users'
+    | '/practices/$practiceId/grid'
     | '/practices/$practiceId/teams'
     | '/practices/$practiceId'
   id:
@@ -278,6 +290,7 @@ export interface FileRouteTypes {
     | '/_authenticated/users/new'
     | '/_authenticated/practices/'
     | '/_authenticated/users/'
+    | '/_authenticated/practices/$practiceId/grid'
     | '/_authenticated/practices/$practiceId/teams'
     | '/_authenticated/practices/$practiceId/'
   fileRoutesById: FileRoutesById
@@ -432,6 +445,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPracticesPracticeIdIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/practices/$practiceId/grid': {
+      id: '/_authenticated/practices/$practiceId/grid'
+      path: '/practices/$practiceId/grid'
+      fullPath: '/practices/$practiceId/grid'
+      preLoaderRoute: typeof AuthenticatedPracticesPracticeIdGridRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/practices/$practiceId/teams': {
       id: '/_authenticated/practices/$practiceId/teams'
       path: '/practices/$practiceId/teams'
@@ -457,6 +477,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedUsersNewRoute: typeof AuthenticatedUsersNewRoute
   AuthenticatedPracticesIndexRoute: typeof AuthenticatedPracticesIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
+  AuthenticatedPracticesPracticeIdGridRoute: typeof AuthenticatedPracticesPracticeIdGridRoute
   AuthenticatedPracticesPracticeIdTeamsRoute: typeof AuthenticatedPracticesPracticeIdTeamsRoute
   AuthenticatedPracticesPracticeIdIndexRoute: typeof AuthenticatedPracticesPracticeIdIndexRoute
 }
@@ -476,6 +497,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedUsersNewRoute: AuthenticatedUsersNewRoute,
   AuthenticatedPracticesIndexRoute: AuthenticatedPracticesIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
+  AuthenticatedPracticesPracticeIdGridRoute:
+    AuthenticatedPracticesPracticeIdGridRoute,
   AuthenticatedPracticesPracticeIdTeamsRoute:
     AuthenticatedPracticesPracticeIdTeamsRoute,
   AuthenticatedPracticesPracticeIdIndexRoute:

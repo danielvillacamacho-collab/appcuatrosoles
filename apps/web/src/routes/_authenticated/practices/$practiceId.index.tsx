@@ -13,6 +13,7 @@ import {
 } from "../../../features/practices/api/usePracticas.js";
 import { useSesion } from "../../../features/session/api/useSesion.js";
 import { useEquipos } from "../../../features/practices/api/useEquipos.js";
+import { useGrilla } from "../../../features/practices/api/useGrilla.js";
 import { handicapEnGoles } from "../../../lib/handicap.js";
 import { MiEstado } from "./index.js";
 import { useFecha } from "../../../lib/fechas.js";
@@ -119,6 +120,8 @@ function Contenido({ practica }: { practica: PracticeResponse }): React.JSX.Elem
       </section>
 
       <Equipos practica={practica} puedeAdministrar={puedeAdministrar} />
+
+      <MiGrilla practica={practica} puedeAdministrar={puedeAdministrar} />
 
       {puedeAdministrar && <Administracion practica={practica} />}
     </>
@@ -366,5 +369,64 @@ function Dato({ termino, valor }: { termino: string; valor: string }): React.JSX
       <dt className="text-sm text-muted">{termino}</dt>
       <dd className="font-medium">{valor}</dd>
     </div>
+  );
+}
+
+/**
+ * Qué se jugó, desde el lado del jugador (T-734).
+ *
+ * **La única pregunta que un jugador le hace a esta pantalla es «¿me contaron bien?»**, así que eso
+ * es lo que responde: sus chukkers y su cuenta, sin botones de edición.
+ *
+ * La cuenta **viene calculada del servidor** (R-052-02). Recalcularla acá sería una segunda
+ * implementación del número del que va a colgar el cobro, y dos implementaciones dan distinto el
+ * día que haya un caso raro.
+ */
+function MiGrilla({
+  practica,
+  puedeAdministrar,
+}: {
+  practica: PracticeResponse;
+  puedeAdministrar: boolean;
+}): React.JSX.Element | null {
+  const sesion = useSesion();
+  const grilla = useGrilla(practica.id);
+
+  if (practica.status !== "confirmed" && practica.status !== "played") {
+    return null;
+  }
+
+  if (!grilla.isSuccess) {
+    // Sin equipos aprobados no hay grilla, y no hay nada que decir todavía.
+    return null;
+  }
+
+  const miPersona = sesion.data?.personId;
+  const mia = grilla.data.chukkersPorPersona.find((fila) => fila.personId === miPersona);
+
+  return (
+    <section aria-labelledby="mi-grilla" className="flex flex-col gap-3">
+      <h2 id="mi-grilla" className="text-sm font-semibold uppercase tracking-[0.15em] text-muted">
+        {copy.grilla.misChukkers}
+      </h2>
+
+      {mia === undefined ? (
+        <p className="text-muted">{copy.grilla.noJugaste}</p>
+      ) : (
+        <p>
+          {mia.noSePresento
+            ? copy.grilla.noSePresento
+            : copy.grilla.misChukkersCuenta(mia.chukkers)}
+        </p>
+      )}
+
+      {puedeAdministrar && (
+        <div>
+          <Link to="/practices/$practiceId/grid" params={{ practiceId: practica.id }}>
+            <Button variante="secundaria">{copy.grilla.titulo}</Button>
+          </Link>
+        </div>
+      )}
+    </section>
   );
 }

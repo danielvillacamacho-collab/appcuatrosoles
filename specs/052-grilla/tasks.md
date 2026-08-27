@@ -181,24 +181,45 @@ número lo va a leer el cobro de Fase 3, y si sale mal se cobra mal.
 
 ## D — Interfaz
 
-- [ ] **T-731** La grilla del comisario, **recorrida por jugador** (plan §7).
+- [x] **T-731** La grilla del comisario, **recorrida por jugador** (plan §7).
   Verificación: una fila por persona con sus chukkers como fichas de 44 px; un toque apaga un
   chukker y la cuenta de esa fila baja **en la misma pantalla**; se prueba a 375 px de ancho, que es
   el celular real, no el escritorio angosto.
+  ✅ 2026-08-27 — 14 tests (la sección D entera en un archivo). Fichas de 44 px, una fila por
+  jugador, y `aria-pressed` para que el estado no viva sólo en el color de fondo.
+  > **Sin estado local, al revés que la pantalla de equipos.** Allá el comisario prueba alternativas
+  > antes de decidir y la latencia mataba la función; acá cada toque es un hecho que ya ocurrió, y
+  > guardarlos en lote sólo abriría la puerta a perderlos al cerrar la pestaña.
 
-- [ ] **T-732** La sustitución: «entró Pedro por Luis».
+- [x] **T-732** La sustitución: «entró Pedro por Luis».
   Verificación: elegir a Pedro traspasa los chukkers marcados de Luis; Luis queda en cero y sigue
   visible —no desaparece de la pantalla, porque estuvo—; se puede elegir a alguien que **no se
   postuló** (R-052-05).
+  ✅ 2026-08-27 — traspasa los chukkers en **un solo lote**, porque es un intercambio: de a uno, el
+  primero chocaría contra el `UNIQUE`. Verificado mandándolos de a uno — el test cae.
+  > La lista de personas sale de `GET /handicaps` y **no de `GET /users`**, que exige `user.edit` y
+  > el comisario no tiene. Es el mismo agujero de `specs/030` T-343, evitado esta vez por saberlo.
 
-- [ ] **T-733** Cerrar y reabrir desde la pantalla.
+- [x] **T-733** Cerrar y reabrir desde la pantalla.
   Verificación: cerrar pide confirmación y deja la grilla en sólo lectura; reabrir la devuelve a
   editable; una práctica que no empezó **no muestra el botón de cerrar**, en vez de mostrarlo y
   fallar.
+  ✅ 2026-08-27 — cerrar y reabrir, con el botón de cerrar **siempre visible**: esconderlo cuando la
+  práctica no ha empezado obligaría a la pantalla a saber la hora del club, que es una regla del
+  dominio. El API la rechaza con su motivo, y la pantalla lo muestra.
 
-- [ ] **T-734** La fila del jugador en el detalle de la práctica.
+- [x] **T-734** La fila del jugador en el detalle de la práctica.
   Verificación: un jugador ve sus chukkers y su cuenta; no ve botones de edición; una práctica que
   no jugó no le muestra una fila vacía sino que lo dice.
+  ✅ 2026-08-27 — la fila del jugador en el detalle: sus chukkers y su cuenta, sin botones. La
+  cuenta **viene calculada del servidor** (R-052-02): recalcularla acá sería una segunda
+  implementación del número del que va a colgar el cobro.
+
+> **Sección D cerrada el 2026-08-27.** 182 tests de interfaz (168 al empezar). Presupuesto de
+> carga: 126.1 KB de 200. Dos bugs los encontraron los tests, no yo: el error de cerrar se leía de
+> **otra instancia** del hook y no aparecía nunca; y los once códigos de error nuevos no tenían
+> texto en `es-CO.ts`, así que el cliente —que traduce por código y nunca muestra el `message` del
+> servidor— habría mostrado el genérico. La consola avisa de eso, y por eso se vio.
 
 ## E — Cierre
 

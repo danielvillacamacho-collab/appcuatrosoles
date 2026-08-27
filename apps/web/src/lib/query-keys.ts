@@ -36,6 +36,8 @@ export const queryKeys = {
     detalle: (id: string) => ["practices", id] as const,
     /** Cuelga del detalle: invalidarlo alcanza a los equipos. */
     equipos: (id: string) => ["practices", id, "teams"] as const,
+    /** Igual que los equipos: invalidar el detalle refresca la grilla sin nombrarla. */
+    grilla: (id: string) => ["practices", id, "grid"] as const,
   },
 
   handicaps: {

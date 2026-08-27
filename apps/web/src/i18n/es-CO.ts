@@ -76,6 +76,42 @@ export const copy = {
     cambiosSinGuardar: "Tienes cambios sin guardar.",
   },
 
+  grilla: {
+    titulo: "Qué se jugó",
+    descripcion: "Todos juegan todo, salvo lo que corrijas. Toca un chukker para quitarlo o ponerlo.",
+    /** La fila de cada jugador: su nombre y sus chukkers. */
+    chukker: (numero: number) => `Chukker ${numero}`,
+    jugoChukker: (nombre: string, numero: number) => `${nombre} jugó el chukker ${numero}`,
+    noJugoChukker: (nombre: string, numero: number) => `${nombre} no jugó el chukker ${numero}`,
+    cuenta: (cuantos: number) => (cuantos === 1 ? "1 chukker" : `${cuantos} chukkers`),
+    sinGrilla: "Todavía no hay grilla. Aparece cuando el comisario aprueba los equipos.",
+    /** Quien no llegó. */
+    noSePresento: "No se presentó",
+    /** El botón dice una **acción**; la cuenta dice un **hecho**. Con el mismo texto se confunden. */
+    marcarAusenteCorto: "Marcar que no llegó",
+    marcarAusente: (nombre: string) => `Marcar que ${nombre} no se presentó`,
+    quitarAusente: (nombre: string) => `${nombre} sí se presentó`,
+    /** Sustituir: la acción menos frecuente, así que no compite por el espacio. */
+    sustituir: (nombre: string) => `Entró alguien por ${nombre}`,
+    sustituirTitulo: "¿Quién entró?",
+    sustituirAyuda: "Se le pasan los chukkers que quedaban marcados.",
+    sustituirConfirmar: "Cambiar",
+    cancelar: "Cancelar",
+    buscarPersona: "Buscar por nombre",
+    /** El cierre. */
+    cerrar: "Cerrar la práctica",
+    cerrando: "Cerrando…",
+    cerrarConfirmar: "Se congela la grilla. Puedes reabrirla si hace falta.",
+    cerrada: "Práctica cerrada. La grilla está congelada.",
+    reabrir: "Reabrir",
+    reabriendo: "Reabriendo…",
+    /** Lo que ve el jugador. */
+    misChukkers: "Tus chukkers",
+    misChukkersCuenta: (cuantos: number) =>
+      cuantos === 1 ? "Jugaste 1 chukker." : `Jugaste ${cuantos} chukkers.`,
+    noJugaste: "No quedaste en la grilla de esta práctica.",
+  },
+
   practicas: {
     titulo: "Prácticas",
     descripcion: "Qué hay programado esta semana, y si estás dentro.",
@@ -562,6 +598,21 @@ export const copy = {
     // ── Equipos ──────────────────────────────────────────────────────────────
     practica_no_confirmada: "Sólo se arman equipos de una práctica confirmada.",
     equipos_incompletos: "Faltan puestos: los equipos tienen que incluir a todos los que juegan.",
+
+    // ── La grilla de chukkers (`specs/052`) ──────────────────────────────────
+    // Cada uno dice **qué hacer**, no sólo qué pasó: un rechazo que deja a alguien sin saber cuál
+    // es el siguiente toque es la mitad de un error.
+    practica_cerrada: "La práctica está cerrada. Reábrela para corregir la grilla.",
+    practica_no_cerrada: "Esa práctica no está cerrada.",
+    todavia_no_empezo: "Se puede cerrar cuando la práctica haya empezado.",
+    no_esta_confirmada: "Sólo se cierra una práctica confirmada.",
+    ya_cerrada: "Esa práctica ya está cerrada.",
+    repetido_en_el_chukker: "Esa persona quedaría dos veces en el mismo chukker.",
+    celda_inexistente: "Ese lugar no existe en la grilla de esta práctica.",
+    persona_invalida: "Sólo puedes poner a una persona activa del club.",
+    marcado_ausente: "Esa persona está marcada como que no llegó. Quítale la marca primero.",
+    no_estaba_aceptado: "Sólo se marca a quien había quedado dentro de la práctica.",
+    no_estaba_marcado: "Esa persona no está marcada como ausente.",
 
     // ── Club, temporadas y configuración ─────────────────────────────────────
     nombre_en_uso: "Ya existe algo con ese nombre en el club.",
