@@ -62,11 +62,16 @@ describe("Seed del club de ejemplo", () => {
     // Sin ella el club de ejemplo no muestra `specs/051`: llegar a una práctica confirmada por el
     // camino normal exige esperar a que corra el proceso de decisión.
     const conteos = await contar();
-    const practica = await prisma.practice.findFirstOrThrow({ where: { clubId: CLUB_ID } });
+    const practica = await prisma.practice.findFirstOrThrow({
+      where: { clubId: CLUB_ID, status: "confirmed", startsAt: { gt: new Date("2026-10-01") } },
+    });
 
-    expect(conteos.practicas).toBe(1);
+    // **Tres, y cada una cuenta un estado distinto**: la que viene y espera equipos (`051`), la que
+    // ya quedó registrada y cerrada (`052`), y la que se jugó y espera que alguien diga qué pasó.
+    expect(conteos.practicas).toBe(3);
     expect(practica.status).toBe("confirmed");
-    expect(conteos.postulaciones).toBe(4);
+    // Cuatro por práctica: las mismas cuatro personas jugaron las tres.
+    expect(conteos.postulaciones).toBe(12);
     // Con handicap, o el balanceo no tendría nada que balancear.
     expect(conteos.handicaps).toBe(4);
   });
@@ -74,7 +79,70 @@ describe("Seed del club de ejemplo", () => {
   it("y la deja SIN equipos armados, a propósito", async () => {
     // Que el club de ejemplo llegue hasta acá y no más lejos es lo que deja ver la pantalla
     // haciendo su trabajo: se entra, se arman, se ajustan y se aprueban.
-    expect(await prisma.practiceTeam.count({ where: { clubId: CLUB_ID } })).toBe(0);
+    const proxima = await prisma.practice.findFirstOrThrow({
+      where: { clubId: CLUB_ID, status: "confirmed", startsAt: { gt: new Date("2026-10-01") } },
+      select: { id: true },
+    });
+
+    expect(await prisma.practiceTeam.count({ where: { practiceId: proxima.id } })).toBe(0);
+  });
+
+  it("deja una práctica YA JUGADA y SIN CERRAR, que es la tarea del comisario", async () => {
+    // La tercera. Con equipos aprobados y la grilla llena: lo que hay que hacer con ella es
+    // corregir lo que no salió como estaba previsto, y cerrarla.
+    const porCerrar = await prisma.practice.findFirstOrThrow({
+      where: { clubId: CLUB_ID, status: "confirmed", startsAt: { lt: new Date("2026-10-01") } },
+      select: { id: true, startsAt: true },
+    });
+
+    expect(
+      porCerrar.startsAt.getTime(),
+      "tiene que estar en el pasado o no se podrá cerrar (R-052-07)",
+    ).toBeLessThan(new Date("2026-08-27T00:00:00Z").getTime());
+
+    expect(await prisma.practiceTeam.count({ where: { practiceId: porCerrar.id } })).toBe(2);
+    expect(await prisma.chukkerGridCell.count({ where: { practiceId: porCerrar.id } })).toBe(24);
+  });
+
+  it("deja además una práctica YA JUGADA con su grilla (T-744)", async () => {
+    // Sirve a otra cosa que la anterior: la de arriba deja ver el módulo de equipos funcionando;
+    // ésta deja ver el resultado de haberlo usado. Sin ella, la pantalla del jugador —«¿me
+    // contaron bien?»— no tiene nada que mostrar el primer día.
+    const jugada = await prisma.practice.findFirstOrThrow({
+      where: { clubId: CLUB_ID, status: "played" },
+      select: { id: true, closedAt: true, closedById: true },
+    });
+
+    expect(jugada.closedAt).not.toBeNull();
+    expect(jugada.closedById).not.toBeNull();
+    // 4 puestos × 6 chukkers.
+    expect(await prisma.chukkerGridCell.count({ where: { practiceId: jugada.id } })).toBe(24);
+  });
+
+  it("y la grilla trae UNA corrección, porque una perfecta no enseña nada", async () => {
+    // La pregunta que la pantalla del jugador responde sólo aparece cuando la cuenta de alguien no
+    // es la esperada. Caro jugó 5 de 6: se le lastimó un caballo en el quinto.
+    const jugada = await prisma.practice.findFirstOrThrow({
+      where: { clubId: CLUB_ID, status: "played" },
+      select: { id: true },
+    });
+    const caro = await prisma.person.findFirstOrThrow({
+      where: { clubId: CLUB_ID, fullName: "Caro Ejemplo" },
+      select: { id: true },
+    });
+
+    expect(
+      await prisma.chukkerGridCell.count({
+        where: { practiceId: jugada.id, personId: caro.id },
+      }),
+    ).toBe(5);
+
+    expect(
+      await prisma.chukkerGridCell.count({
+        where: { practiceId: jugada.id, personId: null },
+      }),
+      "el hueco existe: la celda no se borra, se vacía",
+    ).toBe(1);
   });
 
   it("el club queda activo y con su subdominio propio, no como los que migró T-202", async () => {

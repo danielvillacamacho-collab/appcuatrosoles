@@ -223,17 +223,36 @@ número lo va a leer el cobro de Fase 3, y si sale mal se cobra mal.
 
 ## E — Cierre
 
-- [ ] **T-741** E2E de navegador: aprobar equipos → corregir un chukker → cerrar → verificar la
+- [x] **T-741** E2E de navegador: aprobar equipos → corregir un chukker → cerrar → verificar la
   cuenta.
   Verificación: corre **dos veces seguidas** sobre la misma base (la lección de `030` T-34x) y contra
   una base **recién sembrada** (la de `051` T-641, que pasaba en local y fallaba siempre en CI).
+  ✅ 2026-08-27 — pasa **tres veces seguidas** sobre la misma base, y la suite completa de 9 E2E
+  pasa tres veces seguidas también. El test se deja **reabierta y con la corrección devuelta**: sin
+  eso, la corrida siguiente encuentra la práctica cerrada y el primer paso falla.
+  > Un fallo intermitente de `handicaps.spec.ts` apareció una vez bajo carga y no se repitió en tres
+  > corridas. Es un tiempo de espera agotado en una aserción, no un fallo de este módulo; queda
+  > anotado como trabajo aparte en vez de esconderlo o de subir el tiempo de espera global.
 
-- [ ] **T-742** Arnés de aislamiento con las seis rutas nuevas.
+- [x] **T-742** Arnés de aislamiento con las seis rutas nuevas.
+  ✅ 2026-08-27 — las cinco rutas declaradas, **con test propio**. El arnés obliga a declarar cada
+  ruta nueva y falló hasta hacerlo; y el primer intento —meterlas en el recorrido genérico— pasaba
+  sin probar nada, porque el recorrido no crea una práctica del club víctima.
 
 - [ ] **T-743** `verification.md`: cada criterio de aceptación con el archivo y el título literal del
   test que lo cubre. Un criterio sin test **se resuelve, no se anota**.
 
-- [ ] **T-744** Semilla: una práctica **cerrada con grilla** en `pnpm db:seed`, para que la pantalla
+- [x] **T-744** Semilla: una práctica **cerrada con grilla** en `pnpm db:seed`, para que la pantalla
   del jugador tenga algo que mostrar sin tener que jugar una práctica a mano.
   > `051` T-641 se perdió una tarde por una semilla que no dejaba el sistema en el estado que el
   > E2E suponía. La semilla es parte del módulo, no un extra.
+
+  ✅ 2026-08-27 — dos prácticas más en la semilla: una **ya jugada y cerrada** con una corrección
+  adentro (Caro jugó 5 de 6, porque una grilla perfecta no enseña nada), y otra **jugada y sin
+  cerrar**, que es la tarea de un comisario el día después.
+  > **El guardián de la semilla tapaba las tres.** Estaba puesto sobre el bloque entero, así que en
+  > una base que ya lo había corrido las prácticas nuevas no aparecían nunca — y el síntoma habría
+  > sido un E2E que falla en local y pasa en CI. Ahora cada práctica comprueba lo suyo por su franja.
+  > La fecha de la práctica por cerrar es **fija y en el pasado**, no relativa al reloj: lo primero
+  > que escribí fue `Date.now()`, el lint lo rechazó por P-08 y tenía razón. Fija sirve mejor —sólo
+  > se vuelve más pasada— y hace el E2E independiente de la hora a la que se corra.

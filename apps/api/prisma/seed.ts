@@ -301,6 +301,13 @@ async function sembrarPracticaConEquipos(
   if (yaEsta !== null) {
     log("  práctica de ejemplo con equipos (ya estaba)");
 
+    // **Se sigue igual con las otras dos.** Antes este `return` las saltaba: un guardián para las
+    // tres significaba que agregar una práctica nueva al seed no aparecía nunca en una base que ya
+    // lo había corrido, y el síntoma era un E2E que fallaba en local y pasaba en CI. Cada práctica
+    // comprueba lo suyo.
+    await sembrarPracticaJugada(prisma, log, cancha.id, creador.id);
+    await sembrarPracticaPorCerrar(prisma, log, cancha.id, creador.id);
+
     return;
   }
 
@@ -358,6 +365,229 @@ async function sembrarPracticaConEquipos(
   // **Sin equipos armados, a propósito.** Que el club de ejemplo llegue hasta acá y no más lejos es
   // lo que deja ver la pantalla haciendo su trabajo: se entra, se arman, se ajustan y se aprueban.
   log(`  práctica de ejemplo confirmada, con ${JUGADORES.length} jugadores y sin equipos todavía`);
+
+  await sembrarPracticaJugada(prisma, log, cancha.id, creador.id);
+  await sembrarPracticaPorCerrar(prisma, log, cancha.id, creador.id);
+}
+
+/**
+ * Una práctica que **ya se jugó ayer y todavía no se cierra** (`specs/052` T-744).
+ *
+ * Es la tarea pendiente de un comisario el día después, y la tercera de las tres que siembra el
+ * club de ejemplo — cada una cuenta un estado distinto: una que viene, una que ya quedó registrada,
+ * y ésta, la que espera que alguien diga qué pasó.
+ *
+ * **Fecha fija en el pasado, no relativa al reloj.** Lo primero que escribí fue `Date.now() - un
+ * día`, para que siempre fuera «ayer»; el lint lo rechazó por P-08 y tenía razón, aunque el seed no
+ * sea dominio. Una fecha fija anterior a hoy sirve igual y es mejor: sólo se vuelve más pasado con
+ * el tiempo, así que cerrarla nunca deja de ser posible (R-052-07), y el E2E que la cierra no
+ * depende de a qué hora se corra.
+ */
+async function sembrarPracticaPorCerrar(
+  prisma: PrismaClient,
+  log: (mensaje: string) => void,
+  fieldId: string,
+  creadorId: string,
+): Promise<void> {
+  const ayer = new Date("2026-08-20T21:00:00.000Z");
+  const enHoras = (base: Date, horas: number): Date =>
+    new Date(base.getTime() + horas * 60 * 60 * 1000);
+
+  if (await yaHayPracticaEn(prisma, ayer)) {
+    log("  práctica de ejemplo por cerrar (ya estaba)");
+
+    return;
+  }
+
+  const practica = await prisma.practice.create({
+    data: {
+      clubId: CLUB_ID,
+      fieldId,
+      startsAt: ayer,
+      endsAt: enHoras(ayer, 2),
+      chukkers: 6,
+      handicapType: "club",
+      targetPlayers: 4,
+      minPlayers: 4,
+      applicationsCloseAt: enHoras(ayer, -4),
+      decisionAt: enHoras(ayer, -3),
+      status: "confirmed",
+      createdById: creadorId,
+    },
+    select: { id: true },
+  });
+
+  const JUGADORES = [
+    { nombre: "Ana Ejemplo", equipo: "A" as const, position: 1, halves: 6 },
+    { nombre: "Beto Ejemplo", equipo: "A" as const, position: 2, halves: 4 },
+    { nombre: "Caro Ejemplo", equipo: "B" as const, position: 1, halves: 8 },
+    { nombre: "Dani Ejemplo", equipo: "B" as const, position: 2, halves: 2 },
+  ];
+
+  const equipos = new Map<"A" | "B", string>();
+
+  for (const label of ["A", "B"] as const) {
+    const suma = JUGADORES.filter((uno) => uno.equipo === label).reduce(
+      (total, uno) => total + uno.halves,
+      0,
+    );
+    const equipo = await prisma.practiceTeam.create({
+      data: {
+        clubId: CLUB_ID,
+        practiceId: practica.id,
+        label,
+        handicapTotalHalves: suma,
+        approvedById: creadorId,
+        approvedAt: enHoras(ayer, -2),
+      },
+      select: { id: true },
+    });
+
+    equipos.set(label, equipo.id);
+  }
+
+  for (const jugador of JUGADORES) {
+    const persona = await prisma.person.findFirstOrThrow({
+      where: { clubId: CLUB_ID, fullName: jugador.nombre },
+      select: { id: true },
+    });
+
+    await prisma.practiceApplication.create({
+      data: {
+        clubId: CLUB_ID,
+        practiceId: practica.id,
+        personId: persona.id,
+        chukkersOffered: 4,
+        outcome: "accepted",
+      },
+    });
+
+    await prisma.practiceSlot.create({
+      data: {
+        clubId: CLUB_ID,
+        practiceTeamId: equipos.get(jugador.equipo) ?? "",
+        position: jugador.position,
+        primaryPersonId: persona.id,
+        effectiveHandicapHalves: jugador.halves,
+      },
+    });
+
+    // La grilla, llena: es como nace al aprobarse los equipos (R-052-01).
+    for (let chukker = 1; chukker <= 6; chukker += 1) {
+      await prisma.chukkerGridCell.create({
+        data: {
+          clubId: CLUB_ID,
+          practiceId: practica.id,
+          chukkerNo: chukker,
+          team: jugador.equipo,
+          position: jugador.position,
+          personId: persona.id,
+        },
+      });
+    }
+  }
+
+  log("  práctica de ejemplo jugada AYER y sin cerrar, con su grilla llena por corregir");
+}
+
+/**
+ * Una práctica **ya jugada y cerrada, con su grilla** (`specs/052` T-744).
+ *
+ * Va aparte de la anterior porque sirve a otra cosa: la de arriba deja ver el módulo de equipos
+ * *funcionando*; ésta deja ver el resultado *de haberlo usado*. Sin ella, la pantalla del jugador
+ * —«¿me contaron bien?»— no tiene nada que mostrar hasta que alguien juegue una práctica entera a
+ * mano, y esa pantalla es justo la que un jugador va a abrir el primer día.
+ *
+ * Trae **una corrección adentro**: Caro no jugó el chukker 5. Una grilla perfecta no enseña nada,
+ * porque la pregunta que la pantalla responde sólo aparece cuando la cuenta de alguien no es la
+ * esperada.
+ */
+async function sembrarPracticaJugada(
+  prisma: PrismaClient,
+  log: (mensaje: string) => void,
+  fieldId: string,
+  creadorId: string,
+): Promise<void> {
+  const CHUKKERS = 6;
+  const CUANDO = new Date("2026-11-26T21:00:00.000Z");
+
+  if (await yaHayPracticaEn(prisma, CUANDO)) {
+    log("  práctica de ejemplo ya jugada (ya estaba)");
+
+    return;
+  }
+
+  const practica = await prisma.practice.create({
+    data: {
+      clubId: CLUB_ID,
+      fieldId,
+      startsAt: CUANDO,
+      endsAt: new Date("2026-11-26T23:00:00.000Z"),
+      chukkers: CHUKKERS,
+      handicapType: "club",
+      targetPlayers: 4,
+      minPlayers: 4,
+      applicationsCloseAt: new Date("2026-11-26T17:00:00.000Z"),
+      decisionAt: new Date("2026-11-26T18:00:00.000Z"),
+      status: "played",
+      closedAt: new Date("2026-11-26T23:30:00.000Z"),
+      closedById: creadorId,
+      createdById: creadorId,
+    },
+    select: { id: true },
+  });
+
+  const JUGADORES = [
+    { nombre: "Ana Ejemplo", equipo: "A" as const, position: 1 },
+    { nombre: "Beto Ejemplo", equipo: "A" as const, position: 2 },
+    { nombre: "Caro Ejemplo", equipo: "B" as const, position: 1 },
+    { nombre: "Dani Ejemplo", equipo: "B" as const, position: 2 },
+  ];
+
+  for (const jugador of JUGADORES) {
+    const persona = await prisma.person.findFirstOrThrow({
+      where: { clubId: CLUB_ID, fullName: jugador.nombre },
+      select: { id: true },
+    });
+
+    await prisma.practiceApplication.create({
+      data: {
+        clubId: CLUB_ID,
+        practiceId: practica.id,
+        personId: persona.id,
+        chukkersOffered: 4,
+        outcome: "accepted",
+      },
+    });
+
+    for (let chukker = 1; chukker <= CHUKKERS; chukker += 1) {
+      // La corrección: a Caro se le lastimó un caballo en el quinto.
+      const jugo = !(jugador.nombre === "Caro Ejemplo" && chukker === 5);
+
+      await prisma.chukkerGridCell.create({
+        data: {
+          clubId: CLUB_ID,
+          practiceId: practica.id,
+          chukkerNo: chukker,
+          team: jugador.equipo,
+          position: jugador.position,
+          personId: jugo ? persona.id : null,
+        },
+      });
+    }
+  }
+
+  log("  práctica de ejemplo ya jugada y cerrada, con su grilla (Caro jugó 5 de 6)");
+}
+
+/** Si el club de ejemplo ya tiene una práctica en esa franja exacta. */
+async function yaHayPracticaEn(prisma: PrismaClient, startsAt: Date): Promise<boolean> {
+  const existe = await prisma.practice.findFirst({
+    where: { clubId: CLUB_ID, startsAt },
+    select: { id: true },
+  });
+
+  return existe !== null;
 }
 
 /**
