@@ -156,13 +156,28 @@ número lo va a leer el cobro de Fase 3, y si sale mal se cobra mal.
   > El rastro de la reapertura se comprueba **en `audit_log`**, no en la respuesta: si el rastro se
   > perdiera, cerrar dejaría de significar algo, y `audit_log` es append-only por P-07.
 
-- [ ] **T-726** `PUT /practices/:id/result`: el marcador, opcional.
+- [~] **T-726** `PUT /practices/:id/result`: el marcador, opcional. **APLAZADA el 2026-08-27.**
+  Es la única tarea de este módulo que no hace falta para el hito del MVP —«el club deja
+  WhatsApp»—, y su propia regla dice que el resultado no le cambia nada a nadie (R-052-09). La
+  tabla `practice_result` **ya existe** con su migración y sus tests de esquema, así que retomarla
+  es escribir una ruta, no rehacer nada. Se vuelve a ella cuando el uso real la pida — o nunca, que
+  también es una respuesta.
   Verificación: se guarda con notas y sin notas; se puede corregir; cerrar **sin** marcador funciona
   (R-052-09); goles negativos se rechazan.
 
-- [ ] **T-727** La grilla **no** aparece embebida en el listado de prácticas.
+- [x] **T-727** La grilla **no** aparece embebida en el listado de prácticas.
   Verificación: test de contrato del listado que serializa la respuesta entera y comprueba que no
   trae celdas. Es el presupuesto de la interfaz, y es el criterio de `specs/040` T-451.
+  ✅ 2026-08-27 — 2 tests, listado y detalle.
+  > **La primera mutación con que lo verifiqué no lo detectó, y eso enseñó algo.** Añadí la grilla
+  > al `include` de Prisma y el test siguió en verde: el servicio mapea a un DTO explícito, así que
+  > un `include` de más nunca llega al JSON. La filtración real sólo puede entrar por el DTO — y
+  > metiéndola ahí, los dos tests caen. La red está donde tiene que estar.
+
+> **Sección C cerrada el 2026-08-27**, con T-726 aplazada a propósito. 587 tests de integración
+> (541 al empezar el módulo). Las cinco rutas nuevas quedaron declaradas en el arnés de aislamiento
+> **con test propio**, después de descubrir que el recorrido genérico las daba por buenas sin
+> probarlas.
 
 ## D — Interfaz
 

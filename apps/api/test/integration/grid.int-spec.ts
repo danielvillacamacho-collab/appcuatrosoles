@@ -940,4 +940,36 @@ describe("Grilla · API (T-722 a T-727)", () => {
       expect(respuesta.status).toBe(404);
     });
   });
+
+  describe("la grilla no se cuela en los listados (T-727)", () => {
+    it("el listado de prácticas NO trae celdas, ni una", async () => {
+      // El presupuesto de la interfaz (ADR-014). Con 48 celdas por práctica embebidas, un listado
+      // de una temporada lo revienta solo. Es el criterio de `specs/040` T-451: se serializa la
+      // respuesta ENTERA y se busca dentro, en vez de comprobar campo por campo — así también falla
+      // el día que alguien agregue la grilla anidada bajo otro nombre.
+      const practiceId = await practicaConGrilla();
+
+      const respuesta = await como(comisario, api().get(`/api/practices`));
+
+      expect(respuesta.status).toBe(200);
+      const crudo = JSON.stringify(respuesta.body);
+
+      expect(crudo).toContain(practiceId);
+      expect(crudo).not.toContain("chukkerNo");
+      expect(crudo).not.toContain("celdas");
+      expect(crudo).not.toContain("chukkersPorPersona");
+    });
+
+    it("el detalle de una práctica tampoco la trae", async () => {
+      const practiceId = await practicaConGrilla();
+
+      const respuesta = await como(comisario, api().get(`/api/practices/${practiceId}`));
+
+      expect(respuesta.status).toBe(200);
+      const crudo = JSON.stringify(respuesta.body);
+
+      expect(crudo).not.toContain("celdas");
+      expect(crudo).not.toContain("chukkersPorPersona");
+    });
+  });
 });
