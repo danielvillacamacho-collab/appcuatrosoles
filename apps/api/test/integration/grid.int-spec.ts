@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
 import request from "supertest";
-import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { PracticeGridResponse } from "@polo/contracts";
 import type { Clock } from "@polo/domain";
 import { AppModule } from "../../src/app.module.js";
