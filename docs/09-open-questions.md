@@ -82,3 +82,4 @@ revisión de código humana; y hay un manual de operación en `docs/10-operating
 | 2026-08-11 | Q-20, Q-21 y el alcance de `specs/050`: la v1 es publicar, postularse y decidir solo; equipos, grilla y asistencia van a `051` | Daniel |
 | 2026-08-24 | Las cuatro decisiones de `specs/051` §13: el balanceo mira sólo el handicap, el sistema propone al confirmar, y los jugadores ven los equipos recién al aprobarse | Daniel |
 | 2026-08-26 | Las cuatro decisiones de `specs/052` §13: la grilla nace llena y manda sobre la asistencia, la cierra el comisario, y el `no_show` sólo se registra | Daniel |
+| 2026-08-27 | El MVP se cierra como **«el club deja WhatsApp»**: la Fase 2 del roadmap, sin plata. La Fase 3 no se empieza mientras Q-02 (pasarela) y Q-03 (quién recauda) sigan abiertas — programar antes es adivinar el modelo de datos del dinero | Daniel |
