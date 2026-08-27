@@ -127,6 +127,21 @@ TEMPORIZADOR
   fi
 fi
 
+# 3c. El despliegue automático: script y temporizador.
+#
+# **Es lo que quita al equipo de infraestructura del camino.** La alternativa —que GitHub Actions
+# empuje el despliegue— necesita `ssm:SendCommand`, que necesita el rol OIDC, que hay que pedir y
+# esperar. Yendo la instancia a buscar, alcanza con lo que ya tiene.
+#
+# El detalle vive en su propio script para poder instalarlo en una instancia que ya está andando sin
+# correr toda esta puesta a punto. Idempotente, igual que el respaldo.
+if [ -f /data/appcuatrosoles/infra/instalar-auto-despliegue.sh ]; then
+  echo ""
+  echo "🤖 Instalando el despliegue automático..."
+  bash /data/appcuatrosoles/infra/instalar-auto-despliegue.sh || \
+    echo "⚠️  No se pudo instalar el despliegue automático. El despliegue manual sigue funcionando."
+fi
+
 # 4. Detener servicios anteriores (si existen)
 echo ""
 echo "🛑 Deteniendo servicios anteriores..."

@@ -207,11 +207,24 @@ guardada en ninguna parte.
 
 `infra/deploy-to-ecr.sh` se conserva: si algún día hay que volver a ECR, el camino está escrito.
 
-### Lo que todavía no es automático
+### La instancia va a buscar; nadie le empuja
 
-**Reiniciar los servicios en la instancia.** Eso necesita `ssm:SendCommand`, que necesita el rol
-OIDC. Mientras no exista, el paso final se hace a mano por Session Manager (§9), que son dos
-comandos. Cuando el rol llegue, se agrega un job a `deploy.yml` y nada más cambia.
+**El paso final también es automático, y sin AWS de por medio.** La forma «normal» —que GitHub
+Actions empuje el despliegue— necesita `ssm:SendCommand`, que necesita el rol OIDC, que hay que
+pedirle al equipo de infraestructura y esperar. Se hace al revés: un temporizador en la instancia
+mira cada cinco minutos si hay una versión nueva de `latest` y se despliega solo.
+
+La instancia sólo necesita lo que ya tiene: entrar a GHCR y bajar una imagen. **Ningún permiso de
+AWS, ninguna credencial de larga vida, y nadie a quien esperar.**
+
+Dos cosas hacen que esto sea seguro y no una ruleta:
+
+- **`latest` sólo se mueve cuando CI pasó.** `deploy.yml` se dispara *después* de CI y sólo si
+  terminó en verde, así que un commit con los tests en rojo no llega nunca al ambiente donde el club
+  está probando.
+- **Revierte solo.** Si el API no responde después de cambiar, `auto-desplegar.sh` vuelve a la
+  versión anterior sin esperar a que alguien mire, y sale con error para que quede registrado. Es la
+  diferencia entre un despliegue desatendido y una apuesta.
 
 Ningún gate se desactiva para que un despliegue urgente pase (`CLAUDE.md` regla de oro 12,
 `docs/10` §6 — "nunca desactivar un gate de CI para sacar algo urgente").
@@ -227,13 +240,25 @@ REGISTRO=ghcr.io/<propietario-del-repo>
 Y entrar al registro con un token de GitHub de sólo lectura de paquetes (`read:packages`):
 
 ```bash
-echo "<TOKEN>" | docker login ghcr.io -u <usuario-de-github> --password-stdin
+echo "<TOKEN>" | sudo -u ec2-user docker login ghcr.io -u <usuario-de-github> --password-stdin
 ```
 
 > El token queda en `~/.docker/config.json` de la instancia. Es de **sólo lectura de paquetes** a
 > propósito: si se filtrara, lo peor que permite es bajar imágenes, no publicarlas.
 
-**Cada vez**, con el sha que el workflow deja en su resumen:
+Y el despliegue automático, una sola vez:
+
+```bash
+sudo bash /data/appcuatrosoles/infra/instalar-auto-despliegue.sh
+```
+
+> **El `docker login` tiene que hacerlo el usuario del servicio, no `root`.** Entrar con `sudo` deja
+> las credenciales en `/root/.docker/config.json`, el temporizador corre como `ec2-user`, y el
+> primer despliegue automático falla con «unauthorized» a los cinco minutos, cuando ya no hay nadie
+> mirando. El instalador lo comprueba antes de instalar nada y se niega si está mal.
+
+**Cada vez** — sólo si hace falta desplegar a mano una versión concreta; normalmente no hace falta,
+porque el temporizador ya lo hizo:
 
 ```bash
 cd /srv/cuatrosoles && IMAGE_TAG=<sha> ./desplegar.sh

@@ -11,7 +11,13 @@
 name: Publicar imágenes
 
 on:
-  push:
+  # **Después de CI, y sólo si pasó.** Antes esto corría en cada push a `main`, lo que significaba
+  # que `latest` podía apuntar a un commit con los tests en rojo. Ahora no puede: la instancia se
+  # despliega sola siguiendo `latest` (`infra/auto-desplegar.sh`), así que esa etiqueta es la que
+  # decide qué corre en el ambiente donde el club está probando.
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
   # Para volver a publicar una versión anterior sin tener que empujar un commit.
   workflow_dispatch:
@@ -34,14 +40,27 @@ env:
 jobs:
   publicar:
     runs-on: ubuntu-latest
+    # Un `workflow_run` se dispara también cuando CI **falla**: sin esta condición, publicaríamos
+    # justo la versión que los tests acaban de rechazar.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     permissions:
       contents: read
       packages: write
 
     steps:
+      - name: Resolver el commit que se publica
+        run: |
+          SHA="${{ github.event.inputs.ref || github.event.workflow_run.head_sha || github.sha }}"
+          echo "SHA=$SHA" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.ref || github.ref }}
+          # Con `workflow_run`, `github.sha` es el de la rama por defecto y no el del commit que
+          # disparó CI: hay que tomarlo del evento o se publicaría una versión distinta de la que
+          # se probó.
+          ref: ${{ github.event.inputs.ref || github.event.workflow_run.head_sha || github.ref }}
 
       - uses: docker/setup-buildx-action@v3
 
@@ -63,8 +82,9 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ${{ env.REGISTRO }}/cuatrosoles-${{ env.ENTORNO }}-api:${{ github.sha }}
+            ${{ env.REGISTRO }}/cuatrosoles-${{ env.ENTORNO }}-api:${{ env.SHA }}
             ${{ env.REGISTRO }}/cuatrosoles-${{ env.ENTORNO }}-api:latest
+          labels: org.opencontainers.image.revision=${{ env.SHA }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -76,8 +96,9 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ${{ env.REGISTRO }}/cuatrosoles-${{ env.ENTORNO }}-caddy:${{ github.sha }}
+            ${{ env.REGISTRO }}/cuatrosoles-${{ env.ENTORNO }}-caddy:${{ env.SHA }}
             ${{ env.REGISTRO }}/cuatrosoles-${{ env.ENTORNO }}-caddy:latest
+          labels: org.opencontainers.image.revision=${{ env.SHA }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -87,14 +108,14 @@ jobs:
             echo "## Imágenes publicadas"
             echo ""
             echo '```'
-            echo "${{ env.REGISTRO }}/cuatrosoles-${{ env.ENTORNO }}-api:${{ github.sha }}"
-            echo "${{ env.REGISTRO }}/cuatrosoles-${{ env.ENTORNO }}-caddy:${{ github.sha }}"
+            echo "${{ env.REGISTRO }}/cuatrosoles-${{ env.ENTORNO }}-api:${{ env.SHA }}"
+            echo "${{ env.REGISTRO }}/cuatrosoles-${{ env.ENTORNO }}-caddy:${{ env.SHA }}"
             echo '```'
             echo ""
             echo "En la instancia, por Session Manager:"
             echo ""
             echo '```bash'
-            echo "cd /srv/cuatrosoles && IMAGE_TAG=${{ github.sha }} ./desplegar.sh"
+            echo "cd /srv/cuatrosoles && IMAGE_TAG=${{ env.SHA }} ./desplegar.sh"
             echo '```'
             echo ""
             echo "Para volver atrás: el mismo comando con el \`IMAGE_TAG\` anterior."
