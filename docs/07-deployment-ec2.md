@@ -189,19 +189,64 @@ gzip -dc /tmp/respaldo.sql.gz | \
 
 ## 6. CI/CD
 
-GitHub Actions:
+Dos workflows, y la separación es a propósito.
 
-```
-on: push a main
-1. install (pnpm) → lint → typecheck → test:cov → check:arch → check:isolation
-2. build de apps/api, apps/worker, apps/web
-3. migración: aplica `up` contra Postgres real de CI, luego `down`, luego `up` otra vez
-4. si todo pasa: build y push de imágenes; despliegue por SSH a la EC2
-   (docker compose pull && docker compose up -d, migración real aplicada antes del swap)
-```
+**`ci.yml` — la calidad.** En cada push y cada PR: `lint`, `typecheck`, `test:cov`, `check:arch`,
+`check:isolation`, los tests de integración con Testcontainers, los E2E de navegador, y el ciclo
+`up → down → up` de la última migración contra un Postgres real.
+
+**`deploy.yml` — publicar las imágenes.** En cada push a `main`, construye el API y Caddy (con la
+SPA adentro) y las publica en **GHCR**, etiquetadas con el sha del commit y como `latest`.
+
+### Por qué GHCR y no ECR
+
+Publicar en ECR exige credenciales de AWS en el workflow — el rol OIDC de `docs/11` §8, que todavía
+no existe. GHCR usa el token que el propio GitHub Actions genera para cada corrida: **publicar deja
+de depender de AWS**. Una pieza menos en el camino crítico, y ninguna credencial de larga vida
+guardada en ninguna parte.
+
+`infra/deploy-to-ecr.sh` se conserva: si algún día hay que volver a ECR, el camino está escrito.
+
+### Lo que todavía no es automático
+
+**Reiniciar los servicios en la instancia.** Eso necesita `ssm:SendCommand`, que necesita el rol
+OIDC. Mientras no exista, el paso final se hace a mano por Session Manager (§9), que son dos
+comandos. Cuando el rol llegue, se agrega un job a `deploy.yml` y nada más cambia.
 
 Ningún gate se desactiva para que un despliegue urgente pase (`CLAUDE.md` regla de oro 12,
 `docs/10` §6 — "nunca desactivar un gate de CI para sacar algo urgente").
+
+## 6b. Desplegar, paso a paso
+
+**Una vez**, para que la instancia pueda bajar imágenes de GHCR. En `/srv/cuatrosoles/.env`:
+
+```
+REGISTRO=ghcr.io/<propietario-del-repo>
+```
+
+Y entrar al registro con un token de GitHub de sólo lectura de paquetes (`read:packages`):
+
+```bash
+echo "<TOKEN>" | docker login ghcr.io -u <usuario-de-github> --password-stdin
+```
+
+> El token queda en `~/.docker/config.json` de la instancia. Es de **sólo lectura de paquetes** a
+> propósito: si se filtrara, lo peor que permite es bajar imágenes, no publicarlas.
+
+**Cada vez**, con el sha que el workflow deja en su resumen:
+
+```bash
+cd /srv/cuatrosoles && IMAGE_TAG=<sha> ./desplegar.sh
+```
+
+`desplegar.sh` baja las imágenes, escribe el `IMAGE_TAG` en `.env` **sólo si el `pull` funcionó**,
+reinicia, **aplica las migraciones pendientes**, y espera a que `/api/health` responda. Si algo
+falla, dice con qué etiqueta volver.
+
+**Las migraciones corren en cada despliegue, no sólo al arrancar la instancia.** `migrate deploy` es
+idempotente —sin nada pendiente no hace nada— y correrlo siempre quita la peor sorpresa posible:
+código nuevo pidiéndole a la base una tabla que no existe, con errores 500 y ninguna pista. Corren
+con el rol **dueño** de las tablas (T-007), no con el de la aplicación, que no puede alterarlas.
 
 ## 7. Rollback
 

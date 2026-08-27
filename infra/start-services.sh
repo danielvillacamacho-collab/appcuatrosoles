@@ -12,10 +12,23 @@ set -euo pipefail
 IMAGE_TAG="${1:-latest}"
 ENTORNO="${2:-dev}"
 
-# Obtener Account ID y región
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-REGION="${AWS_REGION:-us-east-1}"
-REGISTRY="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
+# El registro de imágenes.
+#
+# **Si `.env` trae `REGISTRO`, ése manda** — es el camino de GHCR, y entonces esto no llama a AWS
+# para nada. Si no lo trae, se deriva ECR como antes, para que una instancia configurada antes del
+# cambio siga arrancando sin que nadie le toque el `.env`.
+REGISTRO_DEL_ENV=""
+if [ -f /srv/cuatrosoles/.env ]; then
+  REGISTRO_DEL_ENV="$(grep -E '^REGISTRO=' /srv/cuatrosoles/.env | cut -d= -f2- || true)"
+fi
+
+if [ -n "$REGISTRO_DEL_ENV" ]; then
+  REGISTRY="$REGISTRO_DEL_ENV"
+else
+  ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+  REGION="${AWS_REGION:-us-east-1}"
+  REGISTRY="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
+fi
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🚀 Iniciando servicios en EC2"
@@ -48,6 +61,17 @@ else
   echo "⚠️  docker-compose.yml no encontrado"
   echo "Asegúrate de que /data/appcuatrosoles está clonado"
   exit 1
+fi
+
+# 3a. El script de despliegue, para poder desplegar sin volver a correr todo esto.
+#
+# `start-services.sh` es la puesta a punto completa de la instancia; desplegar una versión nueva no
+# necesita nada de eso, y correrlo entero por un cambio de código es arriesgar tocar cosas que no
+# hacía falta tocar. `desplegar.sh` sólo baja imágenes y reinicia.
+if [ -f /data/appcuatrosoles/infra/desplegar.sh ]; then
+  echo "📋 Copiando desplegar.sh..."
+  cp /data/appcuatrosoles/infra/desplegar.sh ./desplegar.sh
+  chmod +x ./desplegar.sh
 fi
 
 # 3b. Respaldo diario de la base: script y temporizador
@@ -115,8 +139,8 @@ docker image prune -f 2>/dev/null || true
 
 # 6. Descargar y arrancar servicios
 echo ""
-echo "📥 Descargando imágenes de ECR e iniciando servicios..."
-ECR_REGISTRY=$REGISTRY \
+echo "📥 Descargando imágenes del registro e iniciando servicios..."
+REGISTRO=$REGISTRY \
 IMAGE_TAG=$IMAGE_TAG \
 ENTORNO=$ENTORNO \
 docker compose up -d
