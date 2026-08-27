@@ -35,7 +35,7 @@ interesa— cómo terminó.
 ## 3. Fuera de alcance (en esta versión)
 
 - **Qué caballo juega cada chukker.** Decidido el 2026-08 (`docs/09`): no se modela en v1. La
-  columna queda prevista y vacía, porque el día que entre `080` (caballos) la grilla es exactamente
+  columna queda prevista y vacía, porque el día que entre `090` (caballos) la grilla es exactamente
   donde va.
 - **Las consecuencias de no presentarse.** Cobrar igual, penalizar o bloquear postulaciones es Fase
   3, donde vive la plata y la política de cancelación (D-052-04). Acá sólo queda el registro.
@@ -169,7 +169,7 @@ celdas. Las dos copias sólo pueden aportar una cosa —contradecirse—. El ún
 guardaba y la grilla no es el `no_show`, y ése ya tiene lugar propio en `practice_application.outcome`,
 donde `050` lo dejó declarado.
 
-`chukker_grid_cell.horse_id` queda **declarada y sin usar** hasta `080`, igual que
+`chukker_grid_cell.horse_id` queda **declarada y sin usar** hasta `090`, igual que
 `cost_share_primary_pct` en `051`.
 
 ## 8. Interfaz

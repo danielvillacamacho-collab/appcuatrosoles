@@ -1285,7 +1285,7 @@ model ChukkerGridCell {
   /// que entre alguien que no se postuló es lo normal cuando falta uno.
   personId String? @map("person_id")
 
-  /// **Declarada y sin usar** hasta `080`, con el criterio de `practice_slot.cost_share_primary_pct`.
+  /// **Declarada y sin usar** hasta `090`, con el criterio de `practice_slot.cost_share_primary_pct`.
   /// La grilla es donde va a vivir el caballo de cada chukker.
   horseId String? @map("horse_id")
 

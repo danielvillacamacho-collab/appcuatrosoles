@@ -59,7 +59,7 @@ model ChukkerGridCell {
   /// Nulo = hueco. Puede ser cualquier persona activa del club, no sólo un aceptado (R-052-05).
   personId String? @map("person_id")
 
-  /// Declarada y sin usar hasta `080`. La grilla es donde va a vivir el caballo de cada chukker.
+  /// Declarada y sin usar hasta `090`. La grilla es donde va a vivir el caballo de cada chukker.
   horseId String? @map("horse_id")
 
   /// Un solo hueco por (chukker, equipo, puesto): la grilla no puede tener dos celdas para el mismo
