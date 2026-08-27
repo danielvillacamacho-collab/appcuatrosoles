@@ -100,10 +100,17 @@ número lo va a leer el cobro de Fase 3, y si sale mal se cobra mal.
   > transacción, los equipos quedan aprobados y la grilla vacía, y el test falla. Es exactamente el
   > estado que dejaría una práctica imposible de cerrar.
 
-- [ ] **T-722** `GET /practices/:id/grid`: la grilla con la cuenta por persona.
+- [x] **T-722** `GET /practices/:id/grid`: la grilla con la cuenta por persona.
   Verificación: cualquiera con sesión en el club la ve (plan §4); otra práctica de **otro club**
   responde 404, nunca 403 (P-05); la cuenta que viaja es la de `chukkersPorPersona` y no otra;
   una práctica sin equipos aprobados no tiene grilla.
+  ✅ 2026-08-27 — 6 tests. La cuenta viaja **calculada en la respuesta**: la pantalla la muestra, no
+  la recalcula, para que sea literalmente el mismo número que va a usar el cobro de Fase 3.
+  > El aislamiento quedó declarado en el arnés genérico (`espera: "ajeno"`), que es donde encaja: a
+  > diferencia del resto de rutas de práctica, ésta recibe un identificador y no necesita cuerpo ni
+  > un estado concreto para significar algo. El arnés **falló hasta declararla**, que es su trabajo.
+  > El test propio se rehízo con un comisario de verdad del otro club: con la sesión de este club,
+  > el guard de tenant respondía antes y el 404 no probaba nada de la grilla.
 
 - [ ] **T-723** `PATCH /practices/:id/grid`: el lote de cambios, atómico.
   Verificación: **intercambiar dos jugadores del mismo chukker funciona** —es el caso que falla con

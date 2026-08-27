@@ -201,6 +201,10 @@ const COBERTURA: { ruta: string; espera: "ajeno" | "vacio" | "propio" }[] = [
   { ruta: "PUT /api/settings/:key", espera: "propio" },
   { ruta: "GET /api/organizations/:id/settings", espera: "ajeno" },
   { ruta: "PUT /api/organizations/:id/settings/:key", espera: "ajeno" },
+  // La grilla (`specs/052`) SÍ encaja en el recorrido genérico, a diferencia de las demás rutas de
+  // práctica: recibe el identificador de una práctica y no necesita cuerpo ni un estado concreto
+  // para significar algo. Una práctica de otro club tiene que responder 404.
+  { ruta: "GET /api/practices/:id/grid", espera: "ajeno" },
 ];
 
 const VERBOS: Record<number, string> = {
