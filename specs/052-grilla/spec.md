@@ -103,9 +103,22 @@ por WhatsApp tres días después.
 - **Dado** un jugador aceptado que no apareció, **cuando** el comisario lo marca, **entonces** su
   postulación queda como `no_show` y **sus celdas quedan vacías de una vez**, sin tener que borrar
   seis a mano.
-- **Dado** un jugador que **sí** jugó algún chukker, **cuando** alguien intenta marcarlo como
-  ausente, **entonces** se rechaza: la grilla dice que estuvo, y las dos cosas no pueden ser ciertas
-  (R-052-03).
+- **Dado** un jugador **marcado como ausente**, **cuando** alguien intenta ponerlo en una celda,
+  **entonces** se rechaza: la grilla diría que estuvo y la marca dice que no, y las dos cosas no
+  pueden ser ciertas (R-052-03).
+- **Dado** un ausente marcado por error, **cuando** el comisario le quita la marca, **entonces**
+  vuelve a estar aceptado y se le puede poner en la grilla. **Sus celdas no se restauran solas**: el
+  sistema no sabe qué chukkers jugó, y devolverle los seis originales sería inventar el dato que el
+  módulo existe para registrar.
+- **Dado** alguien que **no estaba aceptado** en la práctica, **cuando** se lo intenta marcar como
+  ausente, **entonces** se rechaza: no se presentó quien nunca fue esperado.
+
+> **Corregido el 2026-08-27, al implementar.** Este criterio decía antes que marcar ausente a quien
+> «sí jugó algún chukker» se rechazaba. Es incompatible con que la grilla **nazca llena**: todos
+> tienen celdas desde el primer segundo, así que la regla habría hecho imposible marcar a nadie —
+> justo lo contrario de la conveniencia que HU-052-04 promete. La invariante de R-052-03 se sostiene
+> igual, pero **en la otra dirección**: marcar vacía las celdas, y estando marcado no se puede
+> ocupar ninguna.
 
 ### HU-052-05 — Cómo terminó
 **Como** comisario **quiero** anotar el marcador **para** dejarlo registrado cuando el club lo pide.
@@ -177,7 +190,7 @@ donde `050` lo dejó declarado.
 ```
 GET   /practices/:id/grid      sesión           → la grilla, con los chukkers contados por persona
 PATCH /practices/:id/grid      practice.manage  { cambios: [{ chukker, equipo, puesto, personId|null }] }
-POST  /practices/:id/no-show   practice.manage  { personId } → marca y vacía sus celdas
+POST  /practices/:id/grid/no-show  practice.manage  { personId, ausente } → marca (y vacía sus celdas) o desmarca
 POST  /practices/:id/close     practice.manage  → congela y pasa a played
 POST  /practices/:id/reopen    practice.manage  → vuelve a confirmed, auditado
 PUT   /practices/:id/result    practice.manage  { golesA, golesB, notas? }

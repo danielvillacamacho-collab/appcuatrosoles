@@ -129,6 +129,7 @@ const CON_TEST_PROPIO = [
   // nada es peor que no tenerlo.
   "GET /api/practices/:id/grid",
   "PATCH /api/practices/:id/grid",
+  "POST /api/practices/:id/grid/no-show",
   "POST /api/field-bookings/block",
   "DELETE /api/field-bookings/:id",
   // `minors.int-spec` → «un acudiente de otro club no existe desde aquí: 404, nunca 403». El

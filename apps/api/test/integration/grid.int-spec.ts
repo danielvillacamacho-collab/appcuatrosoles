@@ -534,4 +534,184 @@ describe("Grilla · API (T-722 a T-727)", () => {
       expect(respuesta.status).toBe(404);
     });
   });
+
+  describe("quién no llegó (T-724)", () => {
+    async function celdasDe(practiceId: string, personId: string): Promise<number> {
+      return prisma.chukkerGridCell.count({ where: { practiceId, personId } });
+    }
+
+    it("marcar ausente vacía TODAS sus celdas de una vez", async () => {
+      // La conveniencia entera de HU-052-04: un toque en vez de seis.
+      const practiceId = await practicaConGrilla();
+      const ana = (jugadores[0] as Cuenta).personId;
+
+      expect(await celdasDe(practiceId, ana)).toBe(6);
+
+      const respuesta = await como(
+        comisario,
+        api().post(`/api/practices/${practiceId}/grid/no-show`).send({ personId: ana, ausente: true }),
+      );
+
+      expect(respuesta.status).toBe(201);
+      expect(await celdasDe(practiceId, ana)).toBe(0);
+
+      const postulacion = await prisma.practiceApplication.findFirstOrThrow({
+        where: { practiceId, personId: ana },
+        select: { outcome: true },
+      });
+      expect(postulacion.outcome).toBe("no_show");
+    });
+
+    it("el ausente aparece en la cuenta, en cero y marcado", async () => {
+      // «No jugó» es un dato que alguien tiene que poder ver. Sin esto desaparecería de la pantalla.
+      const practiceId = await practicaConGrilla();
+      const ana = (jugadores[0] as Cuenta).personId;
+
+      const respuesta = await como(
+        comisario,
+        api().post(`/api/practices/${practiceId}/grid/no-show`).send({ personId: ana, ausente: true }),
+      );
+
+      const grilla = PracticeGridResponse.parse(respuesta.body);
+      const fila = grilla.chukkersPorPersona.find((una) => una.personId === ana);
+
+      expect(fila?.chukkers).toBe(0);
+      expect(fila?.noSePresento).toBe(true);
+    });
+
+    it("estando marcado NO se le puede poner en una celda: la otra dirección de la invariante", async () => {
+      const practiceId = await practicaConGrilla();
+      const ana = (jugadores[0] as Cuenta).personId;
+      await como(
+        comisario,
+        api().post(`/api/practices/${practiceId}/grid/no-show`).send({ personId: ana, ausente: true }),
+      );
+
+      const hueco = await prisma.chukkerGridCell.findFirstOrThrow({
+        where: { practiceId, personId: null },
+        select: { chukkerNo: true, team: true, position: true },
+      });
+
+      const respuesta = await como(
+        comisario,
+        api()
+          .patch(`/api/practices/${practiceId}/grid`)
+          .send({
+            cambios: [
+              {
+                chukker: hueco.chukkerNo,
+                equipo: hueco.team,
+                position: hueco.position,
+                personId: ana,
+              },
+            ],
+          }),
+      );
+
+      expect(respuesta.status).toBe(409);
+      expect(respuesta.body.error.code).toBe("marcado_ausente");
+    });
+
+    it("desmarcar lo devuelve a aceptado, y NO le restaura las celdas", async () => {
+      // El sistema no sabe qué chukkers jugó. Devolverle los seis sería inventar el dato.
+      const practiceId = await practicaConGrilla();
+      const ana = (jugadores[0] as Cuenta).personId;
+      await como(
+        comisario,
+        api().post(`/api/practices/${practiceId}/grid/no-show`).send({ personId: ana, ausente: true }),
+      );
+
+      const respuesta = await como(
+        comisario,
+        api().post(`/api/practices/${practiceId}/grid/no-show`).send({ personId: ana, ausente: false }),
+      );
+
+      expect(respuesta.status).toBe(201);
+      expect(await celdasDe(practiceId, ana)).toBe(0);
+
+      const postulacion = await prisma.practiceApplication.findFirstOrThrow({
+        where: { practiceId, personId: ana },
+        select: { outcome: true },
+      });
+      expect(postulacion.outcome).toBe("accepted");
+    });
+
+    it("desmarcado, se le puede volver a poner en la grilla", async () => {
+      const practiceId = await practicaConGrilla();
+      const ana = (jugadores[0] as Cuenta).personId;
+      await como(
+        comisario,
+        api().post(`/api/practices/${practiceId}/grid/no-show`).send({ personId: ana, ausente: true }),
+      );
+      await como(
+        comisario,
+        api().post(`/api/practices/${practiceId}/grid/no-show`).send({ personId: ana, ausente: false }),
+      );
+
+      const hueco = await prisma.chukkerGridCell.findFirstOrThrow({
+        where: { practiceId, personId: null },
+        select: { chukkerNo: true, team: true, position: true },
+      });
+
+      const respuesta = await como(
+        comisario,
+        api()
+          .patch(`/api/practices/${practiceId}/grid`)
+          .send({
+            cambios: [
+              {
+                chukker: hueco.chukkerNo,
+                equipo: hueco.team,
+                position: hueco.position,
+                personId: ana,
+              },
+            ],
+          }),
+      );
+
+      expect(respuesta.status).toBe(200);
+    });
+
+    it("alguien que NO estaba aceptado no se puede marcar", async () => {
+      const practiceId = await practicaConGrilla();
+      const ajeno = await prisma.person.create({
+        data: { clubId: club.id, fullName: `Nunca postulado ${etiqueta("n")}` },
+      });
+
+      const respuesta = await como(
+        comisario,
+        api()
+          .post(`/api/practices/${practiceId}/grid/no-show`)
+          .send({ personId: ajeno.id, ausente: true }),
+      );
+
+      expect(respuesta.status).toBe(404);
+    });
+
+    it("desmarcar a quien no estaba marcado se rechaza", async () => {
+      const practiceId = await practicaConGrilla();
+      const ana = (jugadores[0] as Cuenta).personId;
+
+      const respuesta = await como(
+        comisario,
+        api().post(`/api/practices/${practiceId}/grid/no-show`).send({ personId: ana, ausente: false }),
+      );
+
+      expect(respuesta.status).toBe(409);
+      expect(respuesta.body.error.code).toBe("no_estaba_marcado");
+    });
+
+    it("un jugador NO puede marcar ausentes", async () => {
+      const practiceId = await practicaConGrilla();
+
+      const respuesta = await como(
+        jugadores[1] as Cuenta,
+        api()
+          .post(`/api/practices/${practiceId}/grid/no-show`)
+          .send({ personId: (jugadores[0] as Cuenta).personId, ausente: true }),
+      );
+
+      expect(respuesta.status).toBe(403);
+    });
+  });
 });

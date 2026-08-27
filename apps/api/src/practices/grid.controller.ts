@@ -1,5 +1,19 @@
-import { Body, Controller, Get, Param, Patch, Req, UseGuards, UseInterceptors } from "@nestjs/common";
-import { AdjustGridRequest, type PracticeGridResponse } from "@polo/contracts";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+  UseInterceptors,
+} from "@nestjs/common";
+import {
+  AdjustGridRequest,
+  NoShowRequest,
+  type PracticeGridResponse,
+} from "@polo/contracts";
 import { AuditInterceptor } from "../common/audit/audit.interceptor.js";
 import { Auditable, type ConAuditoria } from "../common/audit/auditable.js";
 import type { ConSessionUser } from "../common/auth/current-user.js";
@@ -55,5 +69,22 @@ export class GridController {
     @Body(new ZodValidationPipe(AdjustGridRequest)) cambios: AdjustGridRequest,
   ): Promise<PracticeGridResponse> {
     return this.grilla.ajustar(clubDeLaSolicitud(req), id, cambios);
+  }
+
+  /**
+   * Marcar —o desmarcar— a quien no se presentó (T-724).
+   *
+   * Cuelga de `/grid` y no de la práctica porque lo que hace, además de marcar, es **vaciar sus
+   * celdas**: sin esa parte la marca sería una anotación suelta que la grilla contradice.
+   */
+  @Post("no-show")
+  @RequirePermission("practice.manage")
+  @Auditable({ action: "practice.no-show", entityType: "practice_application" })
+  async marcarAusente(
+    @Req() req: Solicitud,
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(NoShowRequest)) peticion: NoShowRequest,
+  ): Promise<PracticeGridResponse> {
+    return this.grilla.marcarAusente(clubDeLaSolicitud(req), id, peticion);
   }
 }

@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
-import type { AdjustGridRequest, PracticeGridResponse } from "@polo/contracts";
+import type { AdjustGridRequest, NoShowRequest, PracticeGridResponse } from "@polo/contracts";
 import {
   chukkersPorPersona,
   grillaInicial,
@@ -336,6 +336,87 @@ export class GridService {
             data: { personId: celda.personId },
           });
         }
+      }
+    });
+
+    return this.ver(clubId, practiceId);
+  }
+
+  /**
+   * Quien no se presentó (T-724, R-052-03).
+   *
+   * **Marcar vacía sus celdas, en la misma transacción.** Es la conveniencia entera de HU-052-04:
+   * un toque en vez de seis. Y es lo que sostiene la invariante, porque no hay restricción de base
+   * que pueda cruzar dos tablas: `no_show` y tener celdas no pueden ser ciertas a la vez, así que
+   * marcar tiene que dejar la grilla coherente o la invariante es una frase en un documento.
+   *
+   * La otra dirección la cubre `ajustar`: estando marcado, no se puede ocupar una celda.
+   *
+   * **Desmarcar no restaura las celdas.** El sistema no sabe qué chukkers jugó; devolverle los seis
+   * originales sería inventar justo el dato que este módulo existe para registrar.
+   */
+  async marcarAusente(
+    clubId: string,
+    practiceId: string,
+    peticion: NoShowRequest,
+  ): Promise<PracticeGridResponse> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "practice" WHERE id = ${practiceId} AND club_id = ${clubId} FOR UPDATE`;
+
+      const practica = await tx.practice.findFirst({
+        where: { id: practiceId, clubId },
+        select: { status: true },
+      });
+
+      if (practica === null) {
+        throw new NotFoundException();
+      }
+
+      if (practica.status === "played") {
+        throw new ApiException(
+          "practica_cerrada",
+          HttpStatus.CONFLICT,
+          "La práctica está cerrada. Para corregirla hay que reabrirla.",
+        );
+      }
+
+      const postulacion = await tx.practiceApplication.findFirst({
+        where: { practiceId, clubId, personId: peticion.personId, withdrawnAt: null },
+        select: { id: true, outcome: true },
+      });
+
+      if (postulacion === null) {
+        throw new NotFoundException();
+      }
+
+      if (peticion.ausente && postulacion.outcome !== "accepted") {
+        // No se presentó quien nunca fue esperado: marcar a alguien que quedó en lista de espera
+        // ensuciaría la estadística sin describir nada real.
+        throw new ApiException(
+          "no_estaba_aceptado",
+          HttpStatus.CONFLICT,
+          "Sólo se marca como ausente a quien había quedado dentro de la práctica.",
+        );
+      }
+
+      if (!peticion.ausente && postulacion.outcome !== "no_show") {
+        throw new ApiException(
+          "no_estaba_marcado",
+          HttpStatus.CONFLICT,
+          "Esa persona no está marcada como ausente.",
+        );
+      }
+
+      await tx.practiceApplication.update({
+        where: { id: postulacion.id },
+        data: { outcome: peticion.ausente ? "no_show" : "accepted" },
+      });
+
+      if (peticion.ausente) {
+        await tx.chukkerGridCell.updateMany({
+          where: { practiceId, clubId, personId: peticion.personId },
+          data: { personId: null },
+        });
       }
     });
 

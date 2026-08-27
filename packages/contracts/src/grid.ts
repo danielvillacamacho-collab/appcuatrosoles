@@ -72,8 +72,17 @@ export const AdjustGridRequest = z.object({
 
 export type AdjustGridRequest = z.infer<typeof AdjustGridRequest>;
 
-/** Marcar a quien no se presentó (R-052-03). */
-export const NoShowRequest = z.object({ personId: z.string().min(1) });
+/**
+ * Marcar —o desmarcar— a quien no se presentó (R-052-03).
+ *
+ * Desmarcar existe porque marcar por error es fácil y quedarse encerrado no puede ser la
+ * consecuencia. **No restaura las celdas**: el sistema no sabe qué chukkers jugó, y devolverle los
+ * seis originales sería inventar justo el dato que el módulo existe para registrar.
+ */
+export const NoShowRequest = z.object({
+  personId: z.string().min(1),
+  ausente: z.boolean(),
+});
 export type NoShowRequest = z.infer<typeof NoShowRequest>;
 
 /** El marcador. **Opcional**: una práctica se cierra sin él (R-052-09). */

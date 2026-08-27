@@ -128,11 +128,21 @@ número lo va a leer el cobro de Fase 3, y si sale mal se cobra mal.
   > cambio vaciaba la celda que el segundo iba a ocupar. El servicio valida **la grilla resultante**,
   > no cada cambio por separado, que es la semántica correcta.
 
-- [ ] **T-724** `POST /practices/:id/no-show`: marcar y vaciar sus celdas, en una transacción
+- [x] **T-724** `POST /practices/:id/no-show`: marcar y vaciar sus celdas, en una transacción
   (R-052-03).
   Verificación: marcar ausente a quien tiene celdas las vacía **todas**; poner en una celda a alguien
   ya marcado ausente se rechaza; los dos sentidos se prueban, porque la regla no la sostiene ninguna
   restricción de base de datos.
+  ✅ 2026-08-27 — 8 tests. Las dos direcciones verificadas rompiéndolas: marcar sin vaciar las
+  celdas hace fallar 5 tests, y quitar el guard inverso hace fallar 1. La invariante no la sostiene
+  ninguna restricción de base —cruza dos tablas—, así que tenía que sostenerla el servicio.
+  > **HU-052-04 se contradecía a sí misma y hubo que corregir el spec.** Pedía que marcar ausente
+  > vaciara las celdas de una vez **y** que se rechazara marcar a quien tuviera celdas. Con la
+  > grilla naciendo llena, todos tienen celdas desde el primer segundo: la segunda regla habría
+  > hecho imposible marcar a nadie. La invariante se sostiene igual, pero en la otra dirección.
+  > Y apareció un callejón sin salida que yo mismo había creado: el mensaje de error decía «quita la
+  > marca», y no había con qué. Desmarcar existe ahora, y **no restaura las celdas** — el sistema no
+  > sabe qué chukkers jugó, y devolverle los seis sería inventar el dato que el módulo registra.
 
 - [ ] **T-725** `POST /practices/:id/close` y `/reopen`, con candado.
   Verificación: cerrar deja `played`, con quién y cuándo, y la grilla deja de admitir cambios;
